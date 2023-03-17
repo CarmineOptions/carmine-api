@@ -1,0 +1,3 @@
+[workspace]
+
+members = ["carmine-api", "carmine-api-db", "carmine-api-starknet"]

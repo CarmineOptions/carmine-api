@@ -1,0 +1,19 @@
+[package]
+name = "carmine-api-starknet"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+carmine-api-db = { path = "../carmine-api-db" }
+futures = "0.3.27"
+reqwest = "0.11.14"
+serde = { version = "1.0.156", features = ["derive"] }
+starknet = { git = "https://github.com/xJonathanLEI/starknet-rs" }
+tokio = { version = "1.26.0", features = ["macros", "rt-multi-thread"] }
+
+
+[[bin]]
+name = "populate_events"
+path = "bin/populate_events.rs"

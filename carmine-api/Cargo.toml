@@ -1,0 +1,14 @@
+[package]
+name = "carmine-api"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+actix-cors = "0.6.4"
+actix-web = "4.3.1"
+carmine-api-starknet = { path = "../carmine-api-starknet" }
+env_logger = "0.10.0"
+serde = { version = "1.0.156", features = ["derive"] }
+tokio = "1.26.0"
