@@ -22,3 +22,7 @@ path = "bin/populate_events.rs"
 [[bin]]
 name = "get_option"
 path = "bin/get_option.rs"
+
+[[bin]]
+name = "populate_options"
+path = "bin/populate_options.rs"

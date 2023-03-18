@@ -46,6 +46,45 @@ pub fn create_batch_of_events(new_events: &Vec<models::NewEvent>) {
     }
 }
 
+pub fn create_option(option: models::NewIOption) {
+    use crate::schema::options::dsl::*;
+
+    let mut connection = establish_connection();
+
+    diesel::insert_into(options)
+        .values(&option)
+        .on_conflict_do_nothing()
+        .execute(&mut connection)
+        .expect("Error saving option");
+}
+
+pub fn create_batch_of_options(new_options: &Vec<models::NewIOption>) {
+    use crate::schema::options::dsl::*;
+
+    let mut connection = establish_connection();
+
+    let chunks = new_options.chunks(BATCH_SIZE);
+
+    for chunk in chunks {
+        diesel::insert_into(options)
+            .values(chunk)
+            .on_conflict_do_nothing()
+            .execute(&mut connection)
+            .expect("Error saving batch of events");
+    }
+}
+
+pub fn get_option_addresses_from_events() -> Vec<String> {
+    use crate::schema::events::dsl::*;
+
+    let connection = &mut establish_connection();
+    events
+        .select(option_token)
+        .distinct()
+        .load::<String>(connection)
+        .expect("Error loading posts")
+}
+
 pub fn show_events() {
     use crate::schema::events::dsl::*;
 

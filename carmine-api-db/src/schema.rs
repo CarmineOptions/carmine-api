@@ -16,3 +16,21 @@ diesel::table! {
         option_tokens_minted -> Text,
     }
 }
+
+diesel::table! {
+    options (id) {
+        id -> Int4,
+        option_side -> Int2,
+        maturity -> Int8,
+        strike_price -> Text,
+        quote_token_address -> Text,
+        base_token_address -> Text,
+        option_type -> Int2,
+        option_address -> Text,
+    }
+}
+
+diesel::allow_tables_to_appear_in_same_query!(
+    events,
+    options,
+);

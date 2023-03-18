@@ -1,4 +1,5 @@
 use crate::schema::events;
+use crate::schema::options;
 use diesel::prelude::*;
 
 #[derive(Queryable)]
@@ -31,4 +32,28 @@ pub struct NewEvent {
     pub option_token: String,
     pub capital_transfered: String,
     pub option_tokens_minted: String,
+}
+
+#[derive(Queryable)]
+pub struct IOption {
+    pub id: i32,
+    pub option_side: i16,
+    pub maturity: i64,
+    pub strike_price: String,
+    pub quote_token_address: String,
+    pub base_token_address: String,
+    pub option_type: i16,
+    pub option_address: String,
+}
+
+#[derive(Debug, Insertable)]
+#[diesel(table_name = options)]
+pub struct NewIOption {
+    pub option_side: i16,
+    pub maturity: i64,
+    pub strike_price: String,
+    pub quote_token_address: String,
+    pub base_token_address: String,
+    pub option_type: i16,
+    pub option_address: String,
 }

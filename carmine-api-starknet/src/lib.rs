@@ -1,6 +1,6 @@
 mod starkscan;
 
-use carmine_api_db::models::NewEvent;
+use carmine_api_db::models::{NewEvent, NewIOption};
 use futures::future::join_all;
 use starknet::core::types::{CallContractResult, CallFunction, FieldElement};
 use starknet::macros::{felt, selector};
@@ -34,16 +34,6 @@ fn lp_address_to_call_function(lp_address: &str) -> CallFunction {
         entry_point_selector: selector!("get_all_non_expired_options_with_premia"),
         calldata: vec![FieldElement::from_hex_be(lp_address).unwrap()],
     }
-}
-
-#[derive(Debug)]
-pub struct IOption {
-    pub option_side: u8,
-    pub maturity: i64,
-    pub strike_price: String,
-    pub quote_token_address: String,
-    pub base_token_address: String,
-    pub option_type: u8,
 }
 
 pub struct Carmine {
@@ -97,8 +87,8 @@ impl Carmine {
 
     pub async fn get_option_info_from_addresses(
         &self,
-        option_token_address: &str,
-    ) -> Result<IOption, &str> {
+        option_address: &str,
+    ) -> Result<NewIOption, &str> {
         let entrypoint = selector!("get_option_info_from_addresses");
         let call = self.provider.call_contract(
             CallFunction {
@@ -106,7 +96,7 @@ impl Carmine {
                 entry_point_selector: entrypoint,
                 calldata: vec![
                     FieldElement::from_hex_be(Carmine::CALL_LP_ADDRESS).unwrap(),
-                    FieldElement::from_hex_be(option_token_address).unwrap(),
+                    FieldElement::from_hex_be(option_address).unwrap(),
                 ],
             },
             BlockId::Latest,
@@ -117,7 +107,7 @@ impl Carmine {
                 entry_point_selector: entrypoint,
                 calldata: vec![
                     FieldElement::from_hex_be(Carmine::PUT_LP_ADDRESS).unwrap(),
-                    FieldElement::from_hex_be(option_token_address).unwrap(),
+                    FieldElement::from_hex_be(option_address).unwrap(),
                 ],
             },
             BlockId::Latest,
@@ -131,10 +121,10 @@ impl Carmine {
                 assert_eq!(data.len(), 6, "Got wrong size Option result");
 
                 let option_side = format!("{}", data[0])
-                    .parse::<u8>()
+                    .parse::<i16>()
                     .expect("Failed to parse side");
                 let option_type = format!("{}", data[5])
-                    .parse::<u8>()
+                    .parse::<i16>()
                     .expect("Failed to parse type");
                 let maturity = format!("{}", data[1])
                     .parse::<i64>()
@@ -143,13 +133,14 @@ impl Carmine {
                 let quote_token_address = format!("{:#x}", data[3]);
                 let base_token_address = format!("{:#x}", data[4]);
 
-                return Ok(IOption {
+                return Ok(NewIOption {
                     option_side,
                     option_type,
                     strike_price,
                     maturity,
                     quote_token_address,
                     base_token_address,
+                    option_address: String::from(option_address),
                 });
             }
         }
