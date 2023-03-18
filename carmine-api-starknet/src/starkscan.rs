@@ -1,4 +1,7 @@
+use std::env;
+
 use carmine_api_db::models::NewEvent;
+use dotenvy::dotenv;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
@@ -22,12 +25,13 @@ pub struct StarkScanEvent {
 }
 
 pub async fn api_call(url: &str) -> StarkScanEventResult {
+    dotenv().ok();
+
+    let api_key = env::var("STARKSCAN_API_KEY").expect("Failed to read API key");
+
     let mut headers = reqwest::header::HeaderMap::new();
     headers.insert("accept", "applicationjson".parse().unwrap());
-    headers.insert(
-        "x-api-key",
-        "r24f3wb9zR4hahlqYtBUM8c6UvaAZ8wx9m0XpgDp".parse().unwrap(),
-    );
+    headers.insert("x-api-key", api_key.parse().unwrap());
 
     let client = Client::new();
     let res = client.get(url).headers(headers).send().await.unwrap();

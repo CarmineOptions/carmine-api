@@ -485,6 +485,7 @@ name = "carmine-api-starknet"
 version = "0.1.0"
 dependencies = [
  "carmine-api-db",
+ "dotenvy",
  "futures",
  "reqwest",
  "serde",
