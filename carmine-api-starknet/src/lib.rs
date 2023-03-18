@@ -36,11 +36,29 @@ fn lp_address_to_call_function(lp_address: &str) -> CallFunction {
     }
 }
 
+#[derive(Debug)]
+pub struct IOption {
+    pub option_side: u8,
+    pub maturity: i64,
+    pub strike_price: String,
+    pub quote_token_address: String,
+    pub base_token_address: String,
+    pub option_type: u8,
+}
+
 pub struct Carmine {
     provider: SequencerGatewayProvider,
 }
 
 impl Carmine {
+    // TODO: everything is hardcoded for the testnet!
+    const CALL_LP_ADDRESS: &str =
+        "0x03b176f8e5b4c9227b660e49e97f2d9d1756f96e5878420ad4accd301dd0cc17";
+    const PUT_LP_ADDRESS: &str =
+        "0x0030fe5d12635ed696483a824eca301392b3f529e06133b42784750503a24972";
+    const CONTRACT_ADDRESS: &str =
+        "0x042a7d485171a01b8c38b6b37e0092f0f096e9d3f945c50c77799171916f5a54";
+
     pub fn new() -> Self {
         let provider = SequencerGatewayProvider::starknet_alpha_goerli();
 
@@ -75,6 +93,68 @@ impl Carmine {
         println!("Fetched Vec length {}", fetched_data.len());
 
         fetched_data
+    }
+
+    pub async fn get_option_info_from_addresses(
+        &self,
+        option_token_address: &str,
+    ) -> Result<IOption, &str> {
+        let entrypoint = selector!("get_option_info_from_addresses");
+        let call = self.provider.call_contract(
+            CallFunction {
+                contract_address: FieldElement::from_hex_be(Carmine::CONTRACT_ADDRESS).unwrap(),
+                entry_point_selector: entrypoint,
+                calldata: vec![
+                    FieldElement::from_hex_be(Carmine::CALL_LP_ADDRESS).unwrap(),
+                    FieldElement::from_hex_be(option_token_address).unwrap(),
+                ],
+            },
+            BlockId::Latest,
+        );
+        let put = self.provider.call_contract(
+            CallFunction {
+                contract_address: FieldElement::from_hex_be(Carmine::CONTRACT_ADDRESS).unwrap(),
+                entry_point_selector: entrypoint,
+                calldata: vec![
+                    FieldElement::from_hex_be(Carmine::PUT_LP_ADDRESS).unwrap(),
+                    FieldElement::from_hex_be(option_token_address).unwrap(),
+                ],
+            },
+            BlockId::Latest,
+        );
+
+        let contract_results = join_all(vec![call, put]).await;
+
+        for result in contract_results {
+            if let Ok(call_res) = result {
+                let data = call_res.result;
+                assert_eq!(data.len(), 6, "Got wrong size Option result");
+
+                let option_side = format!("{}", data[0])
+                    .parse::<u8>()
+                    .expect("Failed to parse side");
+                let option_type = format!("{}", data[5])
+                    .parse::<u8>()
+                    .expect("Failed to parse type");
+                let maturity = format!("{}", data[1])
+                    .parse::<i64>()
+                    .expect("Failed to parse maturity");
+                let strike_price = format!("{:#x}", data[2]);
+                let quote_token_address = format!("{:#x}", data[3]);
+                let base_token_address = format!("{:#x}", data[4]);
+
+                return Ok(IOption {
+                    option_side,
+                    option_type,
+                    strike_price,
+                    maturity,
+                    quote_token_address,
+                    base_token_address,
+                });
+            }
+        }
+
+        Err("Failed to find option with given address")
     }
 
     pub async fn get_latest_block_id(&self) -> Option<u64> {
