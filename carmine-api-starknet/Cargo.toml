@@ -24,5 +24,9 @@ name = "get_option"
 path = "bin/get_option.rs"
 
 [[bin]]
-name = "populate_options"
-path = "bin/populate_options.rs"
+name = "get_trade_history"
+path = "bin/get_trade_history.rs"
+
+[[bin]]
+name = "populate_db"
+path = "bin/populate_db.rs"

@@ -1,9 +1,8 @@
-use crate::{
-    response::{AllNonExpired, GenericResponse},
-    AppState, QueryOptions,
-};
+use crate::types::{AllNonExpired, AppState, GenericResponse, QueryOptions, TradeHistoryResponse};
 use actix_web::{get, web, HttpResponse, Responder};
+use carmine_api_db::models::TradeHistory;
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
 #[get("liveness")]
 async fn liveness_probe_handler() -> impl Responder {
@@ -21,24 +20,74 @@ pub async fn all_non_expired_handler(
     _opts: web::Query<QueryOptions>,
     data: web::Data<Arc<Mutex<AppState>>>,
 ) -> impl Responder {
-    let response_data = &data.lock().unwrap().all_non_expired;
-    let mut payload = Vec::new();
-
-    for v in response_data {
-        let copy = String::from(v);
-        payload.push(copy);
-    }
-
-    let json_response = AllNonExpired {
-        status: "success".to_string(),
-        data: payload,
+    let locked = &data.lock();
+    let response_data = match locked {
+        Ok(app_data) => &app_data.all_non_expired,
+        _ => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "server_error".to_string(),
+                message: "Failed to read AppState".to_string(),
+            });
+        }
     };
 
-    HttpResponse::Ok().json(json_response)
+    HttpResponse::Ok().json(AllNonExpired {
+        status: "success".to_string(),
+        data: response_data,
+    })
+}
+
+#[get("trade-history")]
+pub async fn trade_history_handler(
+    opts: web::Query<QueryOptions>,
+    data: web::Data<Arc<Mutex<AppState>>>,
+) -> impl Responder {
+    let now = Instant::now();
+    let address = match &opts.address {
+        Some(address) => String::from(address),
+        _ => {
+            return HttpResponse::BadRequest().json(GenericResponse {
+                status: "bad_request".to_string(),
+                message: "Did not receive address as a query parameter".to_string(),
+            });
+        }
+    };
+    let locked = &data.lock();
+    let all_trade_history = match locked {
+        Ok(app_data) => &app_data.trade_history,
+        _ => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "server_error".to_string(),
+                message: "Failed to read AppState".to_string(),
+            });
+        }
+    };
+
+    let mut address_specific_trade_history: Vec<&TradeHistory> = vec![];
+
+    for history in all_trade_history {
+        if history.caller == address {
+            address_specific_trade_history.push(history);
+        }
+    }
+
+    println!(
+        "Executed \"trade-history\" in {}ms",
+        now.elapsed().as_millis()
+    );
+
+    HttpResponse::Ok().json(TradeHistoryResponse {
+        status: "success".to_string(),
+        data: address_specific_trade_history,
+    })
 }
 
 pub fn config(conf: &mut web::ServiceConfig) {
-    let scope = web::scope("api").service(all_non_expired_handler);
+    let scope = web::scope("").service(liveness_probe_handler).service(
+        web::scope("api")
+            .service(all_non_expired_handler)
+            .service(trade_history_handler),
+    );
 
     conf.service(scope);
 }

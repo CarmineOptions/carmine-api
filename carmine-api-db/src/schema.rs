@@ -1,8 +1,7 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    events (id) {
-        id -> Int4,
+    events (transaction_hash) {
         block_hash -> Text,
         block_number -> Int8,
         transaction_hash -> Text,
@@ -11,15 +10,14 @@ diesel::table! {
         timestamp -> Int8,
         action -> Text,
         caller -> Text,
-        option_token -> Text,
+        option_address -> Text,
         capital_transfered -> Text,
         option_tokens_minted -> Text,
     }
 }
 
 diesel::table! {
-    options (id) {
-        id -> Int4,
+    options (option_address) {
         option_side -> Int2,
         maturity -> Int8,
         strike_price -> Text,
@@ -30,7 +28,6 @@ diesel::table! {
     }
 }
 
-diesel::allow_tables_to_appear_in_same_query!(
-    events,
-    options,
-);
+diesel::joinable!(events -> options (option_address));
+
+diesel::allow_tables_to_appear_in_same_query!(events, options,);

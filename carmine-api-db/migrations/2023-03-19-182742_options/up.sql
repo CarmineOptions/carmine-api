@@ -7,6 +7,5 @@ CREATE TABLE options (
     base_token_address      Text NOT NULL,
     option_type             SmallInt NOT NULL,
     option_address          Text NOT NULL,
-    CONSTRAINT options_pkey PRIMARY KEY (id),
-    UNIQUE(option_address)
-)
+    PRIMARY KEY (option_address)
+);

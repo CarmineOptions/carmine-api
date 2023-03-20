@@ -1,24 +1,15 @@
 mod handlers;
-mod response;
+mod types;
 
 use actix_cors::Cors;
 use actix_web::middleware::Logger;
 use actix_web::web::Data;
 use actix_web::{http::header, App, HttpServer};
+use carmine_api_db::get_trade_history;
 use carmine_api_starknet;
-use serde::Deserialize;
 use std::sync::{Arc, Mutex};
 use tokio::time::{sleep, Duration};
-
-pub struct AppState {
-    pub all_non_expired: Vec<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct QueryOptions {
-    pub page: Option<usize>,
-    pub limit: Option<usize>,
-}
+use types::AppState;
 
 const REFETCH_DELAY_SECONDS: u64 = 300;
 
@@ -33,6 +24,7 @@ async fn main() -> std::io::Result<()> {
 
     let app_data = Data::new(Arc::new(Mutex::new(AppState {
         all_non_expired: carmine.get_all_non_expired_options_with_premia().await,
+        trade_history: get_trade_history(),
     })));
 
     let app_data1 = app_data.clone();
@@ -41,10 +33,12 @@ async fn main() -> std::io::Result<()> {
         loop {
             sleep(Duration::from_secs(REFETCH_DELAY_SECONDS)).await;
             println!("Refetching the data");
-            let fetched_all_non_expired = carmine.get_all_non_expired_options_with_premia().await;
+            let all_non_expired = carmine.get_all_non_expired_options_with_premia().await;
+            let trade_history = get_trade_history();
             let mut app_data = app_data1.lock().unwrap();
             *app_data = AppState {
-                all_non_expired: fetched_all_non_expired,
+                all_non_expired,
+                trade_history,
             };
             println!("Data updated");
         }

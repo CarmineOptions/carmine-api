@@ -104,7 +104,7 @@ pub fn parse_event(event: StarkScanEvent) -> Option<NewEvent> {
         timestamp: event.timestamp,
         action: action,
         caller: String::from(&event.data[0]),
-        option_token: String::from(&event.data[1]),
+        option_address: String::from(&event.data[1]),
         capital_transfered: String::from(&event.data[2]),
         option_tokens_minted: String::from(&event.data[4]),
     })

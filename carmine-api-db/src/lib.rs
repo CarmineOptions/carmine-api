@@ -4,9 +4,10 @@ mod schema;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use dotenvy::dotenv;
+use models::IOption;
 use std::env;
 
-use crate::models::Event;
+use crate::models::{Event, TradeHistory};
 
 const BATCH_SIZE: usize = 100;
 
@@ -79,25 +80,69 @@ pub fn get_option_addresses_from_events() -> Vec<String> {
 
     let connection = &mut establish_connection();
     events
-        .select(option_token)
+        .select(option_address)
         .distinct()
         .load::<String>(connection)
         .expect("Error loading posts")
 }
 
-pub fn show_events() {
+pub fn get_events() -> Vec<Event> {
     use crate::schema::events::dsl::*;
 
     let connection = &mut establish_connection();
-    let results = events
+    events
         .load::<Event>(connection)
-        .expect("Error loading posts");
+        .expect("Error loading events")
+}
 
-    println!("Displaying {} posts", results.len());
-    for event in results {
-        println!("-----------");
-        println!("{}", event.action);
-        println!("{}", event.timestamp);
-        println!("{}", event.caller);
-    }
+pub fn get_events_by_caller_address(address: &str) -> Vec<Event> {
+    use crate::schema::events::dsl::*;
+
+    let connection = &mut establish_connection();
+    events
+        .filter(caller.eq(address))
+        .load::<Event>(connection)
+        .expect("Error loading events by caller address")
+}
+
+pub fn get_options() -> Vec<IOption> {
+    use crate::schema::options::dsl::*;
+
+    let connection = &mut establish_connection();
+    options
+        .load::<IOption>(connection)
+        .expect("Error loading options")
+}
+
+pub fn get_trade_history() -> Vec<TradeHistory> {
+    use crate::schema::events;
+    use crate::schema::options;
+    let connection = &mut establish_connection();
+
+    let events_with_option: Vec<(IOption, Event)> = options::table
+        .inner_join(events::table)
+        .select((IOption::as_select(), Event::as_select()))
+        .load::<(IOption, Event)>(connection)
+        .expect("Failed to get options - events inner join");
+
+    let mut trade_history_list: Vec<TradeHistory> = events_with_option
+        .into_iter()
+        .map(|(o, e)| TradeHistory {
+            timestamp: e.timestamp,
+            action: e.action,
+            caller: e.caller,
+            capital_transfered: e.capital_transfered,
+            option_tokens_minted: e.option_tokens_minted,
+            option_side: o.option_side,
+            maturity: o.maturity,
+            strike_price: o.strike_price,
+            quote_token_address: o.quote_token_address,
+            base_token_address: o.base_token_address,
+            option_type: o.option_type,
+        })
+        .collect();
+
+    trade_history_list.sort_by_key(|v| v.timestamp);
+
+    trade_history_list
 }

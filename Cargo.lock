@@ -466,6 +466,7 @@ version = "0.1.0"
 dependencies = [
  "actix-cors",
  "actix-web",
+ "carmine-api-db",
  "carmine-api-starknet",
  "env_logger",
  "serde",
@@ -478,6 +479,7 @@ version = "0.1.0"
 dependencies = [
  "diesel",
  "dotenvy",
+ "serde",
 ]
 
 [[package]]

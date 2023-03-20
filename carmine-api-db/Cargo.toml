@@ -8,7 +8,8 @@ edition = "2021"
 [dependencies]
 diesel = { version = "2.0.0", features = ["postgres"] }
 dotenvy = "0.15.6"
+serde = { version = "1.0.156", features = ["derive"] }
 
 [[bin]]
-name = "show_events"
-path = "bin/show_events.rs"
+name = "populate_trade_history"
+path = "bin/populate_trade_history.rs"
