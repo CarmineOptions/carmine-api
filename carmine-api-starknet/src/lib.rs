@@ -3,13 +3,14 @@ mod starkscan;
 use carmine_api_db::models::{NewEvent, NewIOption};
 use futures::future::join_all;
 use starknet::core::types::{CallContractResult, CallFunction, FieldElement};
-use starknet::macros::{felt, selector};
+use starknet::macros::selector;
 use starknet::{
     self,
     core::types::BlockId,
     providers::{Provider, SequencerGatewayProvider},
 };
-use std::time::{Duration, SystemTime};
+use starkscan::StarkScanEvent;
+use std::time::Duration;
 use tokio::time::sleep;
 
 use crate::starkscan::parse_event;
@@ -24,16 +25,6 @@ fn format_call_contract_result(res: CallContractResult) -> Vec<String> {
     }
 
     arr
-}
-
-fn lp_address_to_call_function(lp_address: &str) -> CallFunction {
-    CallFunction {
-        contract_address: felt!(
-            "0x042a7d485171a01b8c38b6b37e0092f0f096e9d3f945c50c77799171916f5a54"
-        ),
-        entry_point_selector: selector!("get_all_non_expired_options_with_premia"),
-        calldata: vec![FieldElement::from_hex_be(lp_address).unwrap()],
-    }
 }
 
 pub struct Carmine {
@@ -56,16 +47,21 @@ impl Carmine {
     }
 
     pub async fn get_all_non_expired_options_with_premia(&self) -> Vec<String> {
+        let entrypoint = selector!("get_all_non_expired_options_with_premia");
         let call = self.provider.call_contract(
-            lp_address_to_call_function(
-                "0x03b176f8e5b4c9227b660e49e97f2d9d1756f96e5878420ad4accd301dd0cc17",
-            ),
+            CallFunction {
+                contract_address: FieldElement::from_hex_be(Carmine::CONTRACT_ADDRESS).unwrap(),
+                entry_point_selector: entrypoint,
+                calldata: vec![FieldElement::from_hex_be(Carmine::CALL_LP_ADDRESS).unwrap()],
+            },
             BlockId::Latest,
         );
         let put = self.provider.call_contract(
-            lp_address_to_call_function(
-                "0x0030fe5d12635ed696483a824eca301392b3f529e06133b42784750503a24972",
-            ),
+            CallFunction {
+                contract_address: FieldElement::from_hex_be(Carmine::CONTRACT_ADDRESS).unwrap(),
+                entry_point_selector: entrypoint,
+                calldata: vec![FieldElement::from_hex_be(Carmine::PUT_LP_ADDRESS).unwrap()],
+            },
             BlockId::Latest,
         );
 
@@ -79,9 +75,6 @@ impl Carmine {
                 fetched_data.append(&mut formatted);
             }
         }
-
-        println!("Fetched Vec length {}", fetched_data.len());
-
         fetched_data
     }
 
@@ -148,69 +141,147 @@ impl Carmine {
         Err("Failed to find option with given address")
     }
 
-    pub async fn get_latest_block_id(&self) -> Option<u64> {
-        let get_block_result = self.provider.get_block(BlockId::Latest).await;
-        let block = match get_block_result {
-            Ok(block) => block,
-            Err(error) => panic!("Failed getting block {:?}", error),
-        };
+    pub async fn get_option_token_address(
+        &self,
+        lptoken_address: &str,
+        option_side: FieldElement,
+        maturity: FieldElement,
+        strike_price: FieldElement,
+    ) -> Result<String, &str> {
+        let entrypoint = selector!("get_option_token_address");
+        let contract_result = self
+            .provider
+            .call_contract(
+                CallFunction {
+                    contract_address: FieldElement::from_hex_be(Carmine::CONTRACT_ADDRESS).unwrap(),
+                    entry_point_selector: entrypoint,
+                    calldata: vec![
+                        FieldElement::from_hex_be(lptoken_address).unwrap(),
+                        option_side,
+                        maturity,
+                        strike_price,
+                    ],
+                },
+                BlockId::Latest,
+            )
+            .await;
 
-        block.block_number
+        match contract_result {
+            Ok(v) => {
+                let data = v.result[0];
+                let address = format!("{:#x}", data);
+                return Ok(address);
+            }
+            Err(e) => {
+                println!("Failed \"get_option_token_address\" \n{}", e);
+                return Err("Failed \"get_option_token_address\"");
+            }
+        }
     }
 
-    pub async fn get_block(&self) {
-        let get_block_result = self.provider.get_block(BlockId::Latest).await;
+    async fn get_options_with_addresses_from_single_pool(
+        &self,
+        pool_address: &str,
+    ) -> Result<Vec<NewIOption>, &str> {
+        let entrypoint = selector!("get_all_options");
+        let contract_result = self
+            .provider
+            .call_contract(
+                CallFunction {
+                    contract_address: FieldElement::from_hex_be(Carmine::CONTRACT_ADDRESS).unwrap(),
+                    entry_point_selector: entrypoint,
+                    calldata: vec![FieldElement::from_hex_be(pool_address).unwrap()],
+                },
+                BlockId::Latest,
+            )
+            .await;
 
-        let block = match get_block_result {
-            Ok(block) => block,
-            Err(error) => panic!("Failed getting block {:?}", error),
+        let data: Vec<FieldElement> = match contract_result {
+            Err(provider_error) => {
+                println!("{:?}", provider_error);
+                return Err("Failed calling endpoint \"get_all_options\"");
+            }
+            Ok(v) => {
+                let mut res = v.result;
+                // first element is length of result array - remove it
+                res.remove(0);
+
+                res
+            }
         };
 
-        println!(
-            "Received block with hash {}, timestamp {} blocknumber {}",
-            block.block_hash.unwrap(),
-            block.timestamp,
-            block.block_number.unwrap()
-        );
-    }
+        // each option has 6 fields
+        let chunks = data.chunks(6);
 
-    pub async fn get_blocks(&self) {
-        let latest_block_id = self.get_latest_block_id().await.unwrap();
+        let mut options: Vec<NewIOption> = vec![];
 
-        let now = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
+        for option_vec in chunks {
+            if option_vec.len() != 6 {
+                println!("Wrong option_vec size!");
+                continue;
+            }
 
-        let target_timestamp = now - 60 * 60 * 4; // 4 hours from now
+            // avoid running into rate limit starknet error
+            sleep(Duration::from_secs(2)).await;
 
-        let mut i = latest_block_id;
+            let option_address_result = self
+                .get_option_token_address(pool_address, option_vec[0], option_vec[1], option_vec[2])
+                .await;
 
-        loop {
-            println!("Exploring block #{}", i);
-            let block_response = self.provider.get_block(BlockId::Number(i)).await;
-
-            let block = match block_response {
-                Ok(block) => block,
-                Err(err) => {
-                    println!("{:?}", err);
-                    panic!("Failed to get block");
+            let option_address = match option_address_result {
+                Err(e) => {
+                    println!("Failed to get option address\n{}", e);
+                    continue;
                 }
+                Ok(v) => v.to_lowercase(),
             };
 
-            i = i - 1;
+            let option_side = format!("{}", option_vec[0])
+                .parse::<i16>()
+                .expect("Failed to parse side");
+            let option_type = format!("{}", option_vec[5])
+                .parse::<i16>()
+                .expect("Failed to parse type");
+            let maturity = format!("{}", option_vec[1])
+                .parse::<i64>()
+                .expect("Failed to parse maturity");
+            let strike_price = format!("{:#x}", option_vec[2]);
+            let quote_token_address = format!("{:#x}", option_vec[3]);
+            let base_token_address = format!("{:#x}", option_vec[4]);
 
-            if block.timestamp < target_timestamp {
-                println!(
-                    "Block #{} is older than the target, there is total of {} blocks in this window",
-                    i,
-                    latest_block_id - i
-                );
-                break;
+            let option = NewIOption {
+                option_side,
+                maturity,
+                strike_price,
+                quote_token_address,
+                base_token_address,
+                option_type,
+                option_address,
+            };
+
+            options.push(option);
+        }
+
+        Ok(options)
+    }
+
+    /// This method returns all options, addresses included.
+    /// !This method is extremely slow, because it waits 2s between
+    /// Starknet calls to avoid running into "rate limit" error!
+    pub async fn get_options_with_addresses(&self) -> Vec<NewIOption> {
+        let call = self.get_options_with_addresses_from_single_pool(Carmine::CALL_LP_ADDRESS);
+        let put = self.get_options_with_addresses_from_single_pool(Carmine::PUT_LP_ADDRESS);
+        let contract_results = join_all(vec![call, put]).await;
+
+        let mut options: Vec<NewIOption> = vec![];
+
+        for result in contract_results {
+            if let Ok(mut v) = result {
+                options.append(&mut v);
             }
         }
 
-        println!("Done!");
+        options
     }
 }
 
@@ -222,9 +293,6 @@ pub async fn get_events_from_starkscan() -> Vec<NewEvent> {
     let cutoff_timestamp = 1672531200; // TODO: change to the one above
 
     let mut current_url = String::from("https://api-testnet.starkscan.co/api/v0/events?from_address=0x042a7d485171a01b8c38b6b37e0092f0f096e9d3f945c50c77799171916f5a54");
-    let mut counter = 1;
-
-    println!("Fetching events...");
 
     'data: loop {
         let res = starkscan::api_call(&current_url).await;
@@ -243,19 +311,73 @@ pub async fn get_events_from_starkscan() -> Vec<NewEvent> {
         }
 
         if let Some(next_url) = res.next_url {
-            println!("curl #{}, fetching next_url", counter);
-            println!("Current events list {}", events.len());
             current_url = next_url;
         } else {
-            println!("curl #{}, no next_url - we are done", counter);
             break 'data;
         }
-
-        counter = counter + 1;
-
         // do not exceed API usage limit (3 rps)
         sleep(Duration::from_millis(340)).await;
     }
 
     events
+}
+
+pub async fn get_new_events_from_starkscan() -> Vec<NewEvent> {
+    // collection of TXs already in the DB
+    let stored_txs: Vec<String> = carmine_api_db::get_events()
+        .into_iter()
+        .map(|e| e.transaction_hash)
+        .collect();
+    let mut new_events: Vec<NewEvent> = Vec::new();
+
+    // Date and time (GMT): Sunday 1. January 2023 0:00:00
+    // 1672531200 timestamp in seconds
+    let cutoff_timestamp = 1672531200; // TODO: change to the one above
+
+    let mut current_url = String::from("https://api-testnet.starkscan.co/api/v0/events?from_address=0x042a7d485171a01b8c38b6b37e0092f0f096e9d3f945c50c77799171916f5a54");
+
+    'data: loop {
+        let res = starkscan::api_call(&current_url).await;
+
+        let fetched_len = res.data.len();
+
+        let filtered_events: Vec<StarkScanEvent> = res
+            .data
+            .into_iter()
+            .filter(|strakscan_event| !stored_txs.contains(&strakscan_event.transaction_hash))
+            .collect();
+
+        let filtered_len = filtered_events.len();
+
+        for event in filtered_events {
+            // only check events up to this timestamp
+            // every next event is just as old or older
+            // therefore it is safe to break top loop
+            if event.timestamp < cutoff_timestamp {
+                println!("Cutoff timestamp reached");
+                break 'data;
+            }
+
+            if let Some(parsed_event) = parse_event(event) {
+                new_events.push(parsed_event);
+            }
+        }
+
+        if fetched_len != filtered_len {
+            // reached TXs already stored in the DB - stop fetching
+            break 'data;
+        }
+
+        if let Some(next_url) = res.next_url {
+            current_url = next_url;
+        } else {
+            break 'data;
+        }
+        // do not exceed API usage limit (3 rps)
+        sleep(Duration::from_millis(340)).await;
+    }
+
+    println!("Fetched {} previously not stored events", new_events.len());
+
+    new_events
 }

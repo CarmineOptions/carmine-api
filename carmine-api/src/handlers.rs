@@ -4,6 +4,13 @@ use carmine_api_db::models::TradeHistory;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
+fn format_tx(tx: &String) -> String {
+    let tmp: String = tx.to_lowercase().chars().skip(2).collect();
+    let without_leading_zeroes = tmp.trim_start_matches('0');
+    let res = format!("0x{}", without_leading_zeroes);
+    res
+}
+
 #[get("liveness")]
 async fn liveness_probe_handler() -> impl Responder {
     const MESSAGE: &str = "API is alive";
@@ -44,7 +51,7 @@ pub async fn trade_history_handler(
 ) -> impl Responder {
     let now = Instant::now();
     let address = match &opts.address {
-        Some(address) => String::from(address),
+        Some(address) => format_tx(address),
         _ => {
             return HttpResponse::BadRequest().json(GenericResponse {
                 status: "bad_request".to_string(),

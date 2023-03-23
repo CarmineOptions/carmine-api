@@ -114,6 +114,16 @@ pub fn get_options() -> Vec<IOption> {
         .expect("Error loading options")
 }
 
+pub fn get_option_addresses_from_options() -> Vec<String> {
+    use crate::schema::options::dsl::*;
+
+    let connection = &mut establish_connection();
+    options
+        .select(option_address)
+        .load::<String>(connection)
+        .expect("Error loading addresses from options")
+}
+
 pub fn get_trade_history() -> Vec<TradeHistory> {
     use crate::schema::events;
     use crate::schema::options;
