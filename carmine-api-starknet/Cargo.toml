@@ -14,19 +14,6 @@ serde = { version = "1.0.156", features = ["derive"] }
 starknet = { git = "https://github.com/xJonathanLEI/starknet-rs" }
 tokio = { version = "1.26.0", features = ["macros", "rt-multi-thread"] }
 
-
-[[bin]]
-name = "populate_events"
-path = "bin/populate_events.rs"
-
-[[bin]]
-name = "get_option"
-path = "bin/get_option.rs"
-
-[[bin]]
-name = "get_trade_history"
-path = "bin/get_trade_history.rs"
-
 [[bin]]
 name = "populate_db"
 path = "bin/populate_db.rs"

@@ -9,7 +9,3 @@ edition = "2021"
 diesel = { version = "2.0.0", features = ["postgres"] }
 dotenvy = "0.15.6"
 serde = { version = "1.0.156", features = ["derive"] }
-
-[[bin]]
-name = "populate_trade_history"
-path = "bin/populate_trade_history.rs"
