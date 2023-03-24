@@ -1,6 +1,6 @@
 mod starkscan;
 
-use carmine_api_db::models::{NewEvent, NewIOption};
+use carmine_api_core::{Event, IOption};
 use futures::future::join_all;
 use starknet::core::types::{CallContractResult, CallFunction, FieldElement};
 use starknet::macros::selector;
@@ -81,7 +81,7 @@ impl Carmine {
     pub async fn get_option_info_from_addresses(
         &self,
         option_address: &str,
-    ) -> Result<NewIOption, &str> {
+    ) -> Result<IOption, &str> {
         let entrypoint = selector!("get_option_info_from_addresses");
         let call = self.provider.call_contract(
             CallFunction {
@@ -126,7 +126,7 @@ impl Carmine {
                 let quote_token_address = format!("{:#x}", data[3]);
                 let base_token_address = format!("{:#x}", data[4]);
 
-                return Ok(NewIOption {
+                return Ok(IOption {
                     option_side,
                     option_type,
                     strike_price,
@@ -182,7 +182,7 @@ impl Carmine {
     async fn get_options_with_addresses_from_single_pool(
         &self,
         pool_address: &str,
-    ) -> Result<Vec<NewIOption>, &str> {
+    ) -> Result<Vec<IOption>, &str> {
         let entrypoint = selector!("get_all_options");
         let contract_result = self
             .provider
@@ -213,7 +213,7 @@ impl Carmine {
         // each option has 6 fields
         let chunks = data.chunks(6);
 
-        let mut options: Vec<NewIOption> = vec![];
+        let mut options: Vec<IOption> = vec![];
 
         for option_vec in chunks {
             if option_vec.len() != 6 {
@@ -249,7 +249,7 @@ impl Carmine {
             let quote_token_address = format!("{:#x}", option_vec[3]);
             let base_token_address = format!("{:#x}", option_vec[4]);
 
-            let option = NewIOption {
+            let option = IOption {
                 option_side,
                 maturity,
                 strike_price,
@@ -268,12 +268,12 @@ impl Carmine {
     /// This method returns all options, addresses included.
     /// !This method is extremely slow, because it waits 2s between
     /// Starknet calls to avoid running into "rate limit" error!
-    pub async fn get_options_with_addresses(&self) -> Vec<NewIOption> {
+    pub async fn get_options_with_addresses(&self) -> Vec<IOption> {
         let call = self.get_options_with_addresses_from_single_pool(Carmine::CALL_LP_ADDRESS);
         let put = self.get_options_with_addresses_from_single_pool(Carmine::PUT_LP_ADDRESS);
         let contract_results = join_all(vec![call, put]).await;
 
-        let mut options: Vec<NewIOption> = vec![];
+        let mut options: Vec<IOption> = vec![];
 
         for result in contract_results {
             if let Ok(mut v) = result {
@@ -285,8 +285,8 @@ impl Carmine {
     }
 }
 
-pub async fn get_events_from_starkscan() -> Vec<NewEvent> {
-    let mut events: Vec<NewEvent> = Vec::new();
+pub async fn get_events_from_starkscan() -> Vec<Event> {
+    let mut events: Vec<Event> = Vec::new();
 
     // Date and time (GMT): Sunday 1. January 2023 0:00:00
     // 1672531200 timestamp in seconds
@@ -322,13 +322,13 @@ pub async fn get_events_from_starkscan() -> Vec<NewEvent> {
     events
 }
 
-pub async fn get_new_events_from_starkscan() -> Vec<NewEvent> {
-    // collection of TXs already in the DB
-    let stored_txs: Vec<String> = carmine_api_db::get_events()
+pub async fn get_new_events_from_starkscan(stored_events: &Vec<Event>) -> Vec<Event> {
+    // collection of already stored TXs
+    let stored_txs: Vec<String> = stored_events
         .into_iter()
-        .map(|e| e.transaction_hash)
+        .map(|e| String::from(&e.transaction_hash))
         .collect();
-    let mut new_events: Vec<NewEvent> = Vec::new();
+    let mut new_events: Vec<Event> = Vec::new();
 
     // Date and time (GMT): Sunday 1. January 2023 0:00:00
     // 1672531200 timestamp in seconds

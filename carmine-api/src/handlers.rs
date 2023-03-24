@@ -1,6 +1,6 @@
 use crate::types::{AllNonExpired, AppState, GenericResponse, QueryOptions, TradeHistoryResponse};
 use actix_web::{get, web, HttpResponse, Responder};
-use carmine_api_db::models::TradeHistory;
+use carmine_api_core::TradeHistory;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 

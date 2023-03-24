@@ -1,16 +1,11 @@
 [package]
-name = "carmine-api"
+name = "carmine-api-cache"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-actix-cors = "0.6.4"
-actix-web = "4.3.1"
-carmine-api-starknet = { path = "../carmine-api-starknet" }
-carmine-api-cache = { path = "../carmine-api-cache" }
 carmine-api-core = { path = "../carmine-api-core" }
-env_logger = "0.10.0"
+carmine-api-starknet = { path = "../carmine-api-starknet" }
 serde = { version = "1.0.156", features = ["derive"] }
-tokio = "1.26.0"

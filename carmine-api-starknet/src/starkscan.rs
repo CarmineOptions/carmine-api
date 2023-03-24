@@ -1,6 +1,6 @@
 use std::env;
 
-use carmine_api_db::models::NewEvent;
+use carmine_api_core::Event;
 use dotenvy::dotenv;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -58,7 +58,7 @@ const ALLOWED_ACTIONS: [&'static str; 5] = [
     "WithdrawLiquidity",
 ];
 
-pub fn parse_event(event: StarkScanEvent) -> Option<NewEvent> {
+pub fn parse_event(event: StarkScanEvent) -> Option<Event> {
     // if "key_name" is null or not allowed action (eg "ExpireOptionTokenForPool")
     // we can't handle the event so we don't store it
     let action = match event.key_name {
@@ -95,7 +95,7 @@ pub fn parse_event(event: StarkScanEvent) -> Option<NewEvent> {
         return None;
     }
 
-    Some(NewEvent {
+    Some(Event {
         block_hash: block_hash,
         block_number: block_number,
         transaction_hash: event.transaction_hash,

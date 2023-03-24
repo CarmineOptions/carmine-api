@@ -1,15 +1,9 @@
 [package]
-name = "carmine-api-db"
+name = "carmine-api-core"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-diesel = { version = "2.0.0", features = ["postgres"] }
-dotenvy = "0.15.6"
 serde = { version = "1.0.156", features = ["derive"] }
-
-[[bin]]
-name = "populate_trade_history"
-path = "bin/populate_trade_history.rs"

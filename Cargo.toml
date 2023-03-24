@@ -1,3 +1,9 @@
 [workspace]
 
-members = ["carmine-api", "carmine-api-db", "carmine-api-starknet"]
+members = [
+    "carmine-api",
+    "carmine-api-cache",
+    "carmine-api-core",
+    # "carmine-api-db",
+    "carmine-api-starknet",
+]

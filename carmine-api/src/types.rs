@@ -1,4 +1,4 @@
-use carmine_api_db::models::{Event, TradeHistory};
+use carmine_api_core::{Event, TradeHistory};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize)]
