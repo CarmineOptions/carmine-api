@@ -281,6 +281,8 @@ impl Carmine {
             }
         }
 
+        println!("Got options from Starknet");
+
         options
     }
 }
@@ -290,18 +292,33 @@ pub async fn get_events_from_starkscan() -> Vec<Event> {
 
     // Date and time (GMT): Sunday 1. January 2023 0:00:00
     // 1672531200 timestamp in seconds
-    let cutoff_timestamp = 1672531200; // TODO: change to the one above
+    // TODO: in development, use timestamp few hours ago
+    // to avoid "Limit Exceeded", but change back to static
+    // timestamp in prod
+    // let cutoff_timestamp = 1672527600;
+    let cutoff_timestamp = 1679148119; // week ago at the time of change
 
     let mut current_url = String::from("https://api-testnet.starkscan.co/api/v0/events?from_address=0x042a7d485171a01b8c38b6b37e0092f0f096e9d3f945c50c77799171916f5a54");
 
+    let mut count = 0;
+
     'data: loop {
-        let res = starkscan::api_call(&current_url).await;
-        for event in res.data {
+        let res = match starkscan::api_call(&current_url).await {
+            Ok(v) => v,
+            Err(_) => {
+                break 'data;
+            }
+        };
+
+        count = count + 1;
+
+        let data = res.data;
+
+        for event in data {
             // only check events up to this timestamp
             // every next event is just as old or older
             // therefore it is safe to break top loop
             if event.timestamp < cutoff_timestamp {
-                println!("Cutoff timestamp reached");
                 break 'data;
             }
 
@@ -319,9 +336,12 @@ pub async fn get_events_from_starkscan() -> Vec<Event> {
         sleep(Duration::from_millis(340)).await;
     }
 
+    println!("Got events from Starkscan with {} requests", count);
+
     events
 }
 
+// TODO: abstract to remove code duplicity
 pub async fn get_new_events_from_starkscan(stored_events: &Vec<Event>) -> Vec<Event> {
     // collection of already stored TXs
     let stored_txs: Vec<String> = stored_events
@@ -332,17 +352,26 @@ pub async fn get_new_events_from_starkscan(stored_events: &Vec<Event>) -> Vec<Ev
 
     // Date and time (GMT): Sunday 1. January 2023 0:00:00
     // 1672531200 timestamp in seconds
-    let cutoff_timestamp = 1672531200; // TODO: change to the one above
+    // let cutoff_timestamp = 1672527600;
+    let cutoff_timestamp = 1679148119; // week ago at the time of change
 
+    let mut count = 0;
     let mut current_url = String::from("https://api-testnet.starkscan.co/api/v0/events?from_address=0x042a7d485171a01b8c38b6b37e0092f0f096e9d3f945c50c77799171916f5a54");
 
     'data: loop {
-        let res = starkscan::api_call(&current_url).await;
+        let res = match starkscan::api_call(&current_url).await {
+            Ok(v) => v,
+            Err(_) => {
+                break 'data;
+            }
+        };
+        count = count + 1;
 
-        let fetched_len = res.data.len();
+        let data = res.data;
 
-        let filtered_events: Vec<StarkScanEvent> = res
-            .data
+        let fetched_len = data.len();
+
+        let filtered_events: Vec<StarkScanEvent> = data
             .into_iter()
             .filter(|strakscan_event| !stored_txs.contains(&strakscan_event.transaction_hash))
             .collect();
@@ -377,7 +406,11 @@ pub async fn get_new_events_from_starkscan(stored_events: &Vec<Event>) -> Vec<Ev
         sleep(Duration::from_millis(340)).await;
     }
 
-    println!("Fetched {} previously not stored events", new_events.len());
+    println!(
+        "Fetched {} previously not stored events with {} requests",
+        new_events.len(),
+        count
+    );
 
     new_events
 }

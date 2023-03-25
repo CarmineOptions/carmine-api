@@ -2,7 +2,7 @@ use std::env;
 
 use carmine_api_core::Event;
 use dotenvy::dotenv;
-use reqwest::Client;
+use reqwest::{Client, Error};
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -24,7 +24,7 @@ pub struct StarkScanEvent {
     pub key_name: Option<String>,
 }
 
-pub async fn api_call(url: &str) -> StarkScanEventResult {
+pub async fn api_call(url: &str) -> Result<StarkScanEventResult, Error> {
     dotenv().ok();
 
     let api_key = env::var("STARKSCAN_API_KEY").expect("Failed to read API key");
@@ -38,15 +38,7 @@ pub async fn api_call(url: &str) -> StarkScanEventResult {
 
     let parsed_result = res.json::<StarkScanEventResult>().await;
 
-    match parsed_result {
-        Ok(result) => {
-            return result;
-        }
-        Err(error) => {
-            println!("{}", error);
-            panic!("Failed to parse StarkScan response");
-        }
-    }
+    parsed_result
 }
 
 // list of action names that will be stored
@@ -63,12 +55,7 @@ pub fn parse_event(event: StarkScanEvent) -> Option<Event> {
     // we can't handle the event so we don't store it
     let action = match event.key_name {
         Some(action) if ALLOWED_ACTIONS.iter().any(|&v| v == action) => action,
-        Some(action) => {
-            println!("disallowed action \"{}\"", action);
-            return None;
-        }
         _ => {
-            println!("key_name is null");
             return None;
         }
     };

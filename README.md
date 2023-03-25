@@ -10,9 +10,13 @@ The workspace consists of three crates:
 
 Server using [Actix](https://actix.rs/) with handlers.
 
-#### carmine-api-db
+#### carmine-api-cache
 
-PostgreSQL build with [Diesel](https://diesel.rs/).
+Struct holding all the data and methods to update them.
+
+#### carmine-api-core
+
+Types used by all crates.
 
 #### carmine-api-starknet
 

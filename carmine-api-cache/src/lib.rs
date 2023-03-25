@@ -7,8 +7,8 @@ pub struct Cache {
     carmine: Carmine,
     events: Vec<Event>,
     options: HashMap<String, IOption>,
-    pub all_non_expired: Vec<String>,
-    pub trade_history: Vec<TradeHistory>,
+    all_non_expired: Vec<String>,
+    trade_history: Vec<TradeHistory>,
 }
 
 impl Cache {
@@ -32,6 +32,40 @@ impl Cache {
         cache.trade_history = trade_history;
 
         cache
+    }
+
+    pub fn get_all_non_expired(&self) -> Vec<String> {
+        let mut arr: Vec<String> = Vec::new();
+
+        for v in &self.all_non_expired {
+            arr.push(String::from(v));
+        }
+
+        arr
+    }
+
+    pub fn get_trade_history(&self) -> Vec<TradeHistory> {
+        let mut arr: Vec<TradeHistory> = Vec::new();
+
+        for v in &self.trade_history {
+            let copy = TradeHistory {
+                timestamp: v.timestamp,
+                action: String::from(&v.action),
+                caller: String::from(&v.caller),
+                capital_transfered: String::from(&v.capital_transfered),
+                option_tokens_minted: String::from(&v.option_tokens_minted),
+                option_side: v.option_side,
+                maturity: v.maturity,
+                strike_price: String::from(&v.strike_price),
+                quote_token_address: String::from(&v.quote_token_address),
+                base_token_address: String::from(&v.base_token_address),
+                option_type: v.option_type,
+            };
+
+            arr.push(copy);
+        }
+
+        arr
     }
 
     fn options_vec_to_hashmap(vec: Vec<IOption>) -> HashMap<String, IOption> {
@@ -77,19 +111,33 @@ impl Cache {
         arr
     }
 
-    pub async fn update(&mut self) {
-        // update options
+    pub async fn update_options(&mut self) {
         let options_vec = self.carmine.get_options_with_addresses().await;
         self.options = Cache::options_vec_to_hashmap(options_vec);
+    }
 
-        // update events
+    pub async fn update_events(&mut self) {
         let new_events = get_new_events_from_starkscan(&self.events).await;
-        self.events = new_events;
+        let mut unique_new_events = new_events
+            .into_iter()
+            .filter(|e| !self.events.contains(e))
+            .collect();
+        self.events.append(&mut unique_new_events);
+    }
 
-        // update trade_history
-        self.trade_history = Cache::generate_trade_history(&self);
-
-        // update all_non_expired
+    pub async fn update_all_non_expired(&mut self) {
         self.all_non_expired = self.carmine.get_all_non_expired_options_with_premia().await;
+    }
+
+    pub fn update_trade_history(&mut self) {
+        self.trade_history = Cache::generate_trade_history(&self);
+    }
+
+    pub async fn update(&mut self) {
+        self.update_options().await;
+        self.update_events().await;
+        self.update_all_non_expired().await;
+        // update_trade_history is synchronous
+        self.update_trade_history();
     }
 }

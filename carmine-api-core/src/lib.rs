@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, PartialEq)]
 pub struct Event {
     pub block_hash: String,
     pub block_number: i64,
@@ -26,7 +26,7 @@ pub struct IOption {
     pub option_address: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct TradeHistory {
     pub timestamp: i64,
     pub action: String,

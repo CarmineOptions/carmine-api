@@ -1,8 +1,10 @@
-use crate::types::{AllNonExpired, AppState, GenericResponse, QueryOptions, TradeHistoryResponse};
-use actix_web::{get, web, HttpResponse, Responder};
+use crate::types::{
+    AllNonExpired, AllTradeHistoryResponse, AppState, GenericResponse, QueryOptions,
+    TradeHistoryResponse,
+};
+use actix_web::{get, http::header::ContentType, web, HttpResponse, Responder};
 use carmine_api_core::TradeHistory;
 use std::sync::{Arc, Mutex};
-use std::time::Instant;
 
 fn format_tx(tx: &String) -> String {
     let tmp: String = tx.to_lowercase().chars().skip(2).collect();
@@ -11,15 +13,38 @@ fn format_tx(tx: &String) -> String {
     res
 }
 
+#[get("readiness")]
+async fn readiness_probe_handler(
+    _opts: web::Query<QueryOptions>,
+    data: web::Data<Arc<Mutex<AppState>>>,
+) -> impl Responder {
+    let locked = &data.lock();
+    let ready = match locked {
+        Ok(app_data) => &app_data.ready,
+        _ => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "server_error".to_string(),
+                message: "Failed to read AppState".to_string(),
+            });
+        }
+    };
+
+    if *ready {
+        return HttpResponse::Ok()
+            .content_type(ContentType::plaintext())
+            .body("API is ready");
+    }
+
+    HttpResponse::InternalServerError()
+        .content_type(ContentType::plaintext())
+        .body("API is not ready")
+}
+
 #[get("liveness")]
 async fn liveness_probe_handler() -> impl Responder {
-    const MESSAGE: &str = "API is alive";
-
-    let response_json = &GenericResponse {
-        status: "success".to_string(),
-        message: MESSAGE.to_string(),
-    };
-    HttpResponse::Ok().json(response_json)
+    HttpResponse::Ok()
+        .content_type(ContentType::plaintext())
+        .body("API is alive")
 }
 
 #[get("all-non-expired")]
@@ -49,7 +74,6 @@ pub async fn trade_history_handler(
     opts: web::Query<QueryOptions>,
     data: web::Data<Arc<Mutex<AppState>>>,
 ) -> impl Responder {
-    let now = Instant::now();
     let address = match &opts.address {
         Some(address) => format_tx(address),
         _ => {
@@ -78,23 +102,53 @@ pub async fn trade_history_handler(
         }
     }
 
-    println!(
-        "Executed \"trade-history\" in {}ms",
-        now.elapsed().as_millis()
-    );
-
     HttpResponse::Ok().json(TradeHistoryResponse {
         status: "success".to_string(),
         data: address_specific_trade_history,
     })
 }
 
+#[get("all-trade-history")]
+pub async fn all_trade_history_handler(
+    _opts: web::Query<QueryOptions>,
+    data: web::Data<Arc<Mutex<AppState>>>,
+) -> impl Responder {
+    let locked = &data.lock();
+    let res = match locked {
+        Ok(app_data) => &app_data.trade_history,
+        _ => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "server_error".to_string(),
+                message: "Failed to read AppState".to_string(),
+            });
+        }
+    };
+
+    let mut data: Vec<&TradeHistory> = vec![];
+
+    for history in res {
+        data.push(history);
+    }
+
+    let length = data.len();
+
+    HttpResponse::Ok().json(AllTradeHistoryResponse {
+        status: "success".to_string(),
+        data,
+        length,
+    })
+}
+
 pub fn config(conf: &mut web::ServiceConfig) {
-    let scope = web::scope("").service(liveness_probe_handler).service(
-        web::scope("api")
-            .service(all_non_expired_handler)
-            .service(trade_history_handler),
-    );
+    let scope = web::scope("")
+        .service(liveness_probe_handler)
+        .service(readiness_probe_handler)
+        .service(
+            web::scope("api")
+                .service(all_non_expired_handler)
+                .service(trade_history_handler)
+                .service(all_trade_history_handler),
+        );
 
     conf.service(scope);
 }
