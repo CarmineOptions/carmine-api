@@ -1,0 +1,9 @@
+version: '3.9'
+
+services:
+  api:
+    build: .
+    environment:
+      - STARKSCAN_API_KEY=your_api_key_goes_here
+    ports:
+      - 8000:8000

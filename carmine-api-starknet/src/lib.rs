@@ -15,6 +15,9 @@ use tokio::time::sleep;
 
 use crate::starkscan::parse_event;
 
+// 1. 3. 2023
+const CUTOFF_TIMESTAMP: i64 = 1677625200;
+
 fn format_call_contract_result(res: CallContractResult) -> Vec<String> {
     let mut arr: Vec<String> = vec![];
 
@@ -290,14 +293,6 @@ impl Carmine {
 pub async fn get_events_from_starkscan() -> Vec<Event> {
     let mut events: Vec<Event> = Vec::new();
 
-    // Date and time (GMT): Sunday 1. January 2023 0:00:00
-    // 1672531200 timestamp in seconds
-    // TODO: in development, use timestamp few hours ago
-    // to avoid "Limit Exceeded", but change back to static
-    // timestamp in prod
-    // let cutoff_timestamp = 1672527600;
-    let cutoff_timestamp = 1679148119; // week ago at the time of change
-
     let mut current_url = String::from("https://api-testnet.starkscan.co/api/v0/events?from_address=0x042a7d485171a01b8c38b6b37e0092f0f096e9d3f945c50c77799171916f5a54");
 
     let mut count = 0;
@@ -318,7 +313,7 @@ pub async fn get_events_from_starkscan() -> Vec<Event> {
             // only check events up to this timestamp
             // every next event is just as old or older
             // therefore it is safe to break top loop
-            if event.timestamp < cutoff_timestamp {
+            if event.timestamp < CUTOFF_TIMESTAMP {
                 break 'data;
             }
 
@@ -350,11 +345,6 @@ pub async fn get_new_events_from_starkscan(stored_events: &Vec<Event>) -> Vec<Ev
         .collect();
     let mut new_events: Vec<Event> = Vec::new();
 
-    // Date and time (GMT): Sunday 1. January 2023 0:00:00
-    // 1672531200 timestamp in seconds
-    // let cutoff_timestamp = 1672527600;
-    let cutoff_timestamp = 1679148119; // week ago at the time of change
-
     let mut count = 0;
     let mut current_url = String::from("https://api-testnet.starkscan.co/api/v0/events?from_address=0x042a7d485171a01b8c38b6b37e0092f0f096e9d3f945c50c77799171916f5a54");
 
@@ -382,7 +372,7 @@ pub async fn get_new_events_from_starkscan(stored_events: &Vec<Event>) -> Vec<Ev
             // only check events up to this timestamp
             // every next event is just as old or older
             // therefore it is safe to break top loop
-            if event.timestamp < cutoff_timestamp {
+            if event.timestamp < CUTOFF_TIMESTAMP {
                 println!("Cutoff timestamp reached");
                 break 'data;
             }

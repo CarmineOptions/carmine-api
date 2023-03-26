@@ -4,6 +4,5 @@ members = [
     "carmine-api",
     "carmine-api-cache",
     "carmine-api-core",
-    # "carmine-api-db",
     "carmine-api-starknet",
 ]

@@ -81,6 +81,7 @@ impl Cache {
 
     fn generate_trade_history(&self) -> Vec<TradeHistory> {
         let mut arr: Vec<TradeHistory> = Vec::new();
+        let allowed_methods = vec!["TradeOpen", "TradeClose", "TradeSettle"];
 
         for event in &self.events {
             let option = match self.options.get(&event.option_address) {
@@ -90,6 +91,14 @@ impl Cache {
                     continue;
                 }
             };
+
+            if !allowed_methods
+                .iter()
+                .any(|&action| action == &*event.action)
+            {
+                // not a trade event (deposit, upgrade or token expiration)
+                continue;
+            }
 
             let trade_history = TradeHistory {
                 timestamp: event.timestamp,
@@ -104,9 +113,10 @@ impl Cache {
                 base_token_address: String::from(&option.base_token_address),
                 option_type: option.option_type,
             };
-
             arr.push(trade_history);
         }
+        // sort by timestamp in ascending order
+        arr.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
 
         arr
     }

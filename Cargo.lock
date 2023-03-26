@@ -469,6 +469,7 @@ dependencies = [
  "carmine-api-cache",
  "carmine-api-core",
  "carmine-api-starknet",
+ "dotenvy",
  "env_logger",
  "serde",
  "tokio",
