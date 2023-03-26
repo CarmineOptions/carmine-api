@@ -17,6 +17,7 @@ use crate::starkscan::parse_event;
 
 // 1. 3. 2023
 const CUTOFF_TIMESTAMP: i64 = 1677625200;
+const STARKSCAN_REQUESTS_DELAY_IN_MS: u64 = 1000;
 
 fn format_call_contract_result(res: CallContractResult) -> Vec<String> {
     let mut arr: Vec<String> = vec![];
@@ -327,8 +328,7 @@ pub async fn get_events_from_starkscan() -> Vec<Event> {
         } else {
             break 'data;
         }
-        // do not exceed API usage limit (3 rps)
-        sleep(Duration::from_millis(340)).await;
+        sleep(Duration::from_millis(STARKSCAN_REQUESTS_DELAY_IN_MS)).await;
     }
 
     println!("Got events from Starkscan with {} requests", count);
@@ -392,8 +392,7 @@ pub async fn get_new_events_from_starkscan(stored_events: &Vec<Event>) -> Vec<Ev
         } else {
             break 'data;
         }
-        // do not exceed API usage limit (3 rps)
-        sleep(Duration::from_millis(340)).await;
+        sleep(Duration::from_millis(STARKSCAN_REQUESTS_DELAY_IN_MS)).await;
     }
 
     println!(
