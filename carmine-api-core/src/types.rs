@@ -15,7 +15,7 @@ pub struct Event {
     pub option_tokens_minted: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct IOption {
     pub option_side: i16,
     pub maturity: i64,
@@ -33,10 +33,5 @@ pub struct TradeHistory {
     pub caller: String,
     pub capital_transfered: String,
     pub option_tokens_minted: String,
-    pub option_side: i16,
-    pub maturity: i64,
-    pub strike_price: String,
-    pub quote_token_address: String,
-    pub base_token_address: String,
-    pub option_type: i16,
+    pub option: Option<IOption>,
 }
