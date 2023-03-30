@@ -48,18 +48,17 @@ impl Cache {
         let mut arr: Vec<TradeHistory> = Vec::new();
 
         for v in &self.trade_history {
+            let option = match &v.option {
+                Some(v) => Some(v.clone()),
+                None => None,
+            };
             let copy = TradeHistory {
                 timestamp: v.timestamp,
                 action: String::from(&v.action),
                 caller: String::from(&v.caller),
                 capital_transfered: String::from(&v.capital_transfered),
                 option_tokens_minted: String::from(&v.option_tokens_minted),
-                option_side: v.option_side,
-                maturity: v.maturity,
-                strike_price: String::from(&v.strike_price),
-                quote_token_address: String::from(&v.quote_token_address),
-                base_token_address: String::from(&v.base_token_address),
-                option_type: v.option_type,
+                option: option,
             };
 
             arr.push(copy);
@@ -81,15 +80,18 @@ impl Cache {
 
     fn generate_trade_history(&self) -> Vec<TradeHistory> {
         let mut arr: Vec<TradeHistory> = Vec::new();
-        let allowed_methods = vec!["TradeOpen", "TradeClose", "TradeSettle"];
+        let allowed_methods = vec![
+            "TradeOpen",
+            "TradeClose",
+            "TradeSettle",
+            "DepositLiquidity",
+            "WithdrawLiquidity",
+        ];
 
         for event in &self.events {
             let option = match self.options.get(&event.option_address) {
-                Some(v) => v,
-                None => {
-                    // no option for this event
-                    continue;
-                }
+                Some(v) => Some(v.clone()),
+                None => None,
             };
 
             if !allowed_methods
@@ -106,12 +108,7 @@ impl Cache {
                 caller: String::from(&event.caller),
                 capital_transfered: String::from(&event.capital_transfered),
                 option_tokens_minted: String::from(&event.option_tokens_minted),
-                option_side: option.option_side,
-                maturity: option.maturity,
-                strike_price: String::from(&option.strike_price),
-                quote_token_address: String::from(&option.quote_token_address),
-                base_token_address: String::from(&option.base_token_address),
-                option_type: option.option_type,
+                option: option,
             };
             arr.push(trade_history);
         }
