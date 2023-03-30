@@ -3,7 +3,7 @@ use crate::types::{
     TradeHistoryResponse,
 };
 use actix_web::{get, http::header::ContentType, web, HttpResponse, Responder};
-use carmine_api_core::TradeHistory;
+use carmine_api_core::types::TradeHistory;
 use std::sync::{Arc, Mutex};
 
 fn format_tx(tx: &String) -> String {
