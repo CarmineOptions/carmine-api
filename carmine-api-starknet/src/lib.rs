@@ -17,8 +17,7 @@ use tokio::time::sleep;
 use crate::starkscan::parse_event;
 
 // 1. 3. 2023
-// const CUTOFF_TIMESTAMP: i64 = 1677625200;
-const CUTOFF_TIMESTAMP: i64 = 1680044495;
+const CUTOFF_TIMESTAMP: i64 = 1677625200;
 const STARKSCAN_REQUESTS_DELAY_IN_MS: u64 = 1000;
 
 fn api_url() -> String {
