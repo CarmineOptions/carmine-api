@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use carmine_api_core::{Event, IOption, TradeHistory};
+use carmine_api_core::types::{Event, IOption, TradeHistory};
 use carmine_api_starknet::{get_events_from_starkscan, get_new_events_from_starkscan, Carmine};
 
 pub struct Cache {

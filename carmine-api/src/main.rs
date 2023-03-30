@@ -7,7 +7,7 @@ use actix_web::web::Data;
 use actix_web::{http::header, App, HttpServer};
 use carmine_api_cache::Cache;
 use dotenvy::dotenv;
-use std::env::var;
+use std::env;
 use std::sync::{Arc, Mutex};
 use tokio::time::{sleep, Duration};
 use types::AppState;
@@ -16,10 +16,16 @@ const REFETCH_DELAY_SECONDS: u64 = 600;
 const LOCAL_IP: &str = "127.0.0.1";
 const DOCKER_IP: &str = "0.0.0.0";
 
-fn ip_address() -> &'static str {
-    dotenv().ok();
+struct Origins {}
 
-    let is_local_build = match var("ENVIRONMENT") {
+impl Origins {
+    const LOCAL: &str = "http://localhost:3000";
+    const DEVELOPMENT: &str = "https://app.carmine-dev.eu";
+    const PRODUCTION: &str = "https://app.carmine.finance";
+}
+
+fn ip_address() -> &'static str {
+    let is_local_build = match env::var("ENVIRONMENT") {
         Ok(v) => v == "local",
         _ => false,
     };
@@ -30,12 +36,21 @@ fn ip_address() -> &'static str {
     DOCKER_IP
 }
 
+/// Checks necessary ENV variables and panics if any is missing
+fn startup_check() {
+    env::var("NETWORK").expect("Check failed - env var \"NETWORK\" is not set");
+    env::var("ENVIRONMENT").expect("Check failed - env var \"ENVIRONMENT\" is not set");
+    env::var("STARKSCAN_API_KEY").expect("Check failed - env var \"STARKSCAN_API_KEY\" is not set");
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    dotenv().ok();
+    startup_check();
     println!("👷 Starting server");
 
-    if std::env::var_os("RUST_LOG").is_none() {
-        std::env::set_var("RUST_LOG", "info");
+    if env::var_os("RUST_LOG").is_none() {
+        env::set_var("RUST_LOG", "info");
     }
     env_logger::init();
 
@@ -76,13 +91,10 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         let cors = Cors::default()
-            // localdevelopment
-            .allowed_origin("http://localhost:3000")
-            // development app
-            .allowed_origin("https://app.carmine-dev.eu")
-            // production app
-            .allowed_origin("https://app.carmine.finance")
-            .allowed_methods(vec!["GET", "POST"])
+            .allowed_origin(Origins::LOCAL)
+            .allowed_origin(Origins::DEVELOPMENT)
+            .allowed_origin(Origins::PRODUCTION)
+            .allowed_methods(vec!["GET"])
             .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
             .allowed_header(header::CONTENT_TYPE)
             .supports_credentials()

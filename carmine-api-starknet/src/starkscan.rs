@@ -1,6 +1,6 @@
 use std::env;
 
-use carmine_api_core::Event;
+use carmine_api_core::types::Event;
 use dotenvy::dotenv;
 use reqwest::{Client, Error};
 use serde::{Deserialize, Serialize};
