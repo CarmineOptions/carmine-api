@@ -1,7 +1,6 @@
 use std::env;
 
 use carmine_api_core::types::Event;
-use dotenvy::dotenv;
 use reqwest::{Client, Error};
 use serde::{Deserialize, Serialize};
 
@@ -25,8 +24,6 @@ pub struct StarkScanEvent {
 }
 
 pub async fn api_call(url: &str) -> Result<StarkScanEventResult, Error> {
-    dotenv().ok();
-
     let api_key = env::var("STARKSCAN_API_KEY").expect("Failed to read API key");
 
     let mut headers = reqwest::header::HeaderMap::new();
@@ -64,7 +61,6 @@ pub fn parse_event(event: StarkScanEvent) -> Option<Event> {
     let block_hash = match event.block_hash {
         Some(hash) => hash,
         _ => {
-            println!("block_hash is null");
             return None;
         }
     };
@@ -72,7 +68,6 @@ pub fn parse_event(event: StarkScanEvent) -> Option<Event> {
     let block_number = match event.block_number {
         Some(n) => n,
         _ => {
-            println!("block_number is null");
             return None;
         }
     };

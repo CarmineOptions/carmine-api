@@ -25,15 +25,10 @@ impl Origins {
 }
 
 fn ip_address() -> &'static str {
-    let is_local_build = match env::var("ENVIRONMENT") {
-        Ok(v) => v == "local",
-        _ => false,
-    };
-
-    if is_local_build {
-        return LOCAL_IP;
+    match env::var("ENVIRONMENT") {
+        Ok(v) if v == "local" => LOCAL_IP,
+        _ => DOCKER_IP,
     }
-    DOCKER_IP
 }
 
 /// Checks necessary ENV variables and panics if any is missing
@@ -47,6 +42,7 @@ fn startup_check() {
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
     startup_check();
+
     println!("👷 Starting server");
 
     if env::var_os("RUST_LOG").is_none() {

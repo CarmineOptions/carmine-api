@@ -1,7 +1,19 @@
 use std::collections::HashMap;
 
-use carmine_api_core::types::{Event, IOption, TradeHistory};
+use carmine_api_core::{
+    network::{call_lp_address, put_lp_address},
+    types::{Event, IOption, TradeHistory},
+};
 use carmine_api_starknet::{get_events_from_starkscan, get_new_events_from_starkscan, Carmine};
+
+// Only store Events we know and not ExpireOptionTokenForPool and Upgrade
+const ALLOWED_METHODS: &'static [&'static str; 5] = &[
+    "TradeOpen",
+    "TradeClose",
+    "TradeSettle",
+    "DepositLiquidity",
+    "WithdrawLiquidity",
+];
 
 pub struct Cache {
     carmine: Carmine,
@@ -35,36 +47,11 @@ impl Cache {
     }
 
     pub fn get_all_non_expired(&self) -> Vec<String> {
-        let mut arr: Vec<String> = Vec::new();
-
-        for v in &self.all_non_expired {
-            arr.push(String::from(v));
-        }
-
-        arr
+        self.all_non_expired.clone()
     }
 
     pub fn get_trade_history(&self) -> Vec<TradeHistory> {
-        let mut arr: Vec<TradeHistory> = Vec::new();
-
-        for v in &self.trade_history {
-            let option = match &v.option {
-                Some(v) => Some(v.clone()),
-                None => None,
-            };
-            let copy = TradeHistory {
-                timestamp: v.timestamp,
-                action: String::from(&v.action),
-                caller: String::from(&v.caller),
-                capital_transfered: String::from(&v.capital_transfered),
-                option_tokens_minted: String::from(&v.option_tokens_minted),
-                option: option,
-            };
-
-            arr.push(copy);
-        }
-
-        arr
+        self.trade_history.clone()
     }
 
     fn options_vec_to_hashmap(vec: Vec<IOption>) -> HashMap<String, IOption> {
@@ -80,27 +67,36 @@ impl Cache {
 
     fn generate_trade_history(&self) -> Vec<TradeHistory> {
         let mut arr: Vec<TradeHistory> = Vec::new();
-        let allowed_methods = vec![
-            "TradeOpen",
-            "TradeClose",
-            "TradeSettle",
-            "DepositLiquidity",
-            "WithdrawLiquidity",
-        ];
+
+        let put_pool_address = put_lp_address();
+        let call_pool_address = call_lp_address();
 
         for event in &self.events {
+            if !ALLOWED_METHODS
+                .iter()
+                .any(|&action| action == &*event.action)
+            {
+                continue;
+            }
+
             let option = match self.options.get(&event.option_address) {
                 Some(v) => Some(v.clone()),
                 None => None,
             };
 
-            if !allowed_methods
-                .iter()
-                .any(|&action| action == &*event.action)
-            {
-                // not a trade event (deposit, upgrade or token expiration)
-                continue;
-            }
+            let liquidity_pool = match event.action.as_str() {
+                "DepositLiquidity" | "WithdrawLiquidity"
+                    if event.option_address.as_str() == put_pool_address =>
+                {
+                    Some("Put".to_string())
+                }
+                "DepositLiquidity" | "WithdrawLiquidity"
+                    if event.option_address.as_str() == call_pool_address =>
+                {
+                    Some("Call".to_string())
+                }
+                _ => None,
+            };
 
             let trade_history = TradeHistory {
                 timestamp: event.timestamp,
@@ -108,7 +104,8 @@ impl Cache {
                 caller: String::from(&event.caller),
                 capital_transfered: String::from(&event.capital_transfered),
                 option_tokens_minted: String::from(&event.option_tokens_minted),
-                option: option,
+                option,
+                liquidity_pool,
             };
             arr.push(trade_history);
         }

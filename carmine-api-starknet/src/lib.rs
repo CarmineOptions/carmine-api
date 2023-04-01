@@ -11,7 +11,8 @@ use starknet::{
     providers::{Provider, SequencerGatewayProvider},
 };
 use starkscan::StarkScanEvent;
-use std::time::Duration;
+use std::env;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::time::sleep;
 
 use crate::starkscan::parse_event;
@@ -19,6 +20,19 @@ use crate::starkscan::parse_event;
 // 1. 3. 2023
 const CUTOFF_TIMESTAMP: i64 = 1677625200;
 const STARKSCAN_REQUESTS_DELAY_IN_MS: u64 = 1000;
+
+fn cutoff_timestamp() -> i64 {
+    match env::var("ENVIRONMENT") {
+        Ok(v) if v == "local" => {
+            // for local development
+            // only fetch events from
+            // last 24h
+            let one_day_ago = SystemTime::now() - Duration::from_secs(24 * 60 * 60);
+            one_day_ago.duration_since(UNIX_EPOCH).unwrap().as_secs() as i64
+        }
+        _ => CUTOFF_TIMESTAMP,
+    }
+}
 
 fn api_url() -> String {
     let base = network::starkscan_base_url();
@@ -313,7 +327,7 @@ pub async fn get_events_from_starkscan() -> Vec<Event> {
             // only check events up to this timestamp
             // every next event is just as old or older
             // therefore it is safe to break top loop
-            if event.timestamp < CUTOFF_TIMESTAMP {
+            if event.timestamp < cutoff_timestamp() {
                 break 'data;
             }
 
@@ -371,7 +385,7 @@ pub async fn get_new_events_from_starkscan(stored_events: &Vec<Event>) -> Vec<Ev
             // only check events up to this timestamp
             // every next event is just as old or older
             // therefore it is safe to break top loop
-            if event.timestamp < CUTOFF_TIMESTAMP {
+            if event.timestamp < cutoff_timestamp() {
                 println!("Cutoff timestamp reached");
                 break 'data;
             }

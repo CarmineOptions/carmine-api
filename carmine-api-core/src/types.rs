@@ -34,4 +34,5 @@ pub struct TradeHistory {
     pub capital_transfered: String,
     pub option_tokens_minted: String,
     pub option: Option<IOption>,
+    pub liquidity_pool: Option<String>,
 }
