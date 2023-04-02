@@ -7,6 +7,7 @@ API with endpoints to be used by the front end.
 For local development, create `.env` file in the root with the following variables:
 
 ```
+NETWORK=testnet
 ENVIRONMENT=local
 STARKSCAN_API_KEY=your_api_key_goes_here
 ```
