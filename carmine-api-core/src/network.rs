@@ -2,11 +2,11 @@ use std::env;
 
 // Starknet addresses
 const TESTNET_CALL_LP_ADDRESS: &str =
-    "0x03b176f8e5b4c9227b660e49e97f2d9d1756f96e5878420ad4accd301dd0cc17";
+    "0x3b176f8e5b4c9227b660e49e97f2d9d1756f96e5878420ad4accd301dd0cc17";
 const TESTNET_PUT_LP_ADDRESS: &str =
-    "0x0030fe5d12635ed696483a824eca301392b3f529e06133b42784750503a24972";
+    "0x30fe5d12635ed696483a824eca301392b3f529e06133b42784750503a24972";
 const TESTNET_CONTRACT_ADDRESS: &str =
-    "0x042a7d485171a01b8c38b6b37e0092f0f096e9d3f945c50c77799171916f5a54";
+    "0x42a7d485171a01b8c38b6b37e0092f0f096e9d3f945c50c77799171916f5a54";
 const MAINNET_CALL_LP_ADDRESS: &str = "mainnet_call_lp_address";
 const MAINNET_PUT_LP_ADDRESS: &str = "mainnet_put_lp_address";
 const MAINNET_CONTRACT_ADDRESS: &str = "mainnet_amm_contract_address";
