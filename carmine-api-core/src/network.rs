@@ -63,15 +63,15 @@ mod tests {
         env::set_var("NETWORK", "testnet");
         assert_eq!(
             call_lp_address(),
-            "0x03b176f8e5b4c9227b660e49e97f2d9d1756f96e5878420ad4accd301dd0cc17"
+            "0x3b176f8e5b4c9227b660e49e97f2d9d1756f96e5878420ad4accd301dd0cc17"
         );
         assert_eq!(
             put_lp_address(),
-            "0x0030fe5d12635ed696483a824eca301392b3f529e06133b42784750503a24972"
+            "0x30fe5d12635ed696483a824eca301392b3f529e06133b42784750503a24972"
         );
         assert_eq!(
             amm_address(),
-            "0x042a7d485171a01b8c38b6b37e0092f0f096e9d3f945c50c77799171916f5a54"
+            "0x42a7d485171a01b8c38b6b37e0092f0f096e9d3f945c50c77799171916f5a54"
         );
         assert_eq!(
             starkscan_base_url(),
