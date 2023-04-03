@@ -50,19 +50,17 @@ async fn main() -> std::io::Result<()> {
     }
     env_logger::init();
 
-    let initial_cache = Cache::new().await;
-
     let app_data = Data::new(Arc::new(Mutex::new(AppState {
-        all_non_expired: initial_cache.get_all_non_expired(),
-        trade_history: initial_cache.get_trade_history(),
-        ready: true,
+        all_non_expired: Vec::new(),
+        trade_history: Vec::new(),
+        ready: false,
     })));
 
     let app_data1 = app_data.clone();
 
     actix_web::rt::spawn(async move {
         let mut should_update = false;
-        let mut cache = initial_cache;
+        let mut cache = Cache::new().await;
 
         loop {
             // do not update fresh cache, then update everytime
