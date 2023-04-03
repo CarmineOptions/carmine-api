@@ -7,9 +7,12 @@ const TESTNET_PUT_LP_ADDRESS: &str =
     "0x30fe5d12635ed696483a824eca301392b3f529e06133b42784750503a24972";
 const TESTNET_CONTRACT_ADDRESS: &str =
     "0x42a7d485171a01b8c38b6b37e0092f0f096e9d3f945c50c77799171916f5a54";
-const MAINNET_CALL_LP_ADDRESS: &str = "mainnet_call_lp_address";
-const MAINNET_PUT_LP_ADDRESS: &str = "mainnet_put_lp_address";
-const MAINNET_CONTRACT_ADDRESS: &str = "mainnet_amm_contract_address";
+const MAINNET_CALL_LP_ADDRESS: &str =
+    "0x8d7253c73fde5f8418a40cb66a09dc304bef463dc1e9d14004c9651554136b";
+const MAINNET_PUT_LP_ADDRESS: &str =
+    "0x1ea6feaa5823e9dc6a75b7afbd21342b77d69525106ea929a24f91649addd16";
+const MAINNET_CONTRACT_ADDRESS: &str =
+    "0x8b6421cec0b0853b79c93330905603636024b2a08151ea289084fad35fc81a";
 
 // StarkScan API
 const MAINNET_STARKSCAN_API_BASE_URL: &str = "https://api.starkscan.co/api/v0/events";
@@ -49,9 +52,18 @@ mod tests {
     #[test]
     fn addresses_mainnet() {
         env::set_var("NETWORK", "mainnet");
-        assert_eq!(call_lp_address(), "mainnet_call_lp_address");
-        assert_eq!(put_lp_address(), "mainnet_put_lp_address");
-        assert_eq!(amm_address(), "mainnet_amm_contract_address");
+        assert_eq!(
+            call_lp_address(),
+            "0x8d7253c73fde5f8418a40cb66a09dc304bef463dc1e9d14004c9651554136b"
+        );
+        assert_eq!(
+            put_lp_address(),
+            "0x1ea6feaa5823e9dc6a75b7afbd21342b77d69525106ea929a24f91649addd16"
+        );
+        assert_eq!(
+            amm_address(),
+            "0x8b6421cec0b0853b79c93330905603636024b2a08151ea289084fad35fc81a"
+        );
         assert_eq!(
             starkscan_base_url(),
             "https://api.starkscan.co/api/v0/events"
