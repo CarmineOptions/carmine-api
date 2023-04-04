@@ -1,6 +1,6 @@
 mod starkscan;
 
-use carmine_api_core::network;
+use carmine_api_core::network::{self, amm_address, call_lp_address, put_lp_address};
 use carmine_api_core::types::{Event, IOption};
 use futures::future::join_all;
 use starknet::core::types::{CallContractResult, CallFunction, FieldElement};
@@ -58,26 +58,32 @@ pub struct Carmine {
 
 impl Carmine {
     pub fn new() -> Self {
-        let provider = SequencerGatewayProvider::starknet_alpha_goerli();
+        let provider = match env::var("NETWORK") {
+            Ok(network) if network == String::from("mainnet") => {
+                SequencerGatewayProvider::starknet_alpha_mainnet()
+            }
+            _ => SequencerGatewayProvider::starknet_alpha_goerli(),
+        };
 
         Carmine { provider }
     }
 
     pub async fn get_all_non_expired_options_with_premia(&self) -> Vec<String> {
         let entrypoint = selector!("get_all_non_expired_options_with_premia");
+        let (amm, call_add, put_add) = (amm_address(), call_lp_address(), put_lp_address());
         let call = self.provider.call_contract(
             CallFunction {
-                contract_address: FieldElement::from_hex_be(network::amm_address()).unwrap(),
+                contract_address: FieldElement::from_hex_be(amm).unwrap(),
                 entry_point_selector: entrypoint,
-                calldata: vec![FieldElement::from_hex_be(network::call_lp_address()).unwrap()],
+                calldata: vec![FieldElement::from_hex_be(call_add).unwrap()],
             },
             BlockId::Latest,
         );
         let put = self.provider.call_contract(
             CallFunction {
-                contract_address: FieldElement::from_hex_be(network::amm_address()).unwrap(),
+                contract_address: FieldElement::from_hex_be(amm).unwrap(),
                 entry_point_selector: entrypoint,
-                calldata: vec![FieldElement::from_hex_be(network::put_lp_address()).unwrap()],
+                calldata: vec![FieldElement::from_hex_be(put_add).unwrap()],
             },
             BlockId::Latest,
         );
