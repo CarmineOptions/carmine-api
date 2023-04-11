@@ -33,9 +33,11 @@ fn ip_address() -> &'static str {
 
 /// Checks necessary ENV variables and panics if any is missing
 fn startup_check() {
-    env::var("NETWORK").expect("Check failed - env var \"NETWORK\" is not set");
-    env::var("ENVIRONMENT").expect("Check failed - env var \"ENVIRONMENT\" is not set");
-    env::var("STARKSCAN_API_KEY").expect("Check failed - env var \"STARKSCAN_API_KEY\" is not set");
+    env::var("NETWORK").expect("ENV \"NETWORK\" is not set");
+    env::var("ENVIRONMENT").expect("ENV \"ENVIRONMENT\" is not set");
+    env::var("STARKSCAN_API_KEY").expect("ENV \"STARKSCAN_API_KEY\" is not set");
+    env::var("MAINNET_DATABASE_URL").expect("ENV \"MAINNET_DATABASE_URL\" is not set");
+    env::var("TESTNET_DATABASE_URL").expect("ENV \"TESTNET_DATABASE_URL\" is not set");
 }
 
 #[actix_web::main]

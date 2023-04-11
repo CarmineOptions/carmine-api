@@ -1,6 +1,8 @@
 mod starkscan;
 
-use carmine_api_core::network::{self, amm_address, call_lp_address, put_lp_address};
+use carmine_api_core::network::{
+    amm_address, call_lp_address, put_lp_address, starkscan_base_url, Network,
+};
 use carmine_api_core::types::{Event, IOption};
 use futures::future::join_all;
 use starknet::core::types::{CallContractResult, CallFunction, FieldElement};
@@ -34,9 +36,9 @@ fn cutoff_timestamp() -> i64 {
     }
 }
 
-fn api_url() -> String {
-    let base = network::starkscan_base_url();
-    let amm = network::amm_address();
+fn api_url(network: &Network) -> String {
+    let base = starkscan_base_url(&network);
+    let amm = amm_address(&network);
     format!("{}?from_address={}&limit=100", base, amm)
 }
 
@@ -54,23 +56,26 @@ fn format_call_contract_result(res: CallContractResult) -> Vec<String> {
 
 pub struct Carmine {
     provider: SequencerGatewayProvider,
+    network: Network,
 }
 
 impl Carmine {
-    pub fn new() -> Self {
-        let provider = match env::var("NETWORK") {
-            Ok(network) if network == String::from("mainnet") => {
-                SequencerGatewayProvider::starknet_alpha_mainnet()
-            }
-            _ => SequencerGatewayProvider::starknet_alpha_goerli(),
+    pub fn new(network: Network) -> Self {
+        let provider = match network {
+            Network::Mainnet => SequencerGatewayProvider::starknet_alpha_mainnet(),
+            Network::Testnet => SequencerGatewayProvider::starknet_alpha_goerli(),
         };
 
-        Carmine { provider }
+        Carmine { provider, network }
     }
 
     pub async fn get_all_non_expired_options_with_premia(&self) -> Vec<String> {
         let entrypoint = selector!("get_all_non_expired_options_with_premia");
-        let (amm, call_add, put_add) = (amm_address(), call_lp_address(), put_lp_address());
+        let (amm, call_add, put_add) = (
+            amm_address(&self.network),
+            call_lp_address(&self.network),
+            put_lp_address(&self.network),
+        );
         let call = self.provider.call_contract(
             CallFunction {
                 contract_address: FieldElement::from_hex_be(amm).unwrap(),
@@ -108,10 +113,10 @@ impl Carmine {
         let entrypoint = selector!("get_option_info_from_addresses");
         let call = self.provider.call_contract(
             CallFunction {
-                contract_address: FieldElement::from_hex_be(network::amm_address()).unwrap(),
+                contract_address: FieldElement::from_hex_be(amm_address(&self.network)).unwrap(),
                 entry_point_selector: entrypoint,
                 calldata: vec![
-                    FieldElement::from_hex_be(network::call_lp_address()).unwrap(),
+                    FieldElement::from_hex_be(call_lp_address(&self.network)).unwrap(),
                     FieldElement::from_hex_be(option_address).unwrap(),
                 ],
             },
@@ -119,10 +124,10 @@ impl Carmine {
         );
         let put = self.provider.call_contract(
             CallFunction {
-                contract_address: FieldElement::from_hex_be(network::amm_address()).unwrap(),
+                contract_address: FieldElement::from_hex_be(amm_address(&self.network)).unwrap(),
                 entry_point_selector: entrypoint,
                 calldata: vec![
-                    FieldElement::from_hex_be(network::put_lp_address()).unwrap(),
+                    FieldElement::from_hex_be(put_lp_address(&self.network)).unwrap(),
                     FieldElement::from_hex_be(option_address).unwrap(),
                 ],
             },
@@ -176,7 +181,8 @@ impl Carmine {
             .provider
             .call_contract(
                 CallFunction {
-                    contract_address: FieldElement::from_hex_be(network::amm_address()).unwrap(),
+                    contract_address: FieldElement::from_hex_be(amm_address(&self.network))
+                        .unwrap(),
                     entry_point_selector: entrypoint,
                     calldata: vec![
                         FieldElement::from_hex_be(lptoken_address).unwrap(),
@@ -211,7 +217,8 @@ impl Carmine {
             .provider
             .call_contract(
                 CallFunction {
-                    contract_address: FieldElement::from_hex_be(network::amm_address()).unwrap(),
+                    contract_address: FieldElement::from_hex_be(amm_address(&self.network))
+                        .unwrap(),
                     entry_point_selector: entrypoint,
                     calldata: vec![FieldElement::from_hex_be(pool_address).unwrap()],
                 },
@@ -292,8 +299,8 @@ impl Carmine {
     /// !This method is extremely slow, because it waits 2s between
     /// Starknet calls to avoid running into "rate limit" error!
     pub async fn get_options_with_addresses(&self) -> Vec<IOption> {
-        let call = self.get_options_with_addresses_from_single_pool(network::call_lp_address());
-        let put = self.get_options_with_addresses_from_single_pool(network::put_lp_address());
+        let call = self.get_options_with_addresses_from_single_pool(call_lp_address(&self.network));
+        let put = self.get_options_with_addresses_from_single_pool(put_lp_address(&self.network));
         let contract_results = join_all(vec![call, put]).await;
 
         let mut options: Vec<IOption> = vec![];
@@ -310,10 +317,10 @@ impl Carmine {
     }
 }
 
-pub async fn get_events_from_starkscan() -> Vec<Event> {
+pub async fn get_events_from_starkscan(network: &Network) -> Vec<Event> {
     let mut events: Vec<Event> = Vec::new();
 
-    let mut current_url = api_url();
+    let mut current_url = api_url(network);
 
     let mut count = 0;
 
@@ -356,7 +363,10 @@ pub async fn get_events_from_starkscan() -> Vec<Event> {
 }
 
 // TODO: abstract to remove code duplicity
-pub async fn get_new_events_from_starkscan(stored_events: &Vec<Event>) -> Vec<Event> {
+pub async fn get_new_events_from_starkscan(
+    stored_events: &Vec<Event>,
+    network: &Network,
+) -> Vec<Event> {
     // collection of already stored TXs
     let stored_txs: Vec<String> = stored_events
         .into_iter()
@@ -365,7 +375,7 @@ pub async fn get_new_events_from_starkscan(stored_events: &Vec<Event>) -> Vec<Ev
     let mut new_events: Vec<Event> = Vec::new();
 
     let mut count = 0;
-    let mut current_url = api_url();
+    let mut current_url = api_url(network);
 
     'data: loop {
         let res = match starkscan::api_call(&current_url).await {

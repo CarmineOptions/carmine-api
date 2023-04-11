@@ -1,6 +1,10 @@
+use crate::schema::events;
+use crate::schema::options;
+use diesel::prelude::*;
 use serde::Serialize;
 
-#[derive(Debug, Serialize, PartialEq)]
+#[derive(Debug, Clone, Queryable, Insertable, Serialize, PartialEq, Selectable)]
+#[diesel(table_name = events)]
 pub struct Event {
     pub block_hash: String,
     pub block_number: i64,
@@ -10,12 +14,13 @@ pub struct Event {
     pub timestamp: i64,
     pub action: String,
     pub caller: String,
-    pub option_address: String,
+    pub token_address: String,
     pub capital_transfered: String,
-    pub option_tokens_minted: String,
+    pub tokens_minted: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Queryable, Insertable, Serialize, PartialEq, Selectable)]
+#[diesel(table_name = options)]
 pub struct IOption {
     pub option_side: i16,
     pub maturity: i64,
@@ -32,7 +37,7 @@ pub struct TradeHistory {
     pub action: String,
     pub caller: String,
     pub capital_transfered: String,
-    pub option_tokens_minted: String,
+    pub tokens_minted: String,
     pub option: Option<IOption>,
     pub liquidity_pool: Option<String>,
 }
