@@ -8,7 +8,7 @@ FROM debian:buster-slim
 
 WORKDIR /app
 
-RUN apt-get update && apt install -y openssl ca-certificates
+RUN apt-get update && apt install -y libpq-dev openssl ca-certificates
 COPY --from=builder /build/target/release/carmine-api .
 
 EXPOSE 8000

@@ -4,6 +4,10 @@ services:
   api:
     build: .
     environment:
-      - STARKSCAN_API_KEY=your_api_key_goes_here
+      - STARKSCAN_API_KEY=[secret]
+      - ENVIRONMENT=docker
+      - DB_USER=postgres
+      - DB_PASSWORD=[secret]
+      - DB_IP=[secret]
     ports:
       - 8000:8000
