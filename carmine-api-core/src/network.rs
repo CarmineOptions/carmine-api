@@ -1,3 +1,5 @@
+use std::fmt;
+
 // Starknet addresses
 const TESTNET_CALL_LP_ADDRESS: &str =
     "0x3b176f8e5b4c9227b660e49e97f2d9d1756f96e5878420ad4accd301dd0cc17";
@@ -16,9 +18,19 @@ const MAINNET_CONTRACT_ADDRESS: &str =
 const MAINNET_STARKSCAN_API_BASE_URL: &str = "https://api.starkscan.co/api/v0/events";
 const TESTNET_STARKSCAN_API_BASE_URL: &str = "https://api-testnet.starkscan.co/api/v0/events";
 
+#[derive(Clone, Copy)]
 pub enum Network {
     Testnet,
     Mainnet,
+}
+
+impl fmt::Display for Network {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Network::Testnet => write!(f, "Testnet"),
+            Network::Mainnet => write!(f, "Mainnet"),
+        }
+    }
 }
 
 pub fn call_lp_address(network: &Network) -> &'static str {

@@ -7,5 +7,6 @@ edition = "2021"
 
 [dependencies]
 carmine-api-core = { path = "../carmine-api-core" }
+carmine-api-db = { path = "../carmine-api-db" }
 carmine-api-starknet = { path = "../carmine-api-starknet" }
 serde = { version = "1.0.156", features = ["derive"] }

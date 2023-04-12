@@ -11,7 +11,16 @@ actix-web = "4.3.1"
 carmine-api-starknet = { path = "../carmine-api-starknet" }
 carmine-api-cache = { path = "../carmine-api-cache" }
 carmine-api-core = { path = "../carmine-api-core" }
+carmine-api-db = { path = "../carmine-api-db" }
 dotenvy = "0.15.6"
 env_logger = "0.10.0"
 serde = { version = "1.0.156", features = ["derive"] }
 tokio = "1.26.0"
+
+[[bin]]
+path = "./bin/non-expired.rs"
+name = "non-expired"
+
+[[bin]]
+path = "./bin/populate-db.rs"
+name = "populate-db"

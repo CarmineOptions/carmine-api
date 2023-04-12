@@ -41,3 +41,13 @@ pub struct TradeHistory {
     pub option: Option<IOption>,
     pub liquidity_pool: Option<String>,
 }
+
+pub struct AppData {
+    pub all_non_expired: Vec<String>,
+    pub trade_history: Vec<TradeHistory>,
+}
+
+pub struct AppState {
+    pub mainnet: AppData,
+    pub testnet: AppData,
+}

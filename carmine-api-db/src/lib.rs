@@ -20,14 +20,14 @@ fn establish_connection_mainnet() -> PgConnection {
         .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
 }
 
-pub fn establish_connection(network: Network) -> PgConnection {
+pub fn establish_connection(network: &Network) -> PgConnection {
     match network {
         Network::Testnet => establish_connection_testnet(),
         Network::Mainnet => establish_connection_mainnet(),
     }
 }
 
-pub fn create_event(new_event: Event, network: Network) {
+pub fn create_event(new_event: Event, network: &Network) {
     use crate::schema::events::dsl::*;
 
     let mut connection = establish_connection(network);
@@ -39,7 +39,7 @@ pub fn create_event(new_event: Event, network: Network) {
         .expect("Error saving event");
 }
 
-pub fn create_batch_of_events(new_events: &Vec<Event>, network: Network) {
+pub fn create_batch_of_events(new_events: &Vec<Event>, network: &Network) {
     use crate::schema::events::dsl::*;
 
     let mut connection = establish_connection(network);
@@ -55,7 +55,7 @@ pub fn create_batch_of_events(new_events: &Vec<Event>, network: Network) {
     }
 }
 
-pub fn create_option(option: IOption, network: Network) {
+pub fn create_option(option: IOption, network: &Network) {
     use crate::schema::options::dsl::*;
 
     let mut connection = establish_connection(network);
@@ -67,7 +67,7 @@ pub fn create_option(option: IOption, network: Network) {
         .expect("Error saving option");
 }
 
-pub fn create_batch_of_options(new_options: &Vec<IOption>, network: Network) {
+pub fn create_batch_of_options(new_options: &Vec<IOption>, network: &Network) {
     use crate::schema::options::dsl::*;
 
     let mut connection = establish_connection(network);
@@ -83,7 +83,7 @@ pub fn create_batch_of_options(new_options: &Vec<IOption>, network: Network) {
     }
 }
 
-pub fn get_events(network: Network) -> Vec<Event> {
+pub fn get_events(network: &Network) -> Vec<Event> {
     use crate::schema::events::dsl::*;
 
     let connection = &mut establish_connection(network);
@@ -92,7 +92,7 @@ pub fn get_events(network: Network) -> Vec<Event> {
         .expect("Error loading events")
 }
 
-pub fn get_events_by_caller_address(address: &str, network: Network) -> Vec<Event> {
+pub fn get_events_by_caller_address(address: &str, network: &Network) -> Vec<Event> {
     use crate::schema::events::dsl::*;
 
     let connection = &mut establish_connection(network);
@@ -102,7 +102,7 @@ pub fn get_events_by_caller_address(address: &str, network: Network) -> Vec<Even
         .expect("Error loading events by caller address")
 }
 
-pub fn get_options(network: Network) -> Vec<IOption> {
+pub fn get_options(network: &Network) -> Vec<IOption> {
     use crate::schema::options::dsl::*;
 
     let connection = &mut establish_connection(network);

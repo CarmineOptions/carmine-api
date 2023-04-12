@@ -6,11 +6,12 @@ use actix_web::middleware::Logger;
 use actix_web::web::Data;
 use actix_web::{http::header, App, HttpServer};
 use carmine_api_cache::Cache;
+use carmine_api_core::network::Network;
+use carmine_api_core::types::AppState;
 use dotenvy::dotenv;
 use std::env;
 use std::sync::{Arc, Mutex};
 use tokio::time::{sleep, Duration};
-use types::AppState;
 
 const REFETCH_DELAY_SECONDS: u64 = 600;
 const LOCAL_IP: &str = "127.0.0.1";
@@ -33,7 +34,6 @@ fn ip_address() -> &'static str {
 
 /// Checks necessary ENV variables and panics if any is missing
 fn startup_check() {
-    env::var("NETWORK").expect("ENV \"NETWORK\" is not set");
     env::var("ENVIRONMENT").expect("ENV \"ENVIRONMENT\" is not set");
     env::var("STARKSCAN_API_KEY").expect("ENV \"STARKSCAN_API_KEY\" is not set");
     env::var("MAINNET_DATABASE_URL").expect("ENV \"MAINNET_DATABASE_URL\" is not set");
@@ -52,34 +52,33 @@ async fn main() -> std::io::Result<()> {
     }
     env_logger::init();
 
-    let app_data = Data::new(Arc::new(Mutex::new(AppState {
-        all_non_expired: Vec::new(),
-        trade_history: Vec::new(),
-        ready: false,
+    let mut mainnet_cache = Cache::new(Network::Mainnet).await;
+    let mut testnet_cache = Cache::new(Network::Testnet).await;
+
+    let app_state = Data::new(Arc::new(Mutex::new(AppState {
+        mainnet: mainnet_cache.get_app_data(),
+        testnet: testnet_cache.get_app_data(),
     })));
 
-    let app_data1 = app_data.clone();
+    let app_state1 = app_state.clone();
 
     actix_web::rt::spawn(async move {
         let mut should_update = false;
-        let mut cache = Cache::new().await;
 
         loop {
             // do not update fresh cache, then update everytime
             if should_update {
                 sleep(Duration::from_secs(REFETCH_DELAY_SECONDS)).await;
                 println!("Updating AppState");
-                cache.update().await;
+                mainnet_cache.update().await;
+                testnet_cache.update().await;
             } else {
                 should_update = true;
             }
-            let all_non_expired = cache.get_all_non_expired();
-            let trade_history = cache.get_trade_history();
-            let mut app_data = app_data1.lock().unwrap();
-            *app_data = AppState {
-                all_non_expired,
-                trade_history,
-                ready: true,
+            let mut app_state = app_state1.lock().unwrap();
+            *app_state = AppState {
+                mainnet: mainnet_cache.get_app_data(),
+                testnet: testnet_cache.get_app_data(),
             };
             println!("AppState updated");
         }
@@ -98,7 +97,7 @@ async fn main() -> std::io::Result<()> {
             .supports_credentials()
             .max_age(3600);
         App::new()
-            .app_data(app_data.clone())
+            .app_data(app_state.clone())
             .configure(handlers::config)
             .wrap(cors)
             .wrap(Logger::default())

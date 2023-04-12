@@ -2,9 +2,10 @@ use std::collections::HashMap;
 
 use carmine_api_core::{
     network::{call_lp_address, put_lp_address, Network},
-    types::{Event, IOption, TradeHistory},
+    types::{AppData, Event, IOption, TradeHistory},
 };
-use carmine_api_starknet::{get_events_from_starkscan, get_new_events_from_starkscan, Carmine};
+use carmine_api_db::{get_events, get_options};
+use carmine_api_starknet::{get_new_events_from_starkscan, Carmine};
 
 // Only store Events we know and not ExpireOptionTokenForPool and Upgrade
 const ALLOWED_METHODS: &'static [&'static str; 5] = &[
@@ -25,11 +26,11 @@ pub struct Cache {
 }
 
 impl Cache {
-    pub async fn new() -> Self {
-        let network = Network::Mainnet;
-        let carmine = Carmine::new(Network::Mainnet);
-        let events = get_events_from_starkscan(&Network::Mainnet).await;
-        let options_vec = carmine.get_options_with_addresses().await;
+    pub async fn new(network: Network) -> Self {
+        let network = network;
+        let carmine = Carmine::new(network);
+        let events = get_events(&network);
+        let options_vec = get_options(&network);
         let options = Cache::options_vec_to_hashmap(options_vec);
         let all_non_expired = carmine.get_all_non_expired_options_with_premia().await;
 
@@ -45,6 +46,13 @@ impl Cache {
         cache.trade_history = Cache::generate_trade_history(&cache);
 
         cache
+    }
+
+    pub fn get_app_data(&self) -> AppData {
+        AppData {
+            all_non_expired: self.get_all_non_expired(),
+            trade_history: self.get_trade_history(),
+        }
     }
 
     pub fn get_all_non_expired(&self) -> Vec<String> {

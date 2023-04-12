@@ -32,12 +32,6 @@ pub struct EventsResponse {
     pub events: Vec<Event>,
 }
 
-pub struct AppState {
-    pub all_non_expired: Vec<String>,
-    pub trade_history: Vec<TradeHistory>,
-    pub ready: bool,
-}
-
 #[derive(Debug, Deserialize)]
 pub struct QueryOptions {
     pub address: Option<String>,

@@ -7,3 +7,5 @@ members = [
     "carmine-api-db",
     "carmine-api-starknet",
 ]
+
+default-members = ["carmine-api"]

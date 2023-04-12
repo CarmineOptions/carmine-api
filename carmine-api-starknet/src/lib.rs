@@ -4,6 +4,7 @@ use carmine_api_core::network::{
     amm_address, call_lp_address, put_lp_address, starkscan_base_url, Network,
 };
 use carmine_api_core::types::{Event, IOption};
+use carmine_api_db::{create_batch_of_events, create_batch_of_options};
 use futures::future::join_all;
 use starknet::core::types::{CallContractResult, CallFunction, FieldElement};
 use starknet::macros::selector;
@@ -292,6 +293,8 @@ impl Carmine {
             options.push(option);
         }
 
+        create_batch_of_options(&options, &self.network);
+
         Ok(options)
     }
 
@@ -358,6 +361,9 @@ pub async fn get_events_from_starkscan(network: &Network) -> Vec<Event> {
     }
 
     println!("Got events from Starkscan with {} requests", count);
+
+    // update DB
+    create_batch_of_events(&events, network);
 
     events
 }
@@ -429,6 +435,9 @@ pub async fn get_new_events_from_starkscan(
         new_events.len(),
         count
     );
+
+    // update DB
+    create_batch_of_events(&new_events, network);
 
     new_events
 }
