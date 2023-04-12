@@ -14,6 +14,23 @@ fn get_db_url(network: &Network) -> String {
     let ip = env::var("DB_IP").expect("Could not read \"DB_IP\"");
     let environment = env::var("ENVIRONMENT").expect("Could not read \"ENVIRONMENT\"");
 
+    // Cloud Run can only connect via socket
+    if let Ok(socket) = env::var("DB_SOCKET") {
+        return match network {
+            Network::Testnet => format!(
+                "postgres://{}:{}@/carmine-testnet?host=/cloudsql/{}/.s.PGSQL.5432",
+                username, password, socket
+            )
+            .to_string(),
+            Network::Mainnet => format!(
+                "postgres://{}:{}@/carmine-mainnet?host=/cloudsql/{}/.s.PGSQL.5432",
+                username, password, socket
+            )
+            .to_string(),
+        };
+    }
+
+    // your local DB
     if environment.as_str() == "local" {
         return match network {
             Network::Testnet => "postgres://localhost/carmine-testnet".to_string(),
@@ -21,8 +38,9 @@ fn get_db_url(network: &Network) -> String {
         };
     }
 
+    // connecting to Cloud SQL from outside of GCP
+    // ie. running the API locally with prod DB)
     let base = format!("postgres://{}:{}@{}", username, password, ip);
-
     match network {
         Network::Testnet => format!("{}/carmine-testnet", base).to_string(),
         Network::Mainnet => format!("{}/carmine-mainnet", base).to_string(),
