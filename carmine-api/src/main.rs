@@ -34,10 +34,14 @@ fn ip_address() -> &'static str {
 
 /// Checks necessary ENV variables and panics if any is missing
 fn startup_check() {
-    env::var("ENVIRONMENT").expect("ENV \"ENVIRONMENT\" is not set");
+    let environment = env::var("ENVIRONMENT").expect("ENV \"ENVIRONMENT\" is not set");
     env::var("STARKSCAN_API_KEY").expect("ENV \"STARKSCAN_API_KEY\" is not set");
-    env::var("MAINNET_DATABASE_URL").expect("ENV \"MAINNET_DATABASE_URL\" is not set");
-    env::var("TESTNET_DATABASE_URL").expect("ENV \"TESTNET_DATABASE_URL\" is not set");
+    if environment.as_str() != "local" {
+        // only check those if not connecting to local DB
+        env::var("DB_USER").expect("ENV \"DB_USER\" is not set");
+        env::var("DB_PASSWORD").expect("ENV \"DB_PASSWORD\" is not set");
+        env::var("DB_IP").expect("ENV \"DB_IP\" is not set");
+    }
 }
 
 #[actix_web::main]

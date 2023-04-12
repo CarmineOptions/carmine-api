@@ -135,7 +135,12 @@ impl Cache {
     }
 
     pub async fn update_all_non_expired(&mut self) {
-        self.all_non_expired = self.carmine.get_all_non_expired_options_with_premia().await;
+        let new_non_expired = self.carmine.get_all_non_expired_options_with_premia().await;
+
+        if new_non_expired.len() > 0 {
+            // only update if fetched non empty
+            self.all_non_expired = new_non_expired;
+        }
     }
 
     pub fn update_trade_history(&mut self) {

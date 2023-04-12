@@ -470,6 +470,7 @@ dependencies = [
  "carmine-api-core",
  "carmine-api-db",
  "carmine-api-starknet",
+ "diesel",
  "dotenvy",
  "env_logger",
  "serde",

@@ -8,23 +8,31 @@ use std::env;
 
 const BATCH_SIZE: usize = 100;
 
-fn establish_connection_testnet() -> PgConnection {
-    let database_url = env::var("TESTNET_DATABASE_URL").expect("TESTNET_DATABASE_URL must be set");
-    PgConnection::establish(&database_url)
-        .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
-}
+fn get_db_url(network: &Network) -> String {
+    let username = env::var("DB_USER").expect("Could not read \"DB_USER\"");
+    let password = env::var("DB_PASSWORD").expect("Could not read \"DB_PASSWORD\"");
+    let ip = env::var("DB_IP").expect("Could not read \"DB_IP\"");
+    let environment = env::var("ENVIRONMENT").expect("Could not read \"ENVIRONMENT\"");
 
-fn establish_connection_mainnet() -> PgConnection {
-    let database_url = env::var("MAINNET_DATABASE_URL").expect("MAINNET_DATABASE_URL must be set");
-    PgConnection::establish(&database_url)
-        .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
-}
-
-pub fn establish_connection(network: &Network) -> PgConnection {
-    match network {
-        Network::Testnet => establish_connection_testnet(),
-        Network::Mainnet => establish_connection_mainnet(),
+    if environment.as_str() == "local" {
+        return match network {
+            Network::Testnet => "postgres://localhost/carmine-testnet".to_string(),
+            Network::Mainnet => "postgres://localhost/carmine-mainnet".to_string(),
+        };
     }
+
+    let base = format!("postgres://{}:{}@{}", username, password, ip);
+
+    match network {
+        Network::Testnet => format!("{}/carmine-testnet", base).to_string(),
+        Network::Mainnet => format!("{}/carmine-mainnet", base).to_string(),
+    }
+}
+
+fn establish_connection(network: &Network) -> PgConnection {
+    let database_url = get_db_url(network);
+    PgConnection::establish(&database_url)
+        .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
 }
 
 pub fn create_event(new_event: Event, network: &Network) {
