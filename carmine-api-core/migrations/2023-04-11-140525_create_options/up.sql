@@ -1,5 +1,4 @@
 CREATE TABLE options (
-    id                      serial NOT NULL,
     option_side             SmallInt NOT NULL,
     maturity                Int8 NOT NULL,
     strike_price            Text NOT NULL,

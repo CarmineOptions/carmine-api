@@ -10,9 +10,9 @@ diesel::table! {
         timestamp -> Int8,
         action -> Text,
         caller -> Text,
-        option_address -> Text,
+        token_address -> Text,
         capital_transfered -> Text,
-        option_tokens_minted -> Text,
+        tokens_minted -> Text,
     }
 }
 
@@ -28,6 +28,7 @@ diesel::table! {
     }
 }
 
-diesel::joinable!(events -> options (option_address));
-
-diesel::allow_tables_to_appear_in_same_query!(events, options,);
+diesel::allow_tables_to_appear_in_same_query!(
+    events,
+    options,
+);

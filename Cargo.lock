@@ -466,17 +466,38 @@ version = "0.1.0"
 dependencies = [
  "actix-cors",
  "actix-web",
- "carmine-api-db",
+ "carmine-api-cache",
+ "carmine-api-core",
  "carmine-api-starknet",
+ "dotenvy",
  "env_logger",
  "serde",
  "tokio",
 ]
 
 [[package]]
+name = "carmine-api-cache"
+version = "0.1.0"
+dependencies = [
+ "carmine-api-core",
+ "carmine-api-db",
+ "carmine-api-starknet",
+ "serde",
+]
+
+[[package]]
+name = "carmine-api-core"
+version = "0.1.0"
+dependencies = [
+ "diesel",
+ "serde",
+]
+
+[[package]]
 name = "carmine-api-db"
 version = "0.1.0"
 dependencies = [
+ "carmine-api-core",
  "diesel",
  "dotenvy",
  "serde",
@@ -486,7 +507,9 @@ dependencies = [
 name = "carmine-api-starknet"
 version = "0.1.0"
 dependencies = [
+ "carmine-api-core",
  "carmine-api-db",
+ "diesel",
  "dotenvy",
  "futures",
  "reqwest",

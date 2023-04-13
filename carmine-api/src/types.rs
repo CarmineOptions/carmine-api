@@ -1,4 +1,4 @@
-use carmine_api_db::models::{Event, TradeHistory};
+use carmine_api_core::types::{Event, TradeHistory};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize)]
@@ -19,15 +19,17 @@ pub struct TradeHistoryResponse<'a> {
     pub data: Vec<&'a TradeHistory>,
 }
 
+#[derive(Serialize, Debug)]
+pub struct AllTradeHistoryResponse<'a> {
+    pub status: String,
+    pub data: Vec<&'a TradeHistory>,
+    pub length: usize,
+}
+
 #[derive(Serialize)]
 pub struct EventsResponse {
     pub status: String,
     pub events: Vec<Event>,
-}
-
-pub struct AppState {
-    pub all_non_expired: Vec<String>,
-    pub trade_history: Vec<TradeHistory>,
 }
 
 #[derive(Debug, Deserialize)]

@@ -1,28 +1,46 @@
-pub mod models;
-mod schema;
+use carmine_api_core::network::Network;
+use carmine_api_core::schema;
+use carmine_api_core::types::{Event, IOption};
 
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use dotenvy::dotenv;
-use models::IOption;
 use std::env;
-
-use crate::models::{Event, TradeHistory};
 
 const BATCH_SIZE: usize = 100;
 
-pub fn establish_connection() -> PgConnection {
-    dotenv().ok();
+fn get_db_url(network: &Network) -> String {
+    let username = env::var("DB_USER").expect("Could not read \"DB_USER\"");
+    let password = env::var("DB_PASSWORD").expect("Could not read \"DB_PASSWORD\"");
+    let ip = env::var("DB_IP").expect("Could not read \"DB_IP\"");
+    let environment = env::var("ENVIRONMENT").expect("Could not read \"ENVIRONMENT\"");
 
-    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    // your local DB
+    if environment.as_str() == "local" {
+        return match network {
+            Network::Testnet => "postgres://localhost/carmine-testnet".to_string(),
+            Network::Mainnet => "postgres://localhost/carmine-mainnet".to_string(),
+        };
+    }
+
+    // connecting to Cloud SQL from outside of GCP
+    // ie. running the API locally with prod DB)
+    let base = format!("postgres://{}:{}@{}", username, password, ip);
+    match network {
+        Network::Testnet => format!("{}/carmine-testnet", base).to_string(),
+        Network::Mainnet => format!("{}/carmine-mainnet", base).to_string(),
+    }
+}
+
+fn establish_connection(network: &Network) -> PgConnection {
+    let database_url = get_db_url(network);
     PgConnection::establish(&database_url)
         .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
 }
 
-pub fn create_event(new_event: models::NewEvent) {
+pub fn create_event(new_event: Event, network: &Network) {
     use crate::schema::events::dsl::*;
 
-    let mut connection = establish_connection();
+    let mut connection = establish_connection(network);
 
     diesel::insert_into(events)
         .values(&new_event)
@@ -31,10 +49,10 @@ pub fn create_event(new_event: models::NewEvent) {
         .expect("Error saving event");
 }
 
-pub fn create_batch_of_events(new_events: &Vec<models::NewEvent>) {
+pub fn create_batch_of_events(new_events: &Vec<Event>, network: &Network) {
     use crate::schema::events::dsl::*;
 
-    let mut connection = establish_connection();
+    let mut connection = establish_connection(network);
 
     let chunks = new_events.chunks(BATCH_SIZE);
 
@@ -47,10 +65,10 @@ pub fn create_batch_of_events(new_events: &Vec<models::NewEvent>) {
     }
 }
 
-pub fn create_option(option: models::NewIOption) {
+pub fn create_option(option: IOption, network: &Network) {
     use crate::schema::options::dsl::*;
 
-    let mut connection = establish_connection();
+    let mut connection = establish_connection(network);
 
     diesel::insert_into(options)
         .values(&option)
@@ -59,10 +77,10 @@ pub fn create_option(option: models::NewIOption) {
         .expect("Error saving option");
 }
 
-pub fn create_batch_of_options(new_options: &Vec<models::NewIOption>) {
+pub fn create_batch_of_options(new_options: &Vec<IOption>, network: &Network) {
     use crate::schema::options::dsl::*;
 
-    let mut connection = establish_connection();
+    let mut connection = establish_connection(network);
 
     let chunks = new_options.chunks(BATCH_SIZE);
 
@@ -75,84 +93,30 @@ pub fn create_batch_of_options(new_options: &Vec<models::NewIOption>) {
     }
 }
 
-pub fn get_option_addresses_from_events() -> Vec<String> {
+pub fn get_events(network: &Network) -> Vec<Event> {
     use crate::schema::events::dsl::*;
 
-    let connection = &mut establish_connection();
-    events
-        .select(option_address)
-        .distinct()
-        .load::<String>(connection)
-        .expect("Error loading posts")
-}
-
-pub fn get_events() -> Vec<Event> {
-    use crate::schema::events::dsl::*;
-
-    let connection = &mut establish_connection();
+    let connection = &mut establish_connection(network);
     events
         .load::<Event>(connection)
         .expect("Error loading events")
 }
 
-pub fn get_events_by_caller_address(address: &str) -> Vec<Event> {
+pub fn get_events_by_caller_address(address: &str, network: &Network) -> Vec<Event> {
     use crate::schema::events::dsl::*;
 
-    let connection = &mut establish_connection();
+    let connection = &mut establish_connection(network);
     events
         .filter(caller.eq(address))
         .load::<Event>(connection)
         .expect("Error loading events by caller address")
 }
 
-pub fn get_options() -> Vec<IOption> {
+pub fn get_options(network: &Network) -> Vec<IOption> {
     use crate::schema::options::dsl::*;
 
-    let connection = &mut establish_connection();
+    let connection = &mut establish_connection(network);
     options
         .load::<IOption>(connection)
         .expect("Error loading options")
-}
-
-pub fn get_option_addresses_from_options() -> Vec<String> {
-    use crate::schema::options::dsl::*;
-
-    let connection = &mut establish_connection();
-    options
-        .select(option_address)
-        .load::<String>(connection)
-        .expect("Error loading addresses from options")
-}
-
-pub fn get_trade_history() -> Vec<TradeHistory> {
-    use crate::schema::events;
-    use crate::schema::options;
-    let connection = &mut establish_connection();
-
-    let events_with_option: Vec<(IOption, Event)> = options::table
-        .inner_join(events::table)
-        .select((IOption::as_select(), Event::as_select()))
-        .load::<(IOption, Event)>(connection)
-        .expect("Failed to get options - events inner join");
-
-    let mut trade_history_list: Vec<TradeHistory> = events_with_option
-        .into_iter()
-        .map(|(o, e)| TradeHistory {
-            timestamp: e.timestamp,
-            action: e.action,
-            caller: e.caller,
-            capital_transfered: e.capital_transfered,
-            option_tokens_minted: e.option_tokens_minted,
-            option_side: o.option_side,
-            maturity: o.maturity,
-            strike_price: o.strike_price,
-            quote_token_address: o.quote_token_address,
-            base_token_address: o.base_token_address,
-            option_type: o.option_type,
-        })
-        .collect();
-
-    trade_history_list.sort_by_key(|v| v.timestamp);
-
-    trade_history_list
 }

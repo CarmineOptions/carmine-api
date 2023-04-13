@@ -1,8 +1,7 @@
 use std::env;
 
-use carmine_api_db::models::NewEvent;
-use dotenvy::dotenv;
-use reqwest::Client;
+use carmine_api_core::types::Event;
+use reqwest::{Client, Error};
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -24,9 +23,7 @@ pub struct StarkScanEvent {
     pub key_name: Option<String>,
 }
 
-pub async fn api_call(url: &str) -> StarkScanEventResult {
-    dotenv().ok();
-
+pub async fn api_call(url: &str) -> Result<StarkScanEventResult, Error> {
     let api_key = env::var("STARKSCAN_API_KEY").expect("Failed to read API key");
 
     let mut headers = reqwest::header::HeaderMap::new();
@@ -38,15 +35,7 @@ pub async fn api_call(url: &str) -> StarkScanEventResult {
 
     let parsed_result = res.json::<StarkScanEventResult>().await;
 
-    match parsed_result {
-        Ok(result) => {
-            return result;
-        }
-        Err(error) => {
-            println!("{}", error);
-            panic!("Failed to parse StarkScan response");
-        }
-    }
+    parsed_result
 }
 
 // list of action names that will be stored
@@ -58,17 +47,12 @@ const ALLOWED_ACTIONS: [&'static str; 5] = [
     "WithdrawLiquidity",
 ];
 
-pub fn parse_event(event: StarkScanEvent) -> Option<NewEvent> {
+pub fn parse_event(event: StarkScanEvent) -> Option<Event> {
     // if "key_name" is null or not allowed action (eg "ExpireOptionTokenForPool")
     // we can't handle the event so we don't store it
     let action = match event.key_name {
         Some(action) if ALLOWED_ACTIONS.iter().any(|&v| v == action) => action,
-        Some(action) => {
-            println!("disallowed action \"{}\"", action);
-            return None;
-        }
         _ => {
-            println!("key_name is null");
             return None;
         }
     };
@@ -77,7 +61,6 @@ pub fn parse_event(event: StarkScanEvent) -> Option<NewEvent> {
     let block_hash = match event.block_hash {
         Some(hash) => hash,
         _ => {
-            println!("block_hash is null");
             return None;
         }
     };
@@ -85,7 +68,6 @@ pub fn parse_event(event: StarkScanEvent) -> Option<NewEvent> {
     let block_number = match event.block_number {
         Some(n) => n,
         _ => {
-            println!("block_number is null");
             return None;
         }
     };
@@ -95,7 +77,7 @@ pub fn parse_event(event: StarkScanEvent) -> Option<NewEvent> {
         return None;
     }
 
-    Some(NewEvent {
+    Some(Event {
         block_hash: block_hash,
         block_number: block_number,
         transaction_hash: event.transaction_hash,
@@ -104,8 +86,8 @@ pub fn parse_event(event: StarkScanEvent) -> Option<NewEvent> {
         timestamp: event.timestamp,
         action: action,
         caller: String::from(&event.data[0]),
-        option_address: String::from(&event.data[1]),
+        token_address: String::from(&event.data[1]),
         capital_transfered: String::from(&event.data[2]),
-        option_tokens_minted: String::from(&event.data[4]),
+        tokens_minted: String::from(&event.data[4]),
     })
 }

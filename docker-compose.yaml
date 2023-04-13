@@ -1,0 +1,13 @@
+version: '3.9'
+
+services:
+  api:
+    build: .
+    environment:
+      - STARKSCAN_API_KEY=[secret]
+      - ENVIRONMENT=docker
+      - DB_USER=postgres
+      - DB_PASSWORD=[secret]
+      - DB_IP=[secret]
+    ports:
+      - 8000:8000

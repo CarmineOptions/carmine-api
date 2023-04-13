@@ -7,9 +7,8 @@ CREATE TABLE events (
     timestamp               Int8 NOT NULL,
     action                  Text NOT NULL,
     caller                  Text NOT NULL,
-    option_address          Text NOT NULL,
+    token_address           Text NOT NULL,
     capital_transfered      Text NOT NULL,
-    option_tokens_minted    Text NOT NULL,
-    PRIMARY KEY (transaction_hash),
-    FOREIGN KEY (option_address) REFERENCES options (option_address)
+    tokens_minted           Text NOT NULL,
+    PRIMARY KEY (transaction_hash)
 );

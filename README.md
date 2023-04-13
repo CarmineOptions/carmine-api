@@ -4,15 +4,41 @@ API with endpoints to be used by the front end.
 
 ## Development
 
-The workspace consists of three crates:
+For local development, create `.env` file in the root with the following variables:
+
+```
+NETWORK=testnet
+ENVIRONMENT=local
+STARKSCAN_API_KEY=your_api_key_goes_here
+```
+
+And then run dev mode with Cargo:
+
+```
+cargo run -p carmine-api
+```
+
+To test `Docker` build, which runs in the production, set `STARKSCAN_API_KEY` in the `docker-compose.yaml` file and then run:
+
+```
+docker compose up
+```
+
+## Workspace
+
+The workspace consists of four crates:
 
 #### carmine-api
 
 Server using [Actix](https://actix.rs/) with handlers.
 
-#### carmine-api-db
+#### carmine-api-cache
 
-PostgreSQL build with [Diesel](https://diesel.rs/).
+Struct holding all the data and methods to update them.
+
+#### carmine-api-core
+
+Types used by all crates.
 
 #### carmine-api-starknet
 
