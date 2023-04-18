@@ -25,13 +25,13 @@ pub struct StarkScanEvent {
 
 pub async fn api_call(url: &str) -> Result<StarkScanEventResult, Error> {
     let api_key = env::var("STARKSCAN_API_KEY").expect("Failed to read API key");
-
     let mut headers = reqwest::header::HeaderMap::new();
+    let client = Client::new();
+
     headers.insert("accept", "applicationjson".parse().unwrap());
     headers.insert("x-api-key", api_key.parse().unwrap());
 
-    let client = Client::new();
-    let res = client.get(url).headers(headers).send().await.unwrap();
+    let res = client.get(url).headers(headers).send().await?;
 
     let parsed_result = res.json::<StarkScanEventResult>().await;
 
