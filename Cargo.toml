@@ -2,6 +2,7 @@
 
 members = [
     "carmine-api",
+    "carmine-api-airdrop",
     "carmine-api-cache",
     "carmine-api-core",
     "carmine-api-db",
