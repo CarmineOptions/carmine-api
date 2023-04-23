@@ -19,6 +19,7 @@ pub fn config(conf: &mut web::ServiceConfig) {
                 .service(v1::live_options)
                 .service(v1::transactions)
                 .service(v1::all_transactions)
+                .service(v1::airdrop)
                 .service(v0::all_non_expired_handler)
                 .service(v0::trade_history_handler)
                 .service(v0::all_trade_history_handler),
