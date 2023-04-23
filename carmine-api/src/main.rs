@@ -5,6 +5,7 @@ use actix_cors::Cors;
 use actix_web::middleware::Logger;
 use actix_web::web::Data;
 use actix_web::{http::header, App, HttpServer};
+use carmine_api_airdrop::merkle_tree::MerkleTree;
 use carmine_api_cache::Cache;
 use carmine_api_core::network::Network;
 use carmine_api_core::types::AppState;
@@ -62,6 +63,7 @@ async fn main() -> std::io::Result<()> {
     let app_state = Data::new(Arc::new(Mutex::new(AppState {
         mainnet: mainnet_cache.get_app_data(),
         testnet: testnet_cache.get_app_data(),
+        airdrop: MerkleTree::new(),
     })));
 
     let app_state1 = app_state.clone();
@@ -76,6 +78,8 @@ async fn main() -> std::io::Result<()> {
             *app_state = AppState {
                 mainnet: mainnet_cache.get_app_data(),
                 testnet: testnet_cache.get_app_data(),
+                // TODO: should not be generated everytime
+                airdrop: MerkleTree::new(),
             };
             println!("AppState updated");
         }

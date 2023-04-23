@@ -466,6 +466,7 @@ version = "0.1.0"
 dependencies = [
  "actix-cors",
  "actix-web",
+ "carmine-api-airdrop",
  "carmine-api-cache",
  "carmine-api-core",
  "carmine-api-starknet",
@@ -498,6 +499,7 @@ dependencies = [
 name = "carmine-api-core"
 version = "0.1.0"
 dependencies = [
+ "carmine-api-airdrop",
  "diesel",
  "serde",
 ]

@@ -1,5 +1,6 @@
 use crate::schema::events;
 use crate::schema::options;
+use carmine_api_airdrop::merkle_tree::MerkleTree;
 use diesel::prelude::*;
 use serde::Serialize;
 
@@ -50,4 +51,5 @@ pub struct AppData {
 pub struct AppState {
     pub mainnet: AppData,
     pub testnet: AppData,
+    pub airdrop: MerkleTree,
 }
