@@ -8,6 +8,12 @@ pub struct GenericResponse {
 }
 
 #[derive(Serialize, Debug)]
+pub struct DataResponse<T> {
+    pub status: String,
+    pub data: T,
+}
+
+#[derive(Serialize, Debug)]
 pub struct AllNonExpired<'a> {
     pub status: String,
     pub data: &'a Vec<String>,

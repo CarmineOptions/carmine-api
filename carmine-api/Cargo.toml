@@ -8,9 +8,10 @@ edition = "2021"
 [dependencies]
 actix-cors = "0.6.4"
 actix-web = "4.3.1"
-carmine-api-starknet = { path = "../carmine-api-starknet" }
+carmine-api-airdrop = { path = "../carmine-api-airdrop" }
 carmine-api-cache = { path = "../carmine-api-cache" }
 carmine-api-core = { path = "../carmine-api-core" }
+carmine-api-starknet = { path = "../carmine-api-starknet" }
 dotenvy = "0.15.6"
 env_logger = "0.10.0"
 serde = { version = "1.0.156", features = ["derive"] }

@@ -9,11 +9,7 @@ use std::env;
 const BATCH_SIZE: usize = 100;
 
 fn get_db_url(network: &Network) -> String {
-    let username = env::var("DB_USER").expect("Could not read \"DB_USER\"");
-    let password = env::var("DB_PASSWORD").expect("Could not read \"DB_PASSWORD\"");
-    let ip = env::var("DB_IP").expect("Could not read \"DB_IP\"");
     let environment = env::var("ENVIRONMENT").expect("Could not read \"ENVIRONMENT\"");
-
     // your local DB
     if environment.as_str() == "local" {
         return match network {
@@ -21,6 +17,9 @@ fn get_db_url(network: &Network) -> String {
             Network::Mainnet => "postgres://localhost/carmine-mainnet".to_string(),
         };
     }
+    let username = env::var("DB_USER").expect("Could not read \"DB_USER\"");
+    let password = env::var("DB_PASSWORD").expect("Could not read \"DB_PASSWORD\"");
+    let ip = env::var("DB_IP").expect("Could not read \"DB_IP\"");
 
     // connecting to Cloud SQL from outside of GCP
     // ie. running the API locally with prod DB)

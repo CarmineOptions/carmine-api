@@ -1,159 +1,181 @@
 use serde::Deserialize;
 use starknet_crypto::{pedersen_hash, FieldElement};
-use std::fs::File;
+use std::{collections::HashSet, fs::File, path::Path, str::FromStr, vec};
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Airdrop {
     pub address: String,
-    amount: u32,
+    amount: String,
 }
 
-#[allow(dead_code)]
 pub struct MerkleTree {
-    pub root: String,
-    tree: Vec<Vec<Node>>,
-    leaves: Vec<Airdrop>,
+    pub root: Node,
+    airdrops: Vec<Airdrop>,
 }
 
 impl MerkleTree {
     pub fn new() -> Self {
-        let mut leaves = read_airdrop();
+        let airdrops = read_airdrop();
+        let mut leaves: Vec<Node> = airdrops
+            .clone()
+            .into_iter()
+            .map(|a| Node::new_leaf(a))
+            .collect();
 
+        // if odd length add a copy of last elem
         if leaves.len() % 2 == 1 {
-            // can safely unwrap, because length is odd
             leaves.push(leaves.last().unwrap().clone());
         }
 
-        // hashed leave is hash(address, amount_b16)
-        let hashed_leaves: Vec<Node> = leaves
+        let root = build_tree(leaves);
+
+        MerkleTree { root, airdrops }
+    }
+    pub fn address_calldata(&self, address: &str) -> Result<Vec<String>, ()> {
+        let felt_address = match FieldElement::from_str(address) {
+            Ok(v) => v,
+            _ => return Err(()),
+        };
+        if !&self.root.accessible_addresses.contains(&felt_address) {
+            return Err(());
+        }
+        let mut hashes: Vec<FieldElement> = vec![];
+        let mut current_node = &self.root;
+        // if either child is_some, then both is_some
+        loop {
+            let left = current_node.left_child.as_ref().unwrap();
+            let right = current_node.right_child.as_ref().unwrap();
+            if left.accessible_addresses.contains(&felt_address) {
+                hashes.push(right.value);
+                current_node = left;
+            } else {
+                hashes.push(left.value);
+                current_node = right;
+            }
+            if current_node.left_child.is_none() {
+                break;
+            }
+        }
+        // reverse to leaf first root last
+        hashes = hashes.into_iter().rev().collect();
+
+        let airdrop = self
+            .airdrops
             .iter()
-            .map(|v| Node::new(v.address.clone(), format!("{:#x}", v.amount)))
-            .collect();
+            .find(|a| &FieldElement::from_str(&a.address).unwrap() == &felt_address)
+            .unwrap();
 
-        let (tree, root) = match build_tree_recursively(TreeBuilder::KeepGoing(vec![hashed_leaves]))
-        {
-            TreeBuilder::Done((tree, root)) => (tree, root),
-            _ => unreachable!("Unexpected build_tree_recursively result"),
-        };
+        let address = FieldElement::from_str(&airdrop.address).unwrap();
+        let amount = FieldElement::from_str(&airdrop.amount).unwrap();
 
-        MerkleTree { root, tree, leaves }
-    }
+        let mut calldata = vec![address, amount];
+        calldata.append(&mut hashes);
 
-    // Get array of strings that should be used as arguments for the SC
-    pub fn address_calldata(&self, address: &str) -> Option<Vec<String>> {
-        let airdrop_index_option = (
-            self.leaves.iter().find(|v| v.address == address),
-            self.leaves.iter().position(|v| v.address == address),
-        );
-        let (airdrop, mut index) = match airdrop_index_option {
-            (Some(airdrop), Some(index)) => (airdrop, index),
-            _ => {
-                return None;
-            }
-        };
-
-        let mut calldata: Vec<String> = vec![
-            // address tokens should be sent to
-            airdrop.address.to_string(),
-            // base16 amount to send
-            format!("{:#x}", airdrop.amount),
-        ];
-
-        // every node up to the root (excluded)
-        for floor in &self.tree {
-            calldata.push(floor[index_switch(index)].value.clone());
-            index = index / 2;
-        }
-
-        Some(calldata)
-    }
-    #[allow(dead_code)]
-    // for debugging
-    pub fn print(&self) {
-        let mut floor_count = 0;
-
-        for floor in self.tree.iter() {
-            print!("Floor {}:\n", floor_count);
-            let mut it = floor.iter().peekable();
-            while let Some(node) = it.next() {
-                if it.peek().is_none() {
-                    println!("{}", node.value);
-                } else {
-                    print!("{} - ", node.value);
-                }
-            }
-            println!();
-            floor_count = floor_count + 1;
-        }
+        // in order to be readable by FE needs to be base16 string
+        Ok(calldata.iter().map(felt_to_b16).collect())
     }
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Clone)]
-struct Node {
-    left: String,
-    right: String,
-    value: String,
+pub struct Node {
+    pub left_child: Option<Box<Node>>,
+    pub right_child: Option<Box<Node>>,
+    pub accessible_addresses: HashSet<FieldElement>,
+    pub value: FieldElement,
 }
 
 impl Node {
-    fn new(left: String, right: String) -> Self {
-        let value = hash(&left, &right);
-        Node { left, right, value }
+    fn new(a: Node, b: Node) -> Self {
+        let (left_child, right_child) = match a.value.lt(&b.value) {
+            true => (a, b),
+            false => (b, a),
+        };
+        let value = hash(&left_child.value, &right_child.value);
+        let mut accessible_addresses = HashSet::new();
+        accessible_addresses.extend(left_child.accessible_addresses.clone());
+        accessible_addresses.extend(right_child.accessible_addresses.clone());
+
+        Node {
+            left_child: Some(Box::new(left_child)),
+            right_child: Some(Box::new(right_child)),
+            accessible_addresses,
+            value,
+        }
+    }
+    fn new_leaf(airdrop: Airdrop) -> Self {
+        let address = FieldElement::from_str(&airdrop.address).unwrap();
+        let amount = FieldElement::from_str(&airdrop.amount).unwrap();
+        // keep order address, amount (cannot use fn hash)
+        let value = pedersen_hash(&address, &amount);
+
+        Node {
+            left_child: None,
+            right_child: None,
+            accessible_addresses: vec![address].into_iter().collect(),
+            value,
+        }
     }
 }
 
 enum TreeBuilder {
-    KeepGoing(Vec<Vec<Node>>),
-    Done((Vec<Vec<Node>>, String)),
+    KeepGoing(Vec<Node>),
+    Done(Node),
 }
 
-fn index_switch(index: usize) -> usize {
-    match index % 2 {
-        0 => index + 1,
-        1 => index - 1,
-        _ => unreachable!("mod 2 of index must be 0 or 1"),
+fn build_tree(leaves: Vec<Node>) -> Node {
+    match build_tree_recursively(TreeBuilder::KeepGoing(leaves)) {
+        TreeBuilder::Done(root) => return root,
+        _ => unreachable!("Failed building the tree"),
     }
 }
 
 fn build_tree_recursively(tree_builder: TreeBuilder) -> TreeBuilder {
-    let (current_floor, tree) = match tree_builder {
-        TreeBuilder::KeepGoing(tree) => (tree.last().unwrap().clone(), tree),
-        TreeBuilder::Done((tree, root)) => return TreeBuilder::Done((tree, root)),
+    let mut nodes = match tree_builder {
+        TreeBuilder::KeepGoing(nodes) => nodes,
+        _ => unreachable!("Failed building the tree"),
     };
 
-    let mut next_floor = current_floor
-        .chunks(2)
-        .map(|pair| Node::new(pair[0].value.clone(), pair[1].value.clone()))
-        .collect::<Vec<_>>();
+    let mut next_nodes: Vec<Node> = vec![];
 
-    if current_floor.len() == 2 {
-        return TreeBuilder::Done((tree, next_floor[0].value.clone()));
+    while nodes.len() > 0 {
+        let a = nodes.pop().unwrap();
+        let b = nodes.pop().unwrap();
+        next_nodes.push(Node::new(a, b));
     }
 
-    if next_floor.len() % 2 == 1 {
+    if next_nodes.len() == 1 {
+        // return root
+        let root = next_nodes.pop().unwrap();
+        return TreeBuilder::Done(root);
+    }
+
+    if next_nodes.len() % 2 == 1 {
         // if odd - pair last element with itself
-        next_floor.push(next_floor.last().unwrap().clone());
+        next_nodes.push(next_nodes.last().unwrap().clone());
     }
 
-    let mut new_tree = tree.to_vec();
-    new_tree.push(next_floor);
-
-    build_tree_recursively(TreeBuilder::KeepGoing(new_tree))
+    build_tree_recursively(TreeBuilder::KeepGoing(next_nodes))
 }
 
-pub fn hash(a: &str, b: &str) -> String {
-    let l = FieldElement::from_hex_be(a).unwrap();
-    let r = FieldElement::from_hex_be(b).unwrap();
+fn felt_to_b16(felt: &FieldElement) -> String {
+    format!("{:#x}", felt)
+}
 
-    if l.gt(&r) {
-        return format!("{:#x}", pedersen_hash(&l, &r));
+pub fn hash(a: &FieldElement, b: &FieldElement) -> FieldElement {
+    if a.lt(b) {
+        return pedersen_hash(a, b);
     }
-    format!("{:#x}", pedersen_hash(&r, &l))
+    pedersen_hash(b, a)
 }
 
 pub fn read_airdrop() -> Vec<Airdrop> {
-    let file = File::open("./src/air-drop.json").expect("Failed to read file");
+    let path = Path::new("carmine-api-airdrop/src/air-drop.json");
+    let path = if path.exists() {
+        path
+    } else {
+        Path::new("src/air-drop.json")
+    };
+    let file = File::open(path).expect("Failed to read file");
     let reader = std::io::BufReader::new(file);
     let airdrop: Vec<Airdrop> = serde_json::from_reader(reader).expect("Failed to parse airdrop");
     airdrop

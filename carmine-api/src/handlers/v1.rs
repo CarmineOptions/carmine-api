@@ -1,7 +1,8 @@
 use crate::{
     handlers::format_tx,
     types::{
-        AllNonExpired, AllTradeHistoryResponse, GenericResponse, QueryOptions, TradeHistoryResponse,
+        AllNonExpired, AllTradeHistoryResponse, DataResponse, GenericResponse, QueryOptions,
+        TradeHistoryResponse,
     },
 };
 use actix_web::{get, web, HttpResponse, Responder};
@@ -132,5 +133,46 @@ pub async fn all_transactions(
         status: "success".to_string(),
         data: data.iter().collect(),
         length,
+    })
+}
+
+#[get("/v1/mainnet/airdrop")]
+pub async fn airdrop(
+    opts: web::Query<QueryOptions>,
+    data: web::Data<Arc<Mutex<AppState>>>,
+) -> impl Responder {
+    let address = match &opts.address {
+        Some(address) => format_tx(address),
+        _ => {
+            return HttpResponse::BadRequest().json(GenericResponse {
+                status: "bad_request".to_string(),
+                message: "Did not receive address as a query parameter".to_string(),
+            });
+        }
+    };
+    let locked = &data.lock();
+    let app_state = match locked {
+        Ok(app_data) => app_data,
+        _ => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "server_error".to_string(),
+                message: "Failed to read AppState".to_string(),
+            });
+        }
+    };
+
+    let data = match app_state.airdrop.address_calldata(&address) {
+        Ok(v) => v,
+        _ => {
+            return HttpResponse::BadRequest().json(GenericResponse {
+                status: "bad_request".to_string(),
+                message: "Address not on the list".to_string(),
+            });
+        }
+    };
+
+    HttpResponse::Ok().json(DataResponse {
+        status: "success".to_string(),
+        data,
     })
 }
