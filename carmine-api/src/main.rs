@@ -67,18 +67,11 @@ async fn main() -> std::io::Result<()> {
     let app_state1 = app_state.clone();
 
     actix_web::rt::spawn(async move {
-        let mut should_update = false;
-
         loop {
-            // do not update fresh cache, then update everytime
-            if should_update {
-                sleep(Duration::from_secs(REFETCH_DELAY_SECONDS)).await;
-                println!("Updating AppState");
-                mainnet_cache.update().await;
-                testnet_cache.update().await;
-            } else {
-                should_update = true;
-            }
+            sleep(Duration::from_secs(REFETCH_DELAY_SECONDS)).await;
+            println!("Updating AppState");
+            mainnet_cache.update().await;
+            testnet_cache.update().await;
             let mut app_state = app_state1.lock().unwrap();
             *app_state = AppState {
                 mainnet: mainnet_cache.get_app_data(),

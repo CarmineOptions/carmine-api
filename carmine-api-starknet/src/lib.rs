@@ -209,10 +209,7 @@ impl Carmine {
         }
     }
 
-    async fn get_options_with_addresses_from_single_pool(
-        &self,
-        pool_address: &str,
-    ) -> Result<Vec<IOption>, &str> {
+    async fn get_options_with_addresses_from_single_pool(&self, pool_address: &str) {
         let entrypoint = selector!("get_all_options");
         let contract_result = self
             .provider
@@ -230,7 +227,7 @@ impl Carmine {
         let data: Vec<FieldElement> = match contract_result {
             Err(provider_error) => {
                 println!("{:?}", provider_error);
-                return Err("Failed calling endpoint \"get_all_options\"");
+                return;
             }
             Ok(v) => {
                 let mut res = v.result;
@@ -294,59 +291,37 @@ impl Carmine {
         }
 
         create_batch_of_options(&options, &self.network);
-
-        Ok(options)
     }
 
-    /// This method returns all options, addresses included.
+    /// This method fetches and stores in DB all options, addresses included.
     /// !This method is extremely slow, because it waits 2s between
     /// Starknet calls to avoid running into "rate limit" error!
-    pub async fn get_options_with_addresses(&self) -> Vec<IOption> {
-        let call = self.get_options_with_addresses_from_single_pool(call_lp_address(&self.network));
-        let put = self.get_options_with_addresses_from_single_pool(put_lp_address(&self.network));
-        let contract_results = join_all(vec![call, put]).await;
-
-        let mut options: Vec<IOption> = vec![];
-
-        for result in contract_results {
-            if let Ok(mut v) = result {
-                options.append(&mut v);
-            }
-        }
-
-        println!("Got options from Starknet");
-
-        options
+    pub async fn get_options_with_addresses(&self) {
+        self.get_options_with_addresses_from_single_pool(call_lp_address(&self.network))
+            .await;
+        self.get_options_with_addresses_from_single_pool(put_lp_address(&self.network))
+            .await;
     }
 }
 
-pub async fn get_events_from_starkscan(network: &Network) -> Vec<Event> {
+pub async fn get_events_from_starkscan(network: &Network) {
     let mut events: Vec<Event> = Vec::new();
-
     let mut current_url = api_url(network);
-
     let mut count = 0;
 
     'data: loop {
         let res = match starkscan::api_call(&current_url).await {
             Ok(v) => v,
             Err(_) => {
+                println!("Error from StarkScan");
                 break 'data;
             }
         };
-
         count = count + 1;
 
         let data = res.data;
 
         for event in data {
-            // only check events up to this timestamp
-            // every next event is just as old or older
-            // therefore it is safe to break top loop
-            if event.timestamp < cutoff_timestamp() {
-                break 'data;
-            }
-
             if let Some(parsed_event) = parse_event(event) {
                 events.push(parsed_event);
             }
@@ -364,15 +339,10 @@ pub async fn get_events_from_starkscan(network: &Network) -> Vec<Event> {
 
     // update DB
     create_batch_of_events(&events, network);
-
-    events
 }
 
 // TODO: abstract to remove code duplicity
-pub async fn get_new_events_from_starkscan(
-    stored_events: &Vec<Event>,
-    network: &Network,
-) -> Vec<Event> {
+pub async fn get_new_events_from_starkscan(stored_events: &Vec<Event>, network: &Network) {
     // collection of already stored TXs
     let stored_txs: Vec<String> = stored_events
         .into_iter()
@@ -438,6 +408,4 @@ pub async fn get_new_events_from_starkscan(
 
     // update DB
     create_batch_of_events(&new_events, network);
-
-    new_events
 }

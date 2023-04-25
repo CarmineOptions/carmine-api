@@ -1,4 +1,8 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    time::{SystemTime, UNIX_EPOCH},
+    vec,
+};
 
 use carmine_api_core::{
     network::{call_lp_address, put_lp_address, Network},
@@ -121,26 +125,63 @@ impl Cache {
     }
 
     pub async fn update_options(&mut self) {
-        let options_vec = self.carmine.get_options_with_addresses().await;
-        self.options = Cache::options_vec_to_hashmap(options_vec);
+        self.carmine.get_options_with_addresses().await;
+        let options_vec = get_options(&self.network);
+        let options = Cache::options_vec_to_hashmap(options_vec);
+        self.options = options;
     }
 
     pub async fn update_events(&mut self) {
-        let new_events = get_new_events_from_starkscan(&self.events, &self.network).await;
-        let mut unique_new_events = new_events
-            .into_iter()
-            .filter(|e| !self.events.contains(e))
-            .collect();
-        self.events.append(&mut unique_new_events);
+        get_new_events_from_starkscan(&self.events, &self.network).await;
+        self.events = get_events(&self.network);
+    }
+
+    fn remove_expired(&mut self) {
+        let option_length: usize = 7;
+
+        let mut updated_options: Vec<String> = vec![];
+
+        for option in self.all_non_expired.chunks(option_length) {
+            let time = &option[1];
+            let parsed_timestamp = time.parse::<u64>().ok().unwrap();
+            let now = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
+
+            if now < parsed_timestamp {
+                // not expired, add to updated options
+                updated_options.extend(option.to_vec());
+            }
+        }
+
+        self.all_non_expired = updated_options;
     }
 
     pub async fn update_all_non_expired(&mut self) {
+        let option_length: usize = 7;
+        let mut updated_options: Vec<String> = self.all_non_expired.to_vec();
         let new_non_expired = self.carmine.get_all_non_expired_options_with_premia().await;
-
-        if new_non_expired.len() > 0 {
-            // only update if fetched non empty
-            self.all_non_expired = new_non_expired;
+        if new_non_expired.len() == 0 || new_non_expired.len() % option_length != 0 {
+            return;
         }
+        for new_option in new_non_expired.chunks(option_length) {
+            let mut should_add = true;
+            for old_option in self.all_non_expired.chunks(option_length) {
+                let matching = new_option
+                    .iter()
+                    .zip(old_option)
+                    .filter(|&(a, b)| a == b)
+                    .count();
+                if matching == option_length {
+                    should_add = false;
+                }
+            }
+            if should_add {
+                updated_options.extend(new_option.to_vec());
+            }
+        }
+        self.remove_expired();
     }
 
     pub fn update_trade_history(&mut self) {
