@@ -70,7 +70,7 @@ impl Carmine {
         Carmine { provider, network }
     }
 
-    pub async fn get_all_non_expired_options_with_premia(&self) -> Vec<String> {
+    pub async fn get_all_non_expired_options_with_premia(&self) -> Result<Vec<String>, ()> {
         let entrypoint = selector!("get_all_non_expired_options_with_premia");
         let (amm, call_add, put_add) = (
             amm_address(&self.network),
@@ -99,12 +99,18 @@ impl Carmine {
         let mut fetched_data: Vec<String> = Vec::new();
 
         for result in contract_results {
-            if let Ok(v) = result {
-                let mut formatted = format_call_contract_result(v);
-                fetched_data.append(&mut formatted);
+            match result {
+                Ok(v) => {
+                    let mut formatted = format_call_contract_result(v);
+                    fetched_data.append(&mut formatted);
+                }
+                Err(_) => {
+                    println!("Failed fetching non-expired options");
+                    return Err(());
+                }
             }
         }
-        fetched_data
+        Ok(fetched_data)
     }
 
     pub async fn get_option_info_from_addresses(
