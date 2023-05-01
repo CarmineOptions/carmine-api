@@ -1,5 +1,5 @@
 use carmine_api_core::network::Network;
-use carmine_api_starknet::Carmine;
+use carmine_api_starknet::carmine::Carmine;
 
 async fn non_expired_by_network(n: Network) {
     let c = Carmine::new(n);

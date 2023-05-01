@@ -5,7 +5,7 @@ use carmine_api_core::{
     types::{AppData, Event, IOption, TradeHistory},
 };
 use carmine_api_db::{get_events, get_options};
-use carmine_api_starknet::{get_new_events_from_starkscan, Carmine};
+use carmine_api_starknet::{carmine::Carmine, starkscan::get_new_events_from_starkscan};
 
 // Only store Events we know and not ExpireOptionTokenForPool and Upgrade
 const ALLOWED_METHODS: &'static [&'static str; 5] = &[
