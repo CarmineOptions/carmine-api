@@ -173,7 +173,8 @@ pub fn read_airdrop() -> Vec<Airdrop> {
     let path = if path.exists() {
         path
     } else {
-        Path::new("src/air-drop.json")
+        // copied inside Dockerfile
+        Path::new("air-drop.json")
     };
     let file = File::open(path).expect("Failed to read file");
     let reader = std::io::BufReader::new(file);

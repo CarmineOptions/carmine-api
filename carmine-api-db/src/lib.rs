@@ -21,10 +21,6 @@ fn get_db_url(network: &Network) -> String {
     let password = env::var("DB_PASSWORD").expect("Could not read \"DB_PASSWORD\"");
     let ip = env::var("DB_IP").expect("Could not read \"DB_IP\"");
 
-    let username = env::var("DB_USER").expect("Could not read \"DB_USER\"");
-    let password = env::var("DB_PASSWORD").expect("Could not read \"DB_PASSWORD\"");
-    let ip = env::var("DB_IP").expect("Could not read \"DB_IP\"");
-
     let base = format!("postgres://{}:{}@{}", username, password, ip);
     match network {
         Network::Testnet => format!("{}/carmine-testnet", base).to_string(),
