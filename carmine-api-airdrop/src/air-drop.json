@@ -9,7 +9,7 @@
   },
   {
     "address": "0x583a9d956d65628f806386ab5b12dccd74236a3c6b930ded9cf3c54efc722a1",
-    "amount": "30000000000000000000"
+    "amount": "1000000000000000000"
   },
   {
     "address": "0xd54dd64a91d2436935bc5a5b56514f9ce9b7523ef2116dd826dd2f5de8ce9c",
@@ -34,5 +34,13 @@
   {
     "address": "0x12330da1097314f15ec4419ec7039a845b7c56d9d6c5f17a641a6e77e862dce",
     "amount": "90000000000000000000"
+  },
+  {
+    "address": "0x0365421f66a3fb7630ac030fb83a1db5078bfe29cc22f27f95a9978ff9ab7b6e",
+    "amount": "1000000000000000000"
+  },
+  {
+    "address": "0x04ddf35f217a72659e16098d3e0cc5b2a8ad332c3cf4e8e4f79731a533b956e0",
+    "amount": "1000000000000000000"
   }
 ]
