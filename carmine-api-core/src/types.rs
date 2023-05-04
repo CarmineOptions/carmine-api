@@ -1,36 +1,12 @@
+use crate::schema::blocks;
 use crate::schema::events;
 use crate::schema::options;
+use crate::schema::options_volatility;
+use crate::schema::pool_state;
+use crate::schema::pools;
 use carmine_api_airdrop::merkle_tree::MerkleTree;
 use diesel::prelude::*;
 use serde::Serialize;
-
-#[derive(Debug, Clone, Queryable, Insertable, Serialize, PartialEq, Selectable)]
-#[diesel(table_name = events)]
-pub struct Event {
-    pub block_hash: String,
-    pub block_number: i64,
-    pub transaction_hash: String,
-    pub event_index: i64,
-    pub from_address: String,
-    pub timestamp: i64,
-    pub action: String,
-    pub caller: String,
-    pub token_address: String,
-    pub capital_transfered: String,
-    pub tokens_minted: String,
-}
-
-#[derive(Debug, Clone, Queryable, Insertable, Serialize, PartialEq, Selectable)]
-#[diesel(table_name = options)]
-pub struct IOption {
-    pub option_side: i16,
-    pub maturity: i64,
-    pub strike_price: String,
-    pub quote_token_address: String,
-    pub base_token_address: String,
-    pub option_type: i16,
-    pub option_address: String,
-}
 
 #[derive(Debug, Clone, Serialize)]
 pub struct TradeHistory {
@@ -52,4 +28,80 @@ pub struct AppState {
     pub mainnet: AppData,
     pub testnet: AppData,
     pub airdrop: MerkleTree,
+}
+
+#[derive(Debug, Clone, Queryable, Insertable, Serialize, PartialEq, Selectable)]
+#[diesel(table_name = events)]
+pub struct Event {
+    pub block_hash: String,
+    pub block_number: i64,
+    pub transaction_hash: String,
+    pub event_index: i64,
+    pub from_address: String,
+    pub timestamp: i64,
+    pub action: String,
+    pub caller: String,
+    pub token_address: String,
+    pub capital_transfered: String,
+    pub tokens_minted: String,
+}
+
+#[derive(Associations, Debug, Clone, Queryable, Insertable, Serialize, PartialEq, Selectable)]
+#[diesel(belongs_to(Pool, foreign_key = lp_address))]
+#[diesel(table_name = options)]
+pub struct IOption {
+    pub option_side: i16,
+    pub maturity: i64,
+    pub strike_price: String,
+    pub quote_token_address: String,
+    pub base_token_address: String,
+    pub option_type: i16,
+    pub option_address: String,
+    pub lp_address: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PoolStats {
+    pub unlocked_cap: String,
+    pub locked_cap: String,
+    pub lp_balance: String,
+    pub pool_position: String,
+    pub lp_token_value: String,
+}
+
+#[derive(Associations, Debug, Clone, Queryable, Insertable, Serialize, PartialEq, Selectable)]
+#[diesel(belongs_to(Pool, foreign_key = lp_address))]
+#[diesel(belongs_to(DbBlock, foreign_key = block_number))]
+#[diesel(table_name = pool_state)]
+pub struct PoolState {
+    pub unlocked_cap: String,
+    pub locked_cap: String,
+    pub lp_balance: String,
+    pub pool_position: String,
+    pub lp_token_value: String,
+    pub block_number: i64,
+    pub lp_address: String,
+}
+
+#[derive(Debug, Clone, Queryable, Insertable, Serialize, PartialEq, Selectable)]
+#[diesel(table_name = blocks)]
+pub struct DbBlock {
+    pub block_number: i64,
+    pub timestamp: i64,
+}
+
+#[derive(Debug, Clone, Queryable, Insertable, Serialize, PartialEq, Selectable)]
+#[diesel(table_name = pools)]
+pub struct Pool {
+    pub lp_address: String,
+}
+
+#[derive(Associations, Debug, Clone, Queryable, Insertable, Serialize, PartialEq, Selectable)]
+#[diesel(belongs_to(IOption, foreign_key = option_address))]
+#[diesel(belongs_to(DbBlock, foreign_key = block_number))]
+#[diesel(table_name = options_volatility)]
+pub struct OptionVolatility {
+    pub option_address: String,
+    pub block_number: i64,
+    pub volatility: String,
 }

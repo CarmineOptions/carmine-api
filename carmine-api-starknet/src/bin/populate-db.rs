@@ -5,7 +5,7 @@ use dotenvy::dotenv;
 
 async fn populate_network(n: &Network) {
     let c = Carmine::new(*n);
-    get_events_from_starkscan(n).await;
+    // get_events_from_starkscan(n).await;
     c.get_options_with_addresses().await;
 }
 
