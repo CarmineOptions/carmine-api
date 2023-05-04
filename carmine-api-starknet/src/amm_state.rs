@@ -1,14 +1,13 @@
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use carmine_api_core::{network::Network, types::DbBlock};
 use carmine_api_db::{
     create_batch_of_pool_states, create_batch_of_volatilities, create_block, get_last_block_in_db,
 };
 use starknet::core::types::BlockId;
+use tokio::{join, time::sleep};
 
 use crate::carmine::Carmine;
-
-const BLOCK_INCREMENT: i64 = 1;
 
 pub struct AmmStateObserver {
     network: Network,
@@ -23,18 +22,24 @@ impl AmmStateObserver {
         }
     }
 
-    async fn update_single_block(&self, block_number: i64) {
-        let strk_block = self
+    async fn update_single_block(&self, block_number: i64) -> Result<(), ()> {
+        let strk_block = match self
             .carmine
             .get_block_by_id(BlockId::Number(block_number as u64))
             .await
-            .expect("Failed unwrapping block");
+        {
+            Ok(v) => v,
+            Err(_) => return Err(()),
+        };
         let block = DbBlock {
             block_number: i64::try_from(strk_block.block_number.unwrap()).unwrap(),
             timestamp: i64::try_from(strk_block.timestamp).unwrap(),
         };
-        let options_volatility_result = self.carmine.get_all_options_volatility(&block).await;
-        let amm_state_result = self.carmine.get_amm_state(&block).await;
+
+        let (options_volatility_result, amm_state_result) = join!(
+            self.carmine.get_all_options_volatility(&block),
+            self.carmine.get_amm_state(&block)
+        );
 
         match (options_volatility_result, amm_state_result) {
             (Ok(options_volatility), Ok(amm_state)) => {
@@ -42,8 +47,9 @@ impl AmmStateObserver {
                 create_block(&block, &self.network);
                 create_batch_of_volatilities(&options_volatility, &self.network);
                 create_batch_of_pool_states(&amm_state, &self.network);
+                Ok(())
             }
-            _ => return,
+            _ => Err(()),
         }
     }
 
@@ -55,23 +61,39 @@ impl AmmStateObserver {
             .await
             .expect("Failed getting latest block from starknet");
 
-        let start = last_block_db.block_number;
+        let start = last_block_db.block_number + 1;
         let finish = i64::try_from(last_block_starknet.block_number.unwrap()).unwrap();
 
-        self.update_state_over_block_range(start, finish).await;
+        // do nothing if up to date
+        if start < finish {
+            self.update_state_over_block_range(start, finish, 1).await;
+        }
     }
 
-    pub async fn update_state_over_block_range(&self, start: i64, finish: i64) {
+    pub async fn update_state_over_block_range(&self, start: i64, finish: i64, increment: i64) {
         println!("getting data from block #{} to #{}", start, finish);
 
         let mut n = start;
 
-        while n < finish {
-            println!("Updating data from block #{}", n);
+        while n <= finish {
             let now = Instant::now();
-            self.update_single_block(n).await;
-            println!("Updated in: {:.2?}", now.elapsed());
-            n = n + BLOCK_INCREMENT;
+            match self.update_single_block(n).await {
+                Ok(_) => {
+                    println!("Updated block #{} in {:.2?}", n, now.elapsed());
+                    // only increment if successfull
+                    n = n + increment;
+                }
+                Err(_) => {
+                    println!(
+                        "Failed updating block #{} in {:.2?}, retrying...",
+                        n,
+                        now.elapsed()
+                    );
+                    // error is most likely rate limit
+                    // wait 3s to be able to fetch again
+                    sleep(Duration::from_secs(3)).await;
+                }
+            }
         }
 
         println!("State updated");

@@ -1,7 +1,7 @@
 use carmine_api_core::network::{amm_address, call_lp_address, put_lp_address, Network};
 use carmine_api_core::types::{DbBlock, IOption, OptionVolatility, PoolState};
 use carmine_api_db::{create_batch_of_options, get_options, get_pools};
-use futures::future::{self, join_all};
+use futures::future::join_all;
 use futures::FutureExt;
 use starknet::core::types::{Block, CallContractResult, CallFunction, FieldElement};
 use starknet::macros::selector;
@@ -12,6 +12,7 @@ use starknet::{
 };
 use std::str::FromStr;
 use std::time::Duration;
+use tokio::join;
 use tokio::time::sleep;
 
 fn format_call_contract_result(res: CallContractResult) -> Vec<String> {
@@ -25,6 +26,8 @@ fn format_call_contract_result(res: CallContractResult) -> Vec<String> {
 
     arr
 }
+
+const TEN_POW_18: &'static str = "1000000000000000000";
 
 pub struct Carmine {
     provider: SequencerGatewayProvider,
@@ -332,6 +335,7 @@ impl Carmine {
             FieldElement,
             FieldElement,
             FieldElement,
+            FieldElement,
         ),
         (),
     > {
@@ -370,37 +374,42 @@ impl Carmine {
             BlockId::Number(block_number as u64),
         );
 
-        let futures = vec![
-            get_pool_locked_capital_future.boxed(),
-            get_unlocked_capital_future.boxed(),
-            get_lpool_balance_future.boxed(),
-            get_value_of_pool_position_future.boxed(),
-        ];
+        let get_value_of_lp_token_future = self.provider.call_contract(
+            CallFunction {
+                contract_address,
+                entry_point_selector: selector!("get_underlying_for_lptokens"),
+                calldata: vec![
+                    pool,
+                    FieldElement::from_str(TEN_POW_18).unwrap(),
+                    FieldElement::from_str("0").unwrap(), // uint256 consists of 2 numbers, second is 0
+                ],
+            },
+            BlockId::Number(block_number as u64),
+        );
 
-        let results: Vec<
-            Result<
-                CallContractResult,
-                starknet::providers::ProviderError<
-                    starknet::providers::SequencerGatewayProviderError,
-                >,
-            >,
-        > = future::join_all(futures).await;
-
-        match (&results[0], &results[1], &results[2], &results[3]) {
+        match join!(
+            get_pool_locked_capital_future,
+            get_unlocked_capital_future,
+            get_lpool_balance_future,
+            get_value_of_pool_position_future,
+            get_value_of_lp_token_future,
+        ) {
             (
                 Ok(pool_locked_capital),
                 Ok(unlocked_capital),
                 Ok(lpool_balance),
                 Ok(value_of_pool_position),
+                Ok(value_of_lp_token),
             ) => Ok((
                 pool_locked_capital.result[0],
                 unlocked_capital.result[0],
                 lpool_balance.result[0],
                 value_of_pool_position.result[0],
+                value_of_lp_token.result[0],
                 pool,
             )),
             _ => {
-                println!("Failed getting balance data");
+                println!("Failed getting balance data in block #{}", block_number);
                 Err(())
             }
         }
@@ -426,11 +435,17 @@ impl Carmine {
         let mut cumulative_state: Vec<PoolState> = vec![];
 
         for res in results {
-            let (locked_cap, unlocked_cap, lpool_balance, value_pool_position, pool_address) =
-                match res {
-                    Ok(v) => v,
-                    _ => return Err(()),
-                };
+            let (
+                locked_cap,
+                unlocked_cap,
+                lpool_balance,
+                value_pool_position,
+                lp_token_value,
+                pool_address,
+            ) = match res {
+                Ok(v) => v,
+                _ => return Err(()),
+            };
 
             cumulative_state.push(PoolState {
                 unlocked_cap: to_hex(unlocked_cap),
@@ -439,8 +454,7 @@ impl Carmine {
                 pool_position: to_hex(value_pool_position),
                 lp_address: to_hex(pool_address),
                 block_number: block.block_number,
-                // TODO: implement this!!!
-                lp_token_value: "0x0".to_string(),
+                lp_token_value: to_hex(lp_token_value),
             });
         }
 
