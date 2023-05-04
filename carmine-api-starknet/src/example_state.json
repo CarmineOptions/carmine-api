@@ -1,0 +1,202 @@
+[
+  {
+    "pool_address": "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024",
+    "unlocked_cap": "0x1c8e7c121a0e674e",
+    "locked_cap": "0x87aa4c73793be002",
+    "lpool_balance": "0xa438c885934a4750",
+    "value_pool_position": "0x13875eb8ba1190f2c",
+    "timestamp": 1683011435,
+    "block_number": 47744,
+    "id": "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024"
+  },
+  {
+    "pool_address": "0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a",
+    "unlocked_cap": "0x34c5c84d5",
+    "locked_cap": "0xc3b1a82",
+    "lpool_balance": "0x358979f57",
+    "value_pool_position": "0x1a2de028cc74d1896c",
+    "timestamp": 1683011435,
+    "block_number": 47744,
+    "id": "0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a"
+  },
+  {
+    "pool_address": "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024",
+    "unlocked_cap": "0x1c8e7c121a0e674e",
+    "locked_cap": "0x87aa4c73793be002",
+    "lpool_balance": "0xa438c885934a4750",
+    "value_pool_position": "0x13875eb8ba1190f2c",
+    "timestamp": 1683011645,
+    "block_number": 47745,
+    "id": "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024"
+  },
+  {
+    "pool_address": "0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a",
+    "unlocked_cap": "0x34c5c84d5",
+    "locked_cap": "0xc3b1a82",
+    "lpool_balance": "0x358979f57",
+    "value_pool_position": "0x1a2de028cc74d1896c",
+    "timestamp": 1683011645,
+    "block_number": 47745,
+    "id": "0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a"
+  },
+  {
+    "pool_address": "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024",
+    "unlocked_cap": "0x1c8e7c121a0e674e",
+    "locked_cap": "0x87aa4c73793be002",
+    "lpool_balance": "0xa438c885934a4750",
+    "value_pool_position": "0x13875eb8ba1190f2c",
+    "timestamp": 1683011911,
+    "block_number": 47746,
+    "id": "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024"
+  },
+  {
+    "pool_address": "0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a",
+    "unlocked_cap": "0x34c5c84d5",
+    "locked_cap": "0xc3b1a82",
+    "lpool_balance": "0x358979f57",
+    "value_pool_position": "0x1a2de81924b54bb2c7",
+    "timestamp": 1683011911,
+    "block_number": 47746,
+    "id": "0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a"
+  },
+  {
+    "pool_address": "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024",
+    "unlocked_cap": "0x1c8e7c121a0e674e",
+    "locked_cap": "0x87aa4c73793be002",
+    "lpool_balance": "0xa438c885934a4750",
+    "value_pool_position": "0x13876307ca1762148",
+    "timestamp": 1683012196,
+    "block_number": 47747,
+    "id": "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024"
+  },
+  {
+    "pool_address": "0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a",
+    "unlocked_cap": "0x34c5c84d5",
+    "locked_cap": "0xc3b1a82",
+    "lpool_balance": "0x358979f57",
+    "value_pool_position": "0x1a2de81924b54bb2c7",
+    "timestamp": 1683012196,
+    "block_number": 47747,
+    "id": "0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a"
+  },
+  {
+    "pool_address": "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024",
+    "unlocked_cap": "0x1c8e7c121a0e674e",
+    "locked_cap": "0x87aa4c73793be002",
+    "lpool_balance": "0xa438c885934a4750",
+    "value_pool_position": "0x13876307ca1762148",
+    "timestamp": 1683012399,
+    "block_number": 47748,
+    "id": "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024"
+  },
+  {
+    "pool_address": "0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a",
+    "unlocked_cap": "0x34c5c84d5",
+    "locked_cap": "0xc3b1a82",
+    "lpool_balance": "0x358979f57",
+    "value_pool_position": "0x1a2de81924b54bb2c7",
+    "timestamp": 1683012399,
+    "block_number": 47748,
+    "id": "0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a"
+  },
+  {
+    "pool_address": "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024",
+    "unlocked_cap": "0x1c8e7c121a0e674e",
+    "locked_cap": "0x87aa4c73793be002",
+    "lpool_balance": "0xa438c885934a4750",
+    "value_pool_position": "0x13876307ca1762148",
+    "timestamp": 1683012478,
+    "block_number": 47749,
+    "id": "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024"
+  },
+  {
+    "pool_address": "0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a",
+    "unlocked_cap": "0x34c5c84d5",
+    "locked_cap": "0xc3b1a82",
+    "lpool_balance": "0x358979f57",
+    "value_pool_position": "0x1a2de81924b54bb2c7",
+    "timestamp": 1683012478,
+    "block_number": 47749,
+    "id": "0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a"
+  },
+  {
+    "pool_address": "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024",
+    "unlocked_cap": "0x1c8e7c121a0e674e",
+    "locked_cap": "0x87aa4c73793be002",
+    "lpool_balance": "0xa438c885934a4750",
+    "value_pool_position": "0x13876307ca1762148",
+    "timestamp": 1683012841,
+    "block_number": 47750,
+    "id": "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024"
+  },
+  {
+    "pool_address": "0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a",
+    "unlocked_cap": "0x34c5c84d5",
+    "locked_cap": "0xc3b1a82",
+    "lpool_balance": "0x358979f57",
+    "value_pool_position": "0x1a2de81924b54bb2c7",
+    "timestamp": 1683012841,
+    "block_number": 47750,
+    "id": "0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a"
+  },
+  {
+    "pool_address": "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024",
+    "unlocked_cap": "0x1c8e7c121a0e674e",
+    "locked_cap": "0x87aa4c73793be002",
+    "lpool_balance": "0xa438c885934a4750",
+    "value_pool_position": "0x13876307ca1762148",
+    "timestamp": 1683013028,
+    "block_number": 47751,
+    "id": "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024"
+  },
+  {
+    "pool_address": "0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a",
+    "unlocked_cap": "0x34c5c84d5",
+    "locked_cap": "0xc3b1a82",
+    "lpool_balance": "0x358979f57",
+    "value_pool_position": "0x1a2de81924b54bb2c7",
+    "timestamp": 1683013028,
+    "block_number": 47751,
+    "id": "0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a"
+  },
+  {
+    "pool_address": "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024",
+    "unlocked_cap": "0x1c8e7c121a0e674e",
+    "locked_cap": "0x87aa4c73793be002",
+    "lpool_balance": "0xa438c885934a4750",
+    "value_pool_position": "0x13876307ca1762148",
+    "timestamp": 1683013211,
+    "block_number": 47752,
+    "id": "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024"
+  },
+  {
+    "pool_address": "0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a",
+    "unlocked_cap": "0x34c5c84d5",
+    "locked_cap": "0xc3b1a82",
+    "lpool_balance": "0x358979f57",
+    "value_pool_position": "0x1a2de81924b54bb2c7",
+    "timestamp": 1683013211,
+    "block_number": 47752,
+    "id": "0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a"
+  },
+  {
+    "pool_address": "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024",
+    "unlocked_cap": "0x1c8e7c121a0e674e",
+    "locked_cap": "0x87aa4c73793be002",
+    "lpool_balance": "0xa438c885934a4750",
+    "value_pool_position": "0x13876307ca1762148",
+    "timestamp": 1683013487,
+    "block_number": 47753,
+    "id": "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024"
+  },
+  {
+    "pool_address": "0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a",
+    "unlocked_cap": "0x34c5c84d5",
+    "locked_cap": "0xc3b1a82",
+    "lpool_balance": "0x358979f57",
+    "value_pool_position": "0x1a2de81924b54bb2c7",
+    "timestamp": 1683013487,
+    "block_number": 47753,
+    "id": "0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a"
+  }
+]
