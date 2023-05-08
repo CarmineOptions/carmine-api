@@ -5,11 +5,8 @@ use futures::future::join_all;
 use futures::FutureExt;
 use starknet::core::types::{Block, CallContractResult, CallFunction, FieldElement};
 use starknet::macros::selector;
-use starknet::{
-    self,
-    core::types::BlockId,
-    providers::{Provider, SequencerGatewayProvider},
-};
+use starknet::providers::{SequencerGatewayProvider, SequencerGatewayProviderError};
+use starknet::{self, core::types::BlockId, providers::Provider};
 use std::str::FromStr;
 use std::time::Duration;
 use tokio::join;
@@ -324,6 +321,97 @@ impl Carmine {
         Ok(data)
     }
 
+    async fn amm_call(
+        &self,
+        block_number: i64,
+        calldata: Vec<FieldElement>,
+        entry_point_selector: FieldElement,
+    ) -> Result<FieldElement, starknet::providers::ProviderError<SequencerGatewayProviderError>>
+    {
+        match self
+            .provider
+            .call_contract(
+                CallFunction {
+                    contract_address: self.amm_address,
+                    entry_point_selector,
+                    calldata,
+                },
+                BlockId::Number(block_number as u64),
+            )
+            .await
+        {
+            Ok(call_result) => Ok(call_result.result[0]),
+            Err(e) => Err(e),
+        }
+    }
+
+    pub async fn get_pool_locked_capital(
+        &self,
+        block_number: i64,
+        pool: FieldElement,
+    ) -> Result<FieldElement, starknet::providers::ProviderError<SequencerGatewayProviderError>>
+    {
+        self.amm_call(
+            block_number,
+            vec![pool],
+            selector!("get_pool_locked_capital"),
+        )
+        .await
+    }
+
+    pub async fn get_unlocked_capital(
+        &self,
+        block_number: i64,
+        pool: FieldElement,
+    ) -> Result<FieldElement, starknet::providers::ProviderError<SequencerGatewayProviderError>>
+    {
+        self.amm_call(block_number, vec![pool], selector!("get_unlocked_capital"))
+            .await
+    }
+
+    pub async fn get_lpool_balance(
+        &self,
+        block_number: i64,
+        pool: FieldElement,
+    ) -> Result<FieldElement, starknet::providers::ProviderError<SequencerGatewayProviderError>>
+    {
+        self.amm_call(block_number, vec![pool], selector!("get_lpool_balance"))
+            .await
+    }
+
+    pub async fn get_value_of_pool_position(
+        &self,
+        block_number: i64,
+        pool: FieldElement,
+    ) -> Result<FieldElement, starknet::providers::ProviderError<SequencerGatewayProviderError>>
+    {
+        self.amm_call(
+            block_number,
+            vec![pool],
+            selector!("get_value_of_pool_position"),
+        )
+        .await
+    }
+
+    pub async fn get_value_of_lp_token(
+        &self,
+        block_number: i64,
+        pool: FieldElement,
+    ) -> Result<FieldElement, starknet::providers::ProviderError<SequencerGatewayProviderError>>
+    {
+        self.amm_call(
+            block_number,
+            vec![
+                pool,
+                // 10**18 as uint256
+                FieldElement::from_str(TEN_POW_18).unwrap(),
+                FieldElement::from_str("0").unwrap(),
+            ],
+            selector!("get_underlying_for_lptokens"),
+        )
+        .await
+    }
+
     pub async fn get_locked_unlocked_total_capital_for_pool(
         &self,
         pool: FieldElement,
@@ -339,60 +427,12 @@ impl Carmine {
         ),
         (),
     > {
-        let contract_address = self.amm_address;
-        let get_pool_locked_capital_future = self.provider.call_contract(
-            CallFunction {
-                contract_address,
-                entry_point_selector: selector!("get_pool_locked_capital"),
-                calldata: vec![pool],
-            },
-            BlockId::Number(block_number as u64),
-        );
-        let get_unlocked_capital_future = self.provider.call_contract(
-            CallFunction {
-                contract_address,
-                entry_point_selector: selector!("get_unlocked_capital"),
-                calldata: vec![pool],
-            },
-            BlockId::Number(block_number as u64),
-        );
-        let get_lpool_balance_future = self.provider.call_contract(
-            CallFunction {
-                contract_address,
-                entry_point_selector: selector!("get_lpool_balance"),
-                calldata: vec![pool],
-            },
-            BlockId::Number(block_number as u64),
-        );
-
-        let get_value_of_pool_position_future = self.provider.call_contract(
-            CallFunction {
-                contract_address,
-                entry_point_selector: selector!("get_value_of_pool_position"),
-                calldata: vec![pool],
-            },
-            BlockId::Number(block_number as u64),
-        );
-
-        let get_value_of_lp_token_future = self.provider.call_contract(
-            CallFunction {
-                contract_address,
-                entry_point_selector: selector!("get_underlying_for_lptokens"),
-                calldata: vec![
-                    pool,
-                    FieldElement::from_str(TEN_POW_18).unwrap(),
-                    FieldElement::from_str("0").unwrap(), // uint256 consists of 2 numbers, second is 0
-                ],
-            },
-            BlockId::Number(block_number as u64),
-        );
-
         match join!(
-            get_pool_locked_capital_future,
-            get_unlocked_capital_future,
-            get_lpool_balance_future,
-            get_value_of_pool_position_future,
-            get_value_of_lp_token_future,
+            self.get_pool_locked_capital(block_number, pool),
+            self.get_unlocked_capital(block_number, pool),
+            self.get_lpool_balance(block_number, pool),
+            self.get_value_of_pool_position(block_number, pool),
+            self.get_value_of_lp_token(block_number, pool),
         ) {
             (
                 Ok(pool_locked_capital),
@@ -401,11 +441,11 @@ impl Carmine {
                 Ok(value_of_pool_position),
                 Ok(value_of_lp_token),
             ) => Ok((
-                pool_locked_capital.result[0],
-                unlocked_capital.result[0],
-                lpool_balance.result[0],
-                value_of_pool_position.result[0],
-                value_of_lp_token.result[0],
+                pool_locked_capital,
+                unlocked_capital,
+                lpool_balance,
+                value_of_pool_position,
+                value_of_lp_token,
                 pool,
             )),
             _ => {

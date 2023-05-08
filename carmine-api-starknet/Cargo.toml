@@ -33,3 +33,7 @@ name = "local-to-gcp"
 [[bin]]
 path = "./src/bin/call.rs"
 name = "call"
+
+[[bin]]
+path = "./src/bin/apy.rs"
+name = "apy"
