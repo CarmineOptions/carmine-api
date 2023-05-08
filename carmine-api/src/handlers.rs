@@ -5,10 +5,18 @@ mod v0;
 mod v1;
 
 pub fn format_tx(tx: &String) -> String {
+    if tx.len() <= 3 || &tx[..2] != "0x" {
+        // len 3 is 0x0 -> do not remove this zero
+        return tx.to_string();
+    }
     let tmp: String = tx.to_lowercase().chars().skip(2).collect();
     let without_leading_zeroes = tmp.trim_start_matches('0');
     let res = format!("0x{}", without_leading_zeroes);
-    res
+    match res.len() {
+        // 0x0000 -> 0x -> return 0x0
+        2 => "0x0".to_string(),
+        _ => res,
+    }
 }
 
 pub fn config(conf: &mut web::ServiceConfig) {
