@@ -13,6 +13,21 @@ pub struct MerkleTree {
     airdrops: Vec<Airdrop>,
 }
 
+pub fn strip_leading_zeroes(hex: &str) -> String {
+    if hex.len() <= 3 || &hex[..2] != "0x" {
+        // len 3 is 0x0 -> do not remove this zero
+        return hex.to_string();
+    }
+    let tmp: String = hex.to_lowercase().chars().skip(2).collect();
+    let without_leading_zeroes = tmp.trim_start_matches('0');
+    let res = format!("0x{}", without_leading_zeroes);
+    match res.len() {
+        // 0x0000 -> 0x -> return 0x0
+        2 => "0x0".to_string(),
+        _ => res,
+    }
+}
+
 impl MerkleTree {
     pub fn new() -> Self {
         let airdrops = read_airdrop();
@@ -103,7 +118,7 @@ impl Node {
         }
     }
     fn new_leaf(airdrop: Airdrop) -> Self {
-        let address = FieldElement::from_str(&airdrop.address).unwrap();
+        let address = FieldElement::from_str(&strip_leading_zeroes(&airdrop.address)).unwrap();
         let amount = FieldElement::from_str(&airdrop.amount).unwrap();
         // keep order address, amount (cannot use fn hash)
         let value = pedersen_hash(&address, &amount);
