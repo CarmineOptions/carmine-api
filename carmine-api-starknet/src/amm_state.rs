@@ -74,6 +74,7 @@ impl AmmStateObserver {
         println!("getting data from block #{} to #{}", start, finish);
 
         let mut n = start;
+        let mut fail_count = 0;
 
         while n <= finish {
             let now = Instant::now();
@@ -82,6 +83,7 @@ impl AmmStateObserver {
                     println!("Updated block #{} in {:.2?}", n, now.elapsed());
                     // only increment if successfull
                     n = n + increment;
+                    fail_count = 0;
                 }
                 Err(_) => {
                     println!(
@@ -89,9 +91,16 @@ impl AmmStateObserver {
                         n,
                         now.elapsed()
                     );
+                    fail_count = fail_count + 1;
+
                     // error is most likely rate limit
                     // wait 3s to be able to fetch again
                     sleep(Duration::from_secs(3)).await;
+
+                    // if keeps failing, skip this block
+                    if fail_count > 5 {
+                        n = n + increment;
+                    }
                 }
             }
         }
