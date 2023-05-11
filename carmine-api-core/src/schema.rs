@@ -47,8 +47,8 @@ diesel::table! {
         unlocked_cap -> Text,
         locked_cap -> Text,
         lp_balance -> Text,
-        pool_position -> Text,
-        lp_token_value -> Text,
+        pool_position -> Nullable<Text>,
+        lp_token_value -> Nullable<Text>,
         block_number -> Int8,
         lp_address -> Text,
     }
@@ -62,4 +62,14 @@ diesel::table! {
     }
 }
 
-diesel::allow_tables_to_appear_in_same_query!(events, options, blocks, pool_state, pools,);
+diesel::allow_tables_to_appear_in_same_query!(
+    events,
+    options,
+    blocks,
+    pool_state,
+    pools,
+    options_volatility,
+);
+
+diesel::joinable!(pool_state -> blocks (block_number));
+diesel::joinable!(options_volatility -> blocks (block_number));

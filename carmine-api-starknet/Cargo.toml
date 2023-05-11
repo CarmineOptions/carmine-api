@@ -37,3 +37,7 @@ name = "call"
 [[bin]]
 path = "./src/bin/apy.rs"
 name = "apy"
+
+[[bin]]
+path = "./src/bin/get_state.rs"
+name = "get_state"

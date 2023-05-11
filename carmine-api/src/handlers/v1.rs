@@ -176,3 +176,114 @@ pub async fn airdrop(
         data,
     })
 }
+
+#[get("/v1/{network}/eth-usdc-call")]
+pub async fn eth_usdc_call(
+    path: web::Path<String>,
+    data: web::Data<Arc<Mutex<AppState>>>,
+) -> impl Responder {
+    let network = match path.into_inner().as_str() {
+        TESTNET => Network::Testnet,
+        MAINNET => Network::Mainnet,
+        _ => {
+            return HttpResponse::BadRequest().json(GenericResponse {
+                status: "bad_request".to_string(),
+                message: "Specify network in the path".to_string(),
+            });
+        }
+    };
+    let locked = &data.lock();
+    let app_state = match locked {
+        Ok(app_data) => app_data,
+        _ => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "server_error".to_string(),
+                message: "Failed to read AppState".to_string(),
+            });
+        }
+    };
+
+    let data = match network {
+        Network::Testnet => &app_state.testnet.state_eth_usdc_call,
+        Network::Mainnet => &app_state.mainnet.state_eth_usdc_call,
+    };
+
+    HttpResponse::Ok().json(DataResponse {
+        status: "success".to_string(),
+        data,
+    })
+}
+
+#[get("/v1/{network}/eth-usdc-put")]
+pub async fn eth_usdc_put(
+    path: web::Path<String>,
+    data: web::Data<Arc<Mutex<AppState>>>,
+) -> impl Responder {
+    let network = match path.into_inner().as_str() {
+        TESTNET => Network::Testnet,
+        MAINNET => Network::Mainnet,
+        _ => {
+            return HttpResponse::BadRequest().json(GenericResponse {
+                status: "bad_request".to_string(),
+                message: "Specify network in the path".to_string(),
+            });
+        }
+    };
+    let locked = &data.lock();
+    let app_state = match locked {
+        Ok(app_data) => app_data,
+        _ => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "server_error".to_string(),
+                message: "Failed to read AppState".to_string(),
+            });
+        }
+    };
+
+    let data = match network {
+        Network::Testnet => &app_state.testnet.state_eth_usdc_put,
+        Network::Mainnet => &app_state.mainnet.state_eth_usdc_put,
+    };
+
+    HttpResponse::Ok().json(DataResponse {
+        status: "success".to_string(),
+        data,
+    })
+}
+
+#[get("/v1/{network}/option-volatility")]
+pub async fn option_volatility(
+    path: web::Path<String>,
+    data: web::Data<Arc<Mutex<AppState>>>,
+) -> impl Responder {
+    let network = match path.into_inner().as_str() {
+        TESTNET => Network::Testnet,
+        MAINNET => Network::Mainnet,
+        _ => {
+            return HttpResponse::BadRequest().json(GenericResponse {
+                status: "bad_request".to_string(),
+                message: "Specify network in the path".to_string(),
+            });
+        }
+    };
+    let locked = &data.lock();
+    let app_state = match locked {
+        Ok(app_data) => app_data,
+        _ => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "server_error".to_string(),
+                message: "Failed to read AppState".to_string(),
+            });
+        }
+    };
+
+    let data = match network {
+        Network::Testnet => &app_state.testnet.option_volatility,
+        Network::Mainnet => &app_state.mainnet.option_volatility,
+    };
+
+    HttpResponse::Ok().json(DataResponse {
+        status: "success".to_string(),
+        data,
+    })
+}

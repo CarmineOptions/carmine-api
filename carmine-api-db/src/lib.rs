@@ -1,6 +1,9 @@
 use carmine_api_core::network::Network;
 use carmine_api_core::schema::{self};
-use carmine_api_core::types::{DbBlock, Event, IOption, OptionVolatility, Pool, PoolState};
+use carmine_api_core::types::{
+    DbBlock, Event, IOption, OptionVolatility, OptionWithVolatility, Pool, PoolState,
+    PoolStateWithTimestamp, Volatility,
+};
 
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
@@ -209,6 +212,93 @@ pub fn create_batch_of_pool_states(states: &Vec<PoolState>, network: &Network) {
             .values(chunk)
             .on_conflict_do_nothing()
             .execute(&mut connection)
-            .expect("Error saving batch of volatilities");
+            .expect("Error saving batch of pool states");
     }
+}
+
+pub fn get_pool_state(pool_address: &str, network: &Network) -> Vec<PoolStateWithTimestamp> {
+    use crate::schema::blocks::dsl::*;
+    use crate::schema::pool_state::dsl::*;
+
+    let connection = &mut establish_connection(network);
+    pool_state
+        .inner_join(blocks)
+        .filter(lp_address.eq(pool_address))
+        .select((PoolState::as_select(), DbBlock::as_select()))
+        .load::<(PoolState, DbBlock)>(connection)
+        .expect("Error loading pool state")
+        .into_iter()
+        .map(|(pool, block)| PoolStateWithTimestamp {
+            unlocked_cap: pool.unlocked_cap,
+            locked_cap: pool.locked_cap,
+            lp_balance: pool.lp_balance,
+            pool_position: pool.pool_position,
+            lp_token_value: pool.lp_token_value,
+            lp_address: pool.lp_address,
+            block_number: block.block_number,
+            timestamp: block.timestamp,
+        })
+        .collect()
+}
+
+pub fn get_options_volatility(network: &Network) -> Vec<OptionWithVolatility> {
+    use crate::schema::blocks::dsl::*;
+    use crate::schema::options::dsl::*;
+    use crate::schema::options_volatility::dsl::*;
+
+    let connection = &mut establish_connection(network);
+
+    let all_options: Vec<IOption> = options
+        .select(IOption::as_select())
+        .load(connection)
+        .expect("Failed getting all options");
+
+    let volatilities: Vec<(OptionVolatility, DbBlock)> = options_volatility
+        .inner_join(blocks)
+        .select((OptionVolatility::as_select(), DbBlock::as_select()))
+        .load::<(OptionVolatility, DbBlock)>(connection)
+        .expect("Error loading option volatility");
+
+    let mut options_with_volatilities: Vec<OptionWithVolatility> = vec![];
+
+    for opt in all_options {
+        // filter volatilities of the current option
+        let option_specific_volatilities: Vec<Volatility> = volatilities
+            .iter()
+            .filter(|(vol, _)| opt.option_address == vol.option_address)
+            .map(|(vol, block)| Volatility {
+                block_number: block.block_number,
+                timestamp: block.timestamp,
+                volatility: vol.volatility.clone(),
+            })
+            .collect();
+
+        let mut last_value: String = String::new();
+
+        let unique_volatilities: Vec<Volatility> =
+            option_specific_volatilities
+                .into_iter()
+                .fold(vec![], |mut acc, cur| {
+                    if &last_value.as_str() != &cur.volatility.as_str() {
+                        last_value = cur.volatility.clone();
+                        acc.push(cur);
+                    }
+                    acc
+                });
+
+        // push current option with volatility
+        options_with_volatilities.push(OptionWithVolatility {
+            option_side: opt.option_side,
+            maturity: opt.maturity,
+            strike_price: opt.strike_price,
+            quote_token_address: opt.quote_token_address,
+            base_token_address: opt.base_token_address,
+            option_type: opt.option_type,
+            option_address: opt.option_address,
+            lp_address: opt.lp_address,
+            volatilities: unique_volatilities,
+        });
+    }
+
+    options_with_volatilities
 }

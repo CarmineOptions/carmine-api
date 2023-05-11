@@ -9,8 +9,8 @@ use starknet::providers::{SequencerGatewayProvider, SequencerGatewayProviderErro
 use starknet::{self, core::types::BlockId, providers::Provider};
 use std::str::FromStr;
 use std::time::Duration;
-use tokio::join;
 use tokio::time::sleep;
+use tokio::try_join;
 
 fn format_call_contract_result(res: CallContractResult) -> Vec<String> {
     let mut arr: Vec<String> = vec![];
@@ -24,7 +24,16 @@ fn format_call_contract_result(res: CallContractResult) -> Vec<String> {
     arr
 }
 
+fn to_hex(v: FieldElement) -> String {
+    format!("{:#x}", v)
+}
+
 const TEN_POW_18: &'static str = "1000000000000000000";
+
+struct FunctionDescriptor<'a> {
+    name: &'a str,
+    selector: FieldElement,
+}
 
 pub struct Carmine {
     provider: SequencerGatewayProvider,
@@ -32,10 +41,6 @@ pub struct Carmine {
     call_lp_address: FieldElement,
     put_lp_address: FieldElement,
     network: Network,
-}
-
-fn to_hex(v: FieldElement) -> String {
-    format!("{:#x}", v)
 }
 
 impl Carmine {
@@ -325,7 +330,7 @@ impl Carmine {
         &self,
         block_number: i64,
         calldata: Vec<FieldElement>,
-        entry_point_selector: FieldElement,
+        function_descriptor: FunctionDescriptor<'_>,
     ) -> Result<FieldElement, starknet::providers::ProviderError<SequencerGatewayProviderError>>
     {
         match self
@@ -333,7 +338,7 @@ impl Carmine {
             .call_contract(
                 CallFunction {
                     contract_address: self.amm_address,
-                    entry_point_selector,
+                    entry_point_selector: function_descriptor.selector,
                     calldata,
                 },
                 BlockId::Number(block_number as u64),
@@ -354,7 +359,10 @@ impl Carmine {
         self.amm_call(
             block_number,
             vec![pool],
-            selector!("get_pool_locked_capital"),
+            FunctionDescriptor {
+                name: "get_pool_locked_capital",
+                selector: selector!("get_pool_locked_capital"),
+            },
         )
         .await
     }
@@ -365,8 +373,20 @@ impl Carmine {
         pool: FieldElement,
     ) -> Result<FieldElement, starknet::providers::ProviderError<SequencerGatewayProviderError>>
     {
-        self.amm_call(block_number, vec![pool], selector!("get_unlocked_capital"))
+        match self
+            .amm_call(
+                block_number,
+                vec![pool],
+                FunctionDescriptor {
+                    name: "get_unlocked_capital",
+                    selector: selector!("get_unlocked_capital"),
+                },
+            )
             .await
+        {
+            Ok(v) => Ok(v),
+            Err(e) => Err(e),
+        }
     }
 
     pub async fn get_lpool_balance(
@@ -375,41 +395,93 @@ impl Carmine {
         pool: FieldElement,
     ) -> Result<FieldElement, starknet::providers::ProviderError<SequencerGatewayProviderError>>
     {
-        self.amm_call(block_number, vec![pool], selector!("get_lpool_balance"))
-            .await
+        self.amm_call(
+            block_number,
+            vec![pool],
+            FunctionDescriptor {
+                name: "get_lpool_balance",
+                selector: selector!("get_lpool_balance"),
+            },
+        )
+        .await
     }
 
     pub async fn get_value_of_pool_position(
         &self,
         block_number: i64,
         pool: FieldElement,
-    ) -> Result<FieldElement, starknet::providers::ProviderError<SequencerGatewayProviderError>>
-    {
-        self.amm_call(
-            block_number,
-            vec![pool],
-            selector!("get_value_of_pool_position"),
-        )
-        .await
+    ) -> Result<
+        Option<FieldElement>,
+        starknet::providers::ProviderError<SequencerGatewayProviderError>,
+    > {
+        match self
+            .amm_call(
+                block_number,
+                vec![pool],
+                FunctionDescriptor {
+                    name: "get_value_of_pool_position",
+                    selector: selector!("get_value_of_pool_position"),
+                },
+            )
+            .await
+        {
+            Ok(v) => Ok(Some(v)),
+            Err(e)
+                if e.to_string()
+                    .contains("Received price which is over an hour old") =>
+            {
+                // this specific error message means that pool position
+                // cannot be calculated - return None
+                Ok(None)
+            }
+            Err(e) => Err(e),
+        }
     }
 
     pub async fn get_value_of_lp_token(
         &self,
         block_number: i64,
         pool: FieldElement,
-    ) -> Result<FieldElement, starknet::providers::ProviderError<SequencerGatewayProviderError>>
-    {
-        self.amm_call(
-            block_number,
-            vec![
-                pool,
-                // 10**18 as uint256
-                FieldElement::from_str(TEN_POW_18).unwrap(),
-                FieldElement::from_str("0").unwrap(),
-            ],
-            selector!("get_underlying_for_lptokens"),
-        )
-        .await
+    ) -> Result<
+        Option<FieldElement>,
+        starknet::providers::ProviderError<SequencerGatewayProviderError>,
+    > {
+        match self
+            .amm_call(
+                block_number,
+                vec![
+                    pool,
+                    // 10**18 as uint256
+                    FieldElement::from_str(TEN_POW_18).unwrap(),
+                    FieldElement::from_str("0").unwrap(),
+                ],
+                FunctionDescriptor {
+                    name: "get_underlying_for_lptokens",
+                    selector: selector!("get_underlying_for_lptokens"),
+                },
+            )
+            .await
+        {
+            Ok(v) => Ok(Some(v)),
+            Err(e)
+                if e.to_string().contains(
+                    "Unable to calculate position value, please wait till option with maturity",
+                ) =>
+            {
+                // this specific error message means that LP token value
+                // cannot be calculated - return None
+                Ok(None)
+            }
+            Err(e)
+                if e.to_string()
+                    .contains("Received price which is over an hour old") =>
+            {
+                // this specific error message means that LP token value
+                // cannot be calculated - return None
+                Ok(None)
+            }
+            Err(e) => Err(e),
+        }
     }
 
     pub async fn get_locked_unlocked_total_capital_for_pool(
@@ -421,26 +493,26 @@ impl Carmine {
             FieldElement,
             FieldElement,
             FieldElement,
-            FieldElement,
-            FieldElement,
+            Option<FieldElement>,
+            Option<FieldElement>,
             FieldElement,
         ),
-        (),
+        starknet::providers::ProviderError<SequencerGatewayProviderError>,
     > {
-        match join!(
+        match try_join!(
             self.get_pool_locked_capital(block_number, pool),
             self.get_unlocked_capital(block_number, pool),
             self.get_lpool_balance(block_number, pool),
             self.get_value_of_pool_position(block_number, pool),
             self.get_value_of_lp_token(block_number, pool),
         ) {
-            (
-                Ok(pool_locked_capital),
-                Ok(unlocked_capital),
-                Ok(lpool_balance),
-                Ok(value_of_pool_position),
-                Ok(value_of_lp_token),
-            ) => Ok((
+            Ok((
+                pool_locked_capital,
+                unlocked_capital,
+                lpool_balance,
+                value_of_pool_position,
+                value_of_lp_token,
+            )) => Ok((
                 pool_locked_capital,
                 unlocked_capital,
                 lpool_balance,
@@ -448,9 +520,10 @@ impl Carmine {
                 value_of_lp_token,
                 pool,
             )),
-            _ => {
+            Err(e) => {
                 println!("Failed getting balance data in block #{}", block_number);
-                Err(())
+                println!("{:?}", e);
+                Err(e)
             }
         }
     }
@@ -491,10 +564,16 @@ impl Carmine {
                 unlocked_cap: to_hex(unlocked_cap),
                 locked_cap: to_hex(locked_cap),
                 lp_balance: to_hex(lpool_balance),
-                pool_position: to_hex(value_pool_position),
+                pool_position: match value_pool_position {
+                    Some(v) => Some(to_hex(v)),
+                    None => None,
+                },
                 lp_address: to_hex(pool_address),
                 block_number: block.block_number,
-                lp_token_value: to_hex(lp_token_value),
+                lp_token_value: match lp_token_value {
+                    Some(v) => Some(to_hex(v)),
+                    None => None,
+                },
             });
         }
 
