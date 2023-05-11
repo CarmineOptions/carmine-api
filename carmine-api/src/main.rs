@@ -78,7 +78,6 @@ async fn main() -> std::io::Result<()> {
             *app_state = AppState {
                 mainnet: mainnet_cache.get_app_data(),
                 testnet: testnet_cache.get_app_data(),
-                // TODO: should not be generated everytime
                 airdrop: MerkleTree::new(),
             };
             println!("AppState updated");

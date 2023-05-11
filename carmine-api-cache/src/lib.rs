@@ -4,7 +4,7 @@ use carmine_api_core::{
     network::{call_lp_address, put_lp_address, Network},
     types::{AppData, Event, IOption, TradeHistory},
 };
-use carmine_api_db::{get_events, get_options};
+use carmine_api_db::{get_events, get_options, get_options_volatility, get_pool_state};
 use carmine_api_starknet::{carmine::Carmine, starkscan::get_new_events_from_starkscan};
 
 // Only store Events we know and not ExpireOptionTokenForPool and Upgrade
@@ -59,6 +59,9 @@ impl Cache {
         AppData {
             all_non_expired: self.get_all_non_expired(),
             trade_history: self.get_trade_history(),
+            state_eth_usdc_call: get_pool_state(call_lp_address(&self.network), &self.network),
+            state_eth_usdc_put: get_pool_state(put_lp_address(&self.network), &self.network),
+            option_volatility: get_options_volatility(&self.network),
         }
     }
 

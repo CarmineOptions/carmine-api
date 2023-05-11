@@ -1,9 +1,4 @@
-use crate::schema::blocks;
-use crate::schema::events;
-use crate::schema::options;
-use crate::schema::options_volatility;
-use crate::schema::pool_state;
-use crate::schema::pools;
+use crate::schema::{blocks, events, options, options_volatility, pool_state, pools};
 use carmine_api_airdrop::merkle_tree::MerkleTree;
 use diesel::prelude::*;
 use serde::Serialize;
@@ -22,6 +17,9 @@ pub struct TradeHistory {
 pub struct AppData {
     pub all_non_expired: Vec<String>,
     pub trade_history: Vec<TradeHistory>,
+    pub option_volatility: Vec<OptionWithVolatility>,
+    pub state_eth_usdc_call: Vec<PoolStateWithTimestamp>,
+    pub state_eth_usdc_put: Vec<PoolStateWithTimestamp>,
 }
 
 pub struct AppState {
@@ -60,6 +58,26 @@ pub struct IOption {
     pub lp_address: String,
 }
 
+#[derive(Serialize)]
+pub struct Volatility {
+    pub block_number: i64,
+    pub timestamp: i64,
+    pub volatility: String,
+}
+
+#[derive(Serialize)]
+pub struct OptionWithVolatility {
+    pub option_side: i16,
+    pub maturity: i64,
+    pub strike_price: String,
+    pub quote_token_address: String,
+    pub base_token_address: String,
+    pub option_type: i16,
+    pub option_address: String,
+    pub lp_address: String,
+    pub volatilities: Vec<Volatility>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct PoolStats {
     pub unlocked_cap: String,
@@ -77,10 +95,22 @@ pub struct PoolState {
     pub unlocked_cap: String,
     pub locked_cap: String,
     pub lp_balance: String,
-    pub pool_position: String,
-    pub lp_token_value: String,
+    pub pool_position: Option<String>,
+    pub lp_token_value: Option<String>,
     pub block_number: i64,
     pub lp_address: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PoolStateWithTimestamp {
+    pub unlocked_cap: String,
+    pub locked_cap: String,
+    pub lp_balance: String,
+    pub pool_position: Option<String>,
+    pub lp_token_value: Option<String>,
+    pub block_number: i64,
+    pub lp_address: String,
+    pub timestamp: i64,
 }
 
 #[derive(Debug, Clone, Queryable, Insertable, Serialize, PartialEq, Selectable)]
