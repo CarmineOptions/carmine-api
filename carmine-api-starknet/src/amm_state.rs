@@ -15,10 +15,10 @@ pub struct AmmStateObserver {
 }
 
 impl AmmStateObserver {
-    pub fn new(network: &Network) -> Self {
+    pub fn new() -> Self {
         AmmStateObserver {
-            carmine: Carmine::new(*network),
-            network: *network,
+            carmine: Carmine::new(Network::Mainnet),
+            network: Network::Mainnet,
         }
     }
 

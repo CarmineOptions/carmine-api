@@ -4,9 +4,9 @@ use carmine_api_starknet::{carmine::Carmine, starkscan::get_events_from_starksca
 use dotenvy::dotenv;
 
 async fn populate_network(n: &Network) {
-    let c = Carmine::new(*n);
-    // get_events_from_starkscan(n).await;
-    c.get_options_with_addresses().await;
+    // let c = Carmine::new(*n);
+    get_events_from_starkscan(n).await;
+    // c.get_options_with_addresses().await;
 }
 
 fn validate_db(n: &Network) {

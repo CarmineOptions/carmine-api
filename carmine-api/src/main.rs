@@ -9,12 +9,15 @@ use carmine_api_airdrop::merkle_tree::MerkleTree;
 use carmine_api_cache::Cache;
 use carmine_api_core::network::Network;
 use carmine_api_core::types::AppState;
+use carmine_api_starknet::update_database;
 use dotenvy::dotenv;
 use std::env;
 use std::sync::{Arc, Mutex};
 use tokio::time::{sleep, Duration};
 
-const REFETCH_DELAY_SECONDS: u64 = 600;
+const UPDATE_APP_STATE_INTERVAL: u64 = 300;
+const FETCH_DATA_INTO_DATABASE_INTERVAL: u64 = 550;
+
 const LOCAL_IP: &str = "127.0.0.1";
 const DOCKER_IP: &str = "0.0.0.0";
 
@@ -68,9 +71,10 @@ async fn main() -> std::io::Result<()> {
 
     let app_state1 = app_state.clone();
 
+    // updates app state
     actix_web::rt::spawn(async move {
         loop {
-            sleep(Duration::from_secs(REFETCH_DELAY_SECONDS)).await;
+            sleep(Duration::from_secs(UPDATE_APP_STATE_INTERVAL)).await;
             println!("Updating AppState");
             mainnet_cache.update().await;
             testnet_cache.update().await;
@@ -81,6 +85,14 @@ async fn main() -> std::io::Result<()> {
                 airdrop: MerkleTree::new(),
             };
             println!("AppState updated");
+        }
+    });
+
+    // fetches data and updates database
+    actix_web::rt::spawn(async {
+        loop {
+            sleep(Duration::from_secs(FETCH_DATA_INTO_DATABASE_INTERVAL)).await;
+            update_database().await;
         }
     });
 
