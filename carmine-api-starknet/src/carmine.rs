@@ -12,6 +12,10 @@ use std::time::Duration;
 use tokio::time::sleep;
 use tokio::try_join;
 
+const OPTION_NEAR_MATURITY: &'static str =
+    "Unable to calculate position value, please wait till option with maturity";
+const STALE_PRICE: &'static str = "Received price which is over an hour old";
+
 fn format_call_contract_result(res: CallContractResult) -> Vec<String> {
     let mut arr: Vec<String> = vec![];
 
@@ -30,6 +34,7 @@ fn to_hex(v: FieldElement) -> String {
 
 const TEN_POW_18: &'static str = "1000000000000000000";
 
+#[allow(dead_code)]
 struct FunctionDescriptor<'a> {
     name: &'a str,
     selector: FieldElement,
@@ -426,10 +431,12 @@ impl Carmine {
             .await
         {
             Ok(v) => Ok(Some(v)),
-            Err(e)
-                if e.to_string()
-                    .contains("Received price which is over an hour old") =>
-            {
+            Err(e) if e.to_string().contains(OPTION_NEAR_MATURITY) => {
+                // this specific error message means that LP token value
+                // cannot be calculated - return None
+                Ok(None)
+            }
+            Err(e) if e.to_string().contains(STALE_PRICE) => {
                 // this specific error message means that pool position
                 // cannot be calculated - return None
                 Ok(None)
@@ -463,19 +470,12 @@ impl Carmine {
             .await
         {
             Ok(v) => Ok(Some(v)),
-            Err(e)
-                if e.to_string().contains(
-                    "Unable to calculate position value, please wait till option with maturity",
-                ) =>
-            {
+            Err(e) if e.to_string().contains(OPTION_NEAR_MATURITY) => {
                 // this specific error message means that LP token value
                 // cannot be calculated - return None
                 Ok(None)
             }
-            Err(e)
-                if e.to_string()
-                    .contains("Received price which is over an hour old") =>
-            {
+            Err(e) if e.to_string().contains(STALE_PRICE) => {
                 // this specific error message means that LP token value
                 // cannot be calculated - return None
                 Ok(None)
