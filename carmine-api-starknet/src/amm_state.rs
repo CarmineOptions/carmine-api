@@ -4,7 +4,7 @@ use carmine_api_core::{network::Network, types::DbBlock};
 use carmine_api_db::{
     create_batch_of_pool_states, create_batch_of_volatilities, create_block, get_last_block_in_db,
 };
-use starknet::core::types::BlockId;
+use starknet::core::types::{Block, BlockId};
 use tokio::{join, time::sleep};
 
 use crate::carmine::Carmine;
@@ -55,11 +55,18 @@ impl AmmStateObserver {
 
     pub async fn update_state(&self) {
         let last_block_db = get_last_block_in_db(&self.network);
-        let last_block_starknet = self
-            .carmine
-            .get_latest_block()
-            .await
-            .expect("Failed getting latest block from starknet");
+        let last_block_starknet_result = self.carmine.get_latest_block().await;
+
+        let last_block_starknet: Block = match last_block_starknet_result {
+            Ok(block) => block,
+            Err(e) => {
+                println!(
+                    "Failed getting latest block, skipping this update cycle.\n{:?}",
+                    e
+                );
+                return;
+            }
+        };
 
         let start = last_block_db.block_number + 1;
         let finish = i64::try_from(last_block_starknet.block_number.unwrap()).unwrap();
