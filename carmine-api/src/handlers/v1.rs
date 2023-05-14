@@ -176,3 +176,60 @@ pub async fn airdrop(
         data,
     })
 }
+
+#[get("/v1/mainnet/eth-usdc-call")]
+pub async fn eth_usdc_call(data: web::Data<Arc<Mutex<AppState>>>) -> impl Responder {
+    let locked = &data.lock();
+    let app_state = match locked {
+        Ok(app_data) => app_data,
+        _ => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "server_error".to_string(),
+                message: "Failed to read AppState".to_string(),
+            });
+        }
+    };
+
+    HttpResponse::Ok().json(DataResponse {
+        status: "success".to_string(),
+        data: &app_state.mainnet.state_eth_usdc_call,
+    })
+}
+
+#[get("/v1/mainnet/eth-usdc-put")]
+pub async fn eth_usdc_put(data: web::Data<Arc<Mutex<AppState>>>) -> impl Responder {
+    let locked = &data.lock();
+    let app_state = match locked {
+        Ok(app_data) => app_data,
+        _ => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "server_error".to_string(),
+                message: "Failed to read AppState".to_string(),
+            });
+        }
+    };
+
+    HttpResponse::Ok().json(DataResponse {
+        status: "success".to_string(),
+        data: &app_state.mainnet.state_eth_usdc_put,
+    })
+}
+
+#[get("/v1/mainnet/option-volatility")]
+pub async fn option_volatility(data: web::Data<Arc<Mutex<AppState>>>) -> impl Responder {
+    let locked = &data.lock();
+    let app_state = match locked {
+        Ok(app_data) => app_data,
+        _ => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "server_error".to_string(),
+                message: "Failed to read AppState".to_string(),
+            });
+        }
+    };
+
+    HttpResponse::Ok().json(DataResponse {
+        status: "success".to_string(),
+        data: &app_state.mainnet.option_volatility,
+    })
+}
