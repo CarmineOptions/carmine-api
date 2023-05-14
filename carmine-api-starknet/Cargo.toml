@@ -13,18 +13,31 @@ dotenvy = "0.15.6"
 futures = "0.3.27"
 reqwest = "0.11.14"
 serde = { version = "1.0.156", features = ["derive"] }
+serde_json = "1.0.96"
 starknet = { git = "https://github.com/xJonathanLEI/starknet-rs" }
 tokio = { version = "1.26.0", features = ["macros", "rt-multi-thread"] }
 
 
 [[bin]]
-path = "./bin/non-expired.rs"
+path = "./src/bin/non-expired.rs"
 name = "non-expired"
 
 [[bin]]
-path = "./bin/populate-db.rs"
+path = "./src/bin/populate-db.rs"
 name = "populate-db"
 
 [[bin]]
-path = "./bin/local-to-gcp.rs"
+path = "./src/bin/local-to-gcp.rs"
 name = "local-to-gcp"
+
+[[bin]]
+path = "./src/bin/call.rs"
+name = "call"
+
+[[bin]]
+path = "./src/bin/apy.rs"
+name = "apy"
+
+[[bin]]
+path = "./src/bin/get_state.rs"
+name = "get_state"

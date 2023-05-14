@@ -4,8 +4,8 @@ use carmine_api_core::{
     network::{call_lp_address, put_lp_address, Network},
     types::{AppData, Event, IOption, TradeHistory},
 };
-use carmine_api_db::{get_events, get_options};
-use carmine_api_starknet::{carmine::Carmine, starkscan::get_new_events_from_starkscan};
+use carmine_api_db::{get_events, get_options, get_options_volatility, get_pool_state};
+use carmine_api_starknet::carmine::Carmine;
 
 // Only store Events we know and not ExpireOptionTokenForPool and Upgrade
 const ALLOWED_METHODS: &'static [&'static str; 5] = &[
@@ -23,6 +23,8 @@ pub struct Cache {
     options: HashMap<String, IOption>,
     all_non_expired: Vec<String>,
     trade_history: Vec<TradeHistory>,
+    call_pool_address: &'static str,
+    put_pool_address: &'static str,
 }
 
 impl Cache {
@@ -48,6 +50,8 @@ impl Cache {
             options,
             all_non_expired,
             trade_history: Vec::new(),
+            call_pool_address: call_lp_address(&network),
+            put_pool_address: put_lp_address(&network),
         };
 
         cache.trade_history = Cache::generate_trade_history(&cache);
@@ -59,6 +63,9 @@ impl Cache {
         AppData {
             all_non_expired: self.get_all_non_expired(),
             trade_history: self.get_trade_history(),
+            state_eth_usdc_call: get_pool_state(self.call_pool_address, &self.network),
+            state_eth_usdc_put: get_pool_state(self.put_pool_address, &self.network),
+            option_volatility: get_options_volatility(&self.network),
         }
     }
 
@@ -80,9 +87,6 @@ impl Cache {
     fn generate_trade_history(&self) -> Vec<TradeHistory> {
         let mut arr: Vec<TradeHistory> = Vec::new();
 
-        let put_pool_address = put_lp_address(&self.network);
-        let call_pool_address = call_lp_address(&self.network);
-
         for event in &self.events {
             if !ALLOWED_METHODS
                 .iter()
@@ -98,12 +102,12 @@ impl Cache {
 
             let liquidity_pool = match event.action.as_str() {
                 "DepositLiquidity" | "WithdrawLiquidity"
-                    if event.token_address.as_str() == put_pool_address =>
+                    if event.token_address.as_str() == self.put_pool_address =>
                 {
                     Some("Put".to_string())
                 }
                 "DepositLiquidity" | "WithdrawLiquidity"
-                    if event.token_address.as_str() == call_pool_address =>
+                    if event.token_address.as_str() == self.call_pool_address =>
                 {
                     Some("Call".to_string())
                 }
@@ -127,15 +131,13 @@ impl Cache {
         arr
     }
 
-    pub async fn update_options(&mut self) {
-        self.carmine.get_options_with_addresses().await;
+    pub fn update_options(&mut self) {
         let options_vec = get_options(&self.network);
         let options = Cache::options_vec_to_hashmap(options_vec);
         self.options = options;
     }
 
-    pub async fn update_events(&mut self) {
-        get_new_events_from_starkscan(&self.events, &self.network).await;
+    pub fn update_events(&mut self) {
         self.events = get_events(&self.network);
     }
 
@@ -151,8 +153,8 @@ impl Cache {
     }
 
     pub async fn update(&mut self) {
-        self.update_options().await;
-        self.update_events().await;
+        self.update_options();
+        self.update_events();
         self.update_all_non_expired().await;
         self.update_trade_history();
     }
