@@ -11,6 +11,13 @@ use std::sync::{Arc, Mutex};
 
 const TESTNET: &'static str = "testnet";
 const MAINNET: &'static str = "mainnet";
+const ETH_USDC_CALL: &'static str = "eth-usdc-call";
+const ETH_USDC_PUT: &'static str = "eth-usdc-put";
+
+enum Pools {
+    EthUsdcCall,
+    EthUsdcPut,
+}
 
 #[get("/v1/{network}/live-options")]
 pub async fn live_options(
@@ -177,8 +184,21 @@ pub async fn airdrop(
     })
 }
 
-#[get("/v1/mainnet/eth-usdc-call")]
-pub async fn eth_usdc_call(data: web::Data<Arc<Mutex<AppState>>>) -> impl Responder {
+#[get("/v1/mainnet/{pool}")]
+pub async fn pool_state(
+    path: web::Path<String>,
+    data: web::Data<Arc<Mutex<AppState>>>,
+) -> impl Responder {
+    let pool = match path.into_inner().as_str() {
+        ETH_USDC_CALL => Pools::EthUsdcCall,
+        ETH_USDC_PUT => Pools::EthUsdcPut,
+        _ => {
+            return HttpResponse::BadRequest().json(GenericResponse {
+                status: "bad_request".to_string(),
+                message: "Specify network in the path".to_string(),
+            });
+        }
+    };
     let locked = &data.lock();
     let app_state = match locked {
         Ok(app_data) => app_data,
@@ -192,12 +212,28 @@ pub async fn eth_usdc_call(data: web::Data<Arc<Mutex<AppState>>>) -> impl Respon
 
     HttpResponse::Ok().json(DataResponse {
         status: "success".to_string(),
-        data: &app_state.mainnet.state_eth_usdc_call,
+        data: match pool {
+            Pools::EthUsdcCall => &app_state.mainnet.state_eth_usdc_call,
+            Pools::EthUsdcPut => &app_state.mainnet.state_eth_usdc_put,
+        },
     })
 }
 
-#[get("/v1/mainnet/eth-usdc-put")]
-pub async fn eth_usdc_put(data: web::Data<Arc<Mutex<AppState>>>) -> impl Responder {
+#[get("/v1/mainnet/{pool}/state")]
+pub async fn pool_state_last(
+    path: web::Path<String>,
+    data: web::Data<Arc<Mutex<AppState>>>,
+) -> impl Responder {
+    let pool = match path.into_inner().as_str() {
+        ETH_USDC_CALL => Pools::EthUsdcCall,
+        ETH_USDC_PUT => Pools::EthUsdcPut,
+        _ => {
+            return HttpResponse::BadRequest().json(GenericResponse {
+                status: "bad_request".to_string(),
+                message: "Specify network in the path".to_string(),
+            });
+        }
+    };
     let locked = &data.lock();
     let app_state = match locked {
         Ok(app_data) => app_data,
@@ -209,9 +245,54 @@ pub async fn eth_usdc_put(data: web::Data<Arc<Mutex<AppState>>>) -> impl Respond
         }
     };
 
+    let state = match pool {
+        Pools::EthUsdcCall => &app_state.mainnet.state_eth_usdc_call,
+        Pools::EthUsdcPut => &app_state.mainnet.state_eth_usdc_put,
+    };
+
+    let last_state = match state.len() {
+        0 => None,
+        n => Some(&state[n - 1]),
+    };
+
     HttpResponse::Ok().json(DataResponse {
         status: "success".to_string(),
-        data: &app_state.mainnet.state_eth_usdc_put,
+        data: last_state,
+    })
+}
+
+#[get("/v1/mainnet/{pool}/apy")]
+pub async fn pool_apy(
+    path: web::Path<String>,
+    data: web::Data<Arc<Mutex<AppState>>>,
+) -> impl Responder {
+    let pool = match path.into_inner().as_str() {
+        ETH_USDC_CALL => Pools::EthUsdcCall,
+        ETH_USDC_PUT => Pools::EthUsdcPut,
+        _ => {
+            return HttpResponse::BadRequest().json(GenericResponse {
+                status: "bad_request".to_string(),
+                message: "Specify network in the path".to_string(),
+            });
+        }
+    };
+    let locked = &data.lock();
+    let app_state = match locked {
+        Ok(app_data) => app_data,
+        _ => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "server_error".to_string(),
+                message: "Failed to read AppState".to_string(),
+            });
+        }
+    };
+
+    // TODO: calculate APY
+    let apy = 1.15;
+
+    HttpResponse::Ok().json(DataResponse {
+        status: "success".to_string(),
+        data: apy,
     })
 }
 
