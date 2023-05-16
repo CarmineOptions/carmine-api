@@ -20,6 +20,8 @@ pub struct AppData {
     pub option_volatility: Vec<OptionWithVolatility>,
     pub state_eth_usdc_call: Vec<PoolStateWithTimestamp>,
     pub state_eth_usdc_put: Vec<PoolStateWithTimestamp>,
+    pub apy_eth_usdc_call: f64,
+    pub apy_eth_usdc_put: f64,
 }
 
 pub struct AppState {

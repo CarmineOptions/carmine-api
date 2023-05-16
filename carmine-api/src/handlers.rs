@@ -29,8 +29,9 @@ pub fn config(conf: &mut web::ServiceConfig) {
                 .service(v1::all_transactions)
                 .service(v1::airdrop)
                 .service(v1::option_volatility)
-                .service(v1::eth_usdc_call)
-                .service(v1::eth_usdc_put)
+                .service(v1::pool_state)
+                .service(v1::pool_state_last)
+                .service(v1::pool_apy)
                 .service(v0::all_non_expired_handler)
                 .service(v0::trade_history_handler)
                 .service(v0::all_trade_history_handler),
