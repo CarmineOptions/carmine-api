@@ -7,6 +7,8 @@ use carmine_api_core::{
 use carmine_api_db::{get_events, get_options, get_options_volatility, get_pool_state};
 use carmine_api_starknet::carmine::Carmine;
 
+mod apy;
+
 // Only store Events we know and not ExpireOptionTokenForPool and Upgrade
 const ALLOWED_METHODS: &'static [&'static str; 5] = &[
     "TradeOpen",
@@ -63,9 +65,11 @@ impl Cache {
         AppData {
             all_non_expired: self.get_all_non_expired(),
             trade_history: self.get_trade_history(),
+            option_volatility: get_options_volatility(&self.network),
             state_eth_usdc_call: get_pool_state(self.call_pool_address, &self.network),
             state_eth_usdc_put: get_pool_state(self.put_pool_address, &self.network),
-            option_volatility: get_options_volatility(&self.network),
+            apy_eth_usdc_call: self.calculate_apy_for_pool(&self.call_pool_address),
+            apy_eth_usdc_put: self.calculate_apy_for_pool(&self.put_pool_address),
         }
     }
 
@@ -129,6 +133,11 @@ impl Cache {
         arr.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
 
         arr
+    }
+
+    fn calculate_apy_for_pool(&self, pool_address: &str) -> f64 {
+        let state = get_pool_state(pool_address, &self.network);
+        apy::calculate_apy(&state)
     }
 
     pub fn update_options(&mut self) {

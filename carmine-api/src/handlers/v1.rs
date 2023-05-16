@@ -287,8 +287,10 @@ pub async fn pool_apy(
         }
     };
 
-    // TODO: calculate APY
-    let apy = 1.15;
+    let apy = match pool {
+        Pools::EthUsdcCall => &app_state.mainnet.apy_eth_usdc_call,
+        Pools::EthUsdcPut => &app_state.mainnet.apy_eth_usdc_put,
+    };
 
     HttpResponse::Ok().json(DataResponse {
         status: "success".to_string(),
