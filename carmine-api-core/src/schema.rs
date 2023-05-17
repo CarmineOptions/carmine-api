@@ -58,7 +58,8 @@ diesel::table! {
     options_volatility (option_address, block_number) {
         option_address -> Text,
         block_number -> Int8,
-        volatility -> Text,
+        volatility -> Nullable<Text>,
+        option_position -> Nullable<Text>,
     }
 }
 
