@@ -1,6 +1,6 @@
 use carmine_api_core::network::Network;
 use carmine_api_db::{get_events, get_options};
-use carmine_api_starknet::{carmine::Carmine, starkscan::get_events_from_starkscan};
+use carmine_api_starknet::starkscan::get_events_from_starkscan;
 use dotenvy::dotenv;
 
 async fn populate_network(n: &Network) {

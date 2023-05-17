@@ -270,16 +270,17 @@ pub fn get_options_volatility(network: &Network) -> Vec<OptionWithVolatility> {
                 block_number: block.block_number,
                 timestamp: block.timestamp,
                 volatility: vol.volatility.clone(),
+                option_position: vol.option_position.clone(),
             })
             .collect();
 
-        let mut last_value: String = String::new();
+        let mut last_value: Option<String> = None;
 
         let unique_volatilities: Vec<Volatility> =
             option_specific_volatilities
                 .into_iter()
                 .fold(vec![], |mut acc, cur| {
-                    if &last_value.as_str() != &cur.volatility.as_str() {
+                    if &last_value != &cur.volatility {
                         last_value = cur.volatility.clone();
                         acc.push(cur);
                     }

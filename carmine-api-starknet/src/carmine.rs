@@ -15,6 +15,7 @@ use tokio::try_join;
 const OPTION_NEAR_MATURITY: &'static str =
     "Unable to calculate position value, please wait till option with maturity";
 const STALE_PRICE: &'static str = "Received price which is over an hour old";
+const TWO_DAYS_SECS: i64 = 172800;
 
 fn format_call_contract_result(res: CallContractResult) -> Vec<String> {
     let mut arr: Vec<String> = vec![];
@@ -589,8 +590,8 @@ impl Carmine {
 
         let mut futures = vec![];
         for opt in options {
-            // if the option has not expired yet, get volatility
-            if opt.maturity > block.timestamp {
+            // until maturity + two days, keep getting volatility and position
+            if opt.maturity + TWO_DAYS_SECS > block.timestamp {
                 futures.push(self.get_option_volatility(opt, block.block_number));
 
             // else set volatility to 0
@@ -598,7 +599,8 @@ impl Carmine {
                 let option_volatility = OptionVolatility {
                     block_number: block.block_number,
                     option_address: opt.option_address,
-                    volatility: "0x0".to_string(),
+                    volatility: None,
+                    option_position: None,
                 };
                 to_store.push(option_volatility);
             }
@@ -608,44 +610,65 @@ impl Carmine {
         let results = join_all(futures).await;
 
         for res in results {
-            if let Some((volatility, option_address)) = res {
-                let option_volatility = OptionVolatility {
-                    block_number: block.block_number,
-                    option_address,
-                    volatility: to_hex(volatility),
-                };
-                to_store.push(option_volatility);
-            }
+            let (volatility_option, option_position_option, option_address) = res;
+
+            let volatility = volatility_option.map(|v| to_hex(v));
+            let option_position = option_position_option.map(|v| to_hex(v));
+
+            to_store.push(OptionVolatility {
+                block_number: block.block_number,
+                option_address,
+                volatility,
+                option_position,
+            });
         }
 
         Ok(to_store)
     }
 
-    async fn get_option_volatility(
+    pub async fn get_option_volatility(
         &self,
         opt: IOption,
         block_number: i64,
-    ) -> Option<(FieldElement, String)> {
+    ) -> (Option<FieldElement>, Option<FieldElement>, String) {
         let lp_address = FieldElement::from_str(opt.lp_address.as_str()).unwrap();
         let maturity = FieldElement::from_str(format!("{:#x}", opt.maturity).as_str()).unwrap();
         let strike = FieldElement::from_str(opt.strike_price.as_str()).unwrap();
+        let side = FieldElement::from(opt.option_side as u8);
 
-        let volatility_result = self
-            .provider
-            .call_contract(
-                CallFunction {
-                    contract_address: self.amm_address,
-                    entry_point_selector: selector!("get_pool_volatility_auto"),
-                    calldata: vec![lp_address, maturity, strike],
-                },
-                BlockId::Number(block_number as u64),
-            )
-            .await;
+        let volatility_future = Box::pin(self.provider.call_contract(
+            CallFunction {
+                contract_address: self.amm_address,
+                entry_point_selector: selector!("get_pool_volatility_auto"),
+                calldata: vec![lp_address, maturity, strike],
+            },
+            BlockId::Number(block_number as u64),
+        ));
 
-        if let Ok(volatility) = volatility_result {
-            return Some((volatility.result[0], opt.option_address));
-        }
-        None
+        let position_future = Box::pin(self.provider.call_contract(
+            CallFunction {
+                contract_address: self.amm_address,
+                entry_point_selector: selector!("get_option_position"),
+                calldata: vec![lp_address, side, maturity, strike],
+            },
+            BlockId::Number(block_number as u64),
+        ));
+
+        let mut results = join_all(vec![volatility_future, position_future]).await;
+
+        let volatility_result = results.remove(0);
+        let position_result = results.remove(0);
+
+        let volatility: Option<FieldElement> = match volatility_result {
+            Ok(v) => Some(v.result[0]),
+            Err(_) => None,
+        };
+        let position: Option<FieldElement> = match position_result {
+            Ok(v) => Some(v.result[0]),
+            Err(_) => None,
+        };
+
+        (volatility, position, opt.option_address)
     }
 
     pub async fn get_block_by_id(&self, block_id: BlockId) -> Result<Block, ()> {

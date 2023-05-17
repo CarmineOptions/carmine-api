@@ -64,7 +64,8 @@ pub struct IOption {
 pub struct Volatility {
     pub block_number: i64,
     pub timestamp: i64,
-    pub volatility: String,
+    pub volatility: Option<String>,
+    pub option_position: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -135,5 +136,6 @@ pub struct Pool {
 pub struct OptionVolatility {
     pub option_address: String,
     pub block_number: i64,
-    pub volatility: String,
+    pub volatility: Option<String>,
+    pub option_position: Option<String>,
 }
