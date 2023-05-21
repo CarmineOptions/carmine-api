@@ -303,3 +303,25 @@ pub fn get_options_volatility(network: &Network) -> Vec<OptionWithVolatility> {
 
     options_with_volatilities
 }
+
+pub fn update_option_volatility(
+    network: &Network,
+    block: i64,
+    vol: Option<String>,
+    pos: Option<String>,
+    address: String,
+) {
+    use crate::schema::options_volatility::dsl::*;
+
+    let mut connection = establish_connection(network);
+
+    let res = diesel::update(options_volatility)
+        .filter(block_number.eq(block))
+        .filter(option_address.eq(address))
+        .set((volatility.eq(vol), option_position.eq(pos)))
+        .execute(&mut connection);
+
+    if let Err(_e) = res {
+        println!("FAILED! {}", block);
+    }
+}
