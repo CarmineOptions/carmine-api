@@ -60,8 +60,12 @@ async fn main() -> std::io::Result<()> {
     }
     env_logger::init();
 
+    println!("🛠️  Creating cache instances...");
+
     let mut mainnet_cache = Cache::new(Network::Mainnet);
     let mut testnet_cache = Cache::new(Network::Testnet);
+
+    println!("🛠️  Creating app state...");
 
     let app_state = Data::new(Arc::new(Mutex::new(AppState {
         mainnet: mainnet_cache.get_app_data(),
@@ -69,7 +73,11 @@ async fn main() -> std::io::Result<()> {
         airdrop: MerkleTree::new(),
     })));
 
+    println!("🛠️  Cloning app state...");
+
     let app_state1 = app_state.clone();
+
+    println!("🛠️  Spawning app state updating thread...");
 
     // updates app state
     actix_web::rt::spawn(async move {
@@ -92,6 +100,8 @@ async fn main() -> std::io::Result<()> {
             println!("AppState updated");
         }
     });
+
+    println!("🛠️  Spawning DB updating thread...");
 
     // fetches data and updates database
     actix_web::rt::spawn(async {
