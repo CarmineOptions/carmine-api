@@ -14,7 +14,7 @@ async fn main() {
     let network = Network::Mainnet;
     let carmine = Carmine::new(Network::Mainnet);
 
-    let mut block_number = 45237;
+    let mut block_number = 43666;
 
     loop {
         if let Some(block) = get_block_by_number(block_number, &network) {
