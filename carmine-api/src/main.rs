@@ -60,8 +60,8 @@ async fn main() -> std::io::Result<()> {
     }
     env_logger::init();
 
-    let mut mainnet_cache = Cache::new(Network::Mainnet).await;
-    let mut testnet_cache = Cache::new(Network::Testnet).await;
+    let mut mainnet_cache = Cache::new(Network::Mainnet);
+    let mut testnet_cache = Cache::new(Network::Testnet);
 
     let app_state = Data::new(Arc::new(Mutex::new(AppState {
         mainnet: mainnet_cache.get_app_data(),
@@ -73,8 +73,13 @@ async fn main() -> std::io::Result<()> {
 
     // updates app state
     actix_web::rt::spawn(async move {
+        let mut startup = true;
         loop {
-            sleep(Duration::from_secs(UPDATE_APP_STATE_INTERVAL)).await;
+            if startup {
+                startup = false;
+            } else {
+                sleep(Duration::from_secs(UPDATE_APP_STATE_INTERVAL)).await;
+            }
             println!("Updating AppState");
             mainnet_cache.update().await;
             testnet_cache.update().await;

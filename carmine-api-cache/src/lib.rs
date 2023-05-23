@@ -30,20 +30,13 @@ pub struct Cache {
 }
 
 impl Cache {
-    pub async fn new(network: Network) -> Self {
+    pub fn new(network: Network) -> Self {
         let network = network;
         let carmine = Carmine::new(network);
         let events = get_events(&network);
         let options_vec = get_options(&network);
         let options = Cache::options_vec_to_hashmap(options_vec);
-        let all_non_expired_result = carmine.get_all_non_expired_options_with_premia().await;
-        let all_non_expired = match all_non_expired_result {
-            Ok(v) => v,
-            Err(_) => {
-                println!("Failed getting all non-expired on startup");
-                vec![]
-            }
-        };
+        let all_non_expired = vec![];
 
         let mut cache = Cache {
             network,
