@@ -56,19 +56,12 @@ impl Cache {
 
     pub fn get_app_data(&self) -> AppData {
         let all_non_expired = self.get_all_non_expired();
-        println!("Got non expired");
         let trade_history = self.get_trade_history();
-        println!("Got trade history");
         let option_volatility = get_options_volatility(&self.network);
-        println!("Got volatility");
         let state_eth_usdc_call = get_pool_state(self.call_pool_address, &self.network);
-        println!("Got call pool state");
         let state_eth_usdc_put = get_pool_state(self.put_pool_address, &self.network);
-        println!("Got put pool state");
         let apy_eth_usdc_call = self.calculate_apy_for_pool(&self.call_pool_address);
-        println!("Got call APY");
         let apy_eth_usdc_put = self.calculate_apy_for_pool(&self.put_pool_address);
-        println!("Got put APY");
         AppData {
             all_non_expired,
             trade_history,
@@ -143,11 +136,8 @@ impl Cache {
     }
 
     fn calculate_apy_for_pool(&self, pool_address: &str) -> f64 {
-        // let state = get_pool_state(pool_address, &self.network);
-        // apy::calculate_apy(&state)
-
-        // HOTFIX: return 1.0 so it works while you fix the calculation
-        1.0
+        let state = get_pool_state(pool_address, &self.network);
+        apy::calculate_apy(&state)
     }
 
     pub fn update_options(&mut self) {
