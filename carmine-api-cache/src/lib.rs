@@ -143,8 +143,11 @@ impl Cache {
     }
 
     fn calculate_apy_for_pool(&self, pool_address: &str) -> f64 {
-        let state = get_pool_state(pool_address, &self.network);
-        apy::calculate_apy(&state)
+        // let state = get_pool_state(pool_address, &self.network);
+        // apy::calculate_apy(&state)
+
+        // HOTFIX: return 1.0 so it works while you fix the calculation
+        1.0
     }
 
     pub fn update_options(&mut self) {
