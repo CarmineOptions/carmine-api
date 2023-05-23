@@ -65,12 +65,26 @@ async fn main() -> std::io::Result<()> {
     let mut mainnet_cache = Cache::new(Network::Mainnet);
     let mut testnet_cache = Cache::new(Network::Testnet);
 
+    println!("🛠️  Getting data from DB...");
+
+    let mainnet = mainnet_cache.get_app_data();
+
+    println!("✨  Got Mainnet data");
+
+    let testnet = testnet_cache.get_app_data();
+
+    println!("✨  Got Testnet data");
+
+    let airdrop = MerkleTree::new();
+
+    println!("✨  Got Airdrop data");
+
     println!("🛠️  Creating app state...");
 
     let app_state = Data::new(Arc::new(Mutex::new(AppState {
-        mainnet: mainnet_cache.get_app_data(),
-        testnet: testnet_cache.get_app_data(),
-        airdrop: MerkleTree::new(),
+        mainnet,
+        testnet,
+        airdrop,
     })));
 
     println!("🛠️  Cloning app state...");
