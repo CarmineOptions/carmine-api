@@ -14,7 +14,11 @@ pub fn calculate_apy(state: &Vec<PoolStateWithTimestamp>) -> f64 {
         // cannot calculate for less than a week of data
         return 0.0;
     }
-    let now = state.last().unwrap().timestamp;
+    let now = state
+        .iter()
+        .max_by_key(|state| state.timestamp)
+        .unwrap()
+        .timestamp;
     let mut last_day: Vec<i64> = state
         .into_iter()
         .filter(|v| v.timestamp > now - DAY_SECS)
