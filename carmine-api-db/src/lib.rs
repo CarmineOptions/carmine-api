@@ -225,6 +225,7 @@ pub fn get_pool_state(pool_address: &str, network: &Network) -> Vec<PoolStateWit
         .inner_join(blocks)
         .filter(lp_address.eq(pool_address))
         .select((PoolState::as_select(), DbBlock::as_select()))
+        .order(timestamp.desc())
         .load::<(PoolState, DbBlock)>(connection)
         .expect("Error loading pool state")
         .into_iter()
@@ -302,4 +303,26 @@ pub fn get_options_volatility(network: &Network) -> Vec<OptionWithVolatility> {
     }
 
     options_with_volatilities
+}
+
+pub fn update_option_volatility(
+    network: &Network,
+    block: i64,
+    vol: Option<String>,
+    pos: Option<String>,
+    address: String,
+) {
+    use crate::schema::options_volatility::dsl::*;
+
+    let mut connection = establish_connection(network);
+
+    let res = diesel::update(options_volatility)
+        .filter(block_number.eq(block))
+        .filter(option_address.eq(address))
+        .set((volatility.eq(vol), option_position.eq(pos)))
+        .execute(&mut connection);
+
+    if let Err(_e) = res {
+        println!("FAILED! {}", block);
+    }
 }
