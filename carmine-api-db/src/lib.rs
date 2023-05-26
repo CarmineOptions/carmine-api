@@ -225,6 +225,7 @@ pub fn get_pool_state(pool_address: &str, network: &Network) -> Vec<PoolStateWit
         .inner_join(blocks)
         .filter(lp_address.eq(pool_address))
         .select((PoolState::as_select(), DbBlock::as_select()))
+        .order(timestamp.desc())
         .load::<(PoolState, DbBlock)>(connection)
         .expect("Error loading pool state")
         .into_iter()
