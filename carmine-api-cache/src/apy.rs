@@ -3,7 +3,7 @@ use carmine_api_core::types::PoolStateWithTimestamp;
 const WEEK_SECS: i64 = 604800;
 const DAY_SECS: i64 = 86400;
 
-fn average(numbers: &mut Vec<i64>) -> f64 {
+fn median(numbers: &mut Vec<i64>) -> f64 {
     numbers.sort();
     let mid = numbers.len() / 2;
     numbers[mid] as f64
@@ -32,10 +32,10 @@ pub fn calculate_apy(state: &Vec<PoolStateWithTimestamp>) -> f64 {
         .filter_map(|v| i64::from_str_radix(v.trim_start_matches("0x"), 16).ok())
         .collect();
 
-    let last_day_average = average(&mut last_day);
-    let week_ago_average = average(&mut week_ago);
+    let last_day_median = median(&mut last_day);
+    let week_ago_median = median(&mut week_ago);
 
-    let wpy = last_day_average / week_ago_average as f64;
+    let wpy = last_day_median / week_ago_median as f64;
     let apy = wpy.powi(52);
     (apy - 1.0) * 100 as f64 // actual gain in percentage
 }

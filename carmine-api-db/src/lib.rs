@@ -263,7 +263,7 @@ pub fn get_options_volatility(network: &Network) -> Vec<OptionWithVolatility> {
 
     for opt in all_options {
         // filter volatilities of the current option
-        let option_specific_volatilities: Vec<Volatility> = volatilities
+        let mut option_specific_volatilities: Vec<Volatility> = volatilities
             .iter()
             .filter(|(vol, _)| opt.option_address == vol.option_address)
             .map(|(vol, block)| Volatility {
@@ -273,6 +273,8 @@ pub fn get_options_volatility(network: &Network) -> Vec<OptionWithVolatility> {
                 option_position: vol.option_position.clone(),
             })
             .collect();
+
+        option_specific_volatilities.sort_by_key(|v| v.block_number);
 
         let mut last_value: Option<String> = None;
 

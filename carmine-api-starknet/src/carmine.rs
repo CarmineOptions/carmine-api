@@ -594,7 +594,7 @@ impl Carmine {
             if opt.maturity + TWO_DAYS_SECS > block.timestamp {
                 futures.push(self.get_option_volatility(opt, block.block_number));
 
-            // else set volatility to 0
+            // else set volatility to None
             } else {
                 let option_volatility = OptionVolatility {
                     block_number: block.block_number,
