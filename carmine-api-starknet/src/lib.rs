@@ -6,6 +6,7 @@ use starkscan::get_new_events_from_starkscan;
 
 pub mod amm_state;
 pub mod carmine;
+pub mod oracle;
 pub mod starkscan;
 
 pub async fn update_database() {
