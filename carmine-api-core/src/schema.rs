@@ -66,6 +66,7 @@ diesel::table! {
 diesel::table! {
     oracle_prices (id) {
         id -> Text,
+        token_pair -> Text,
         price -> Int8,
         decimals -> SmallInt,
         last_updated_timestamp -> Int8,

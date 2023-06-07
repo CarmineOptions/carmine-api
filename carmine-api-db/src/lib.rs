@@ -1,7 +1,7 @@
 use carmine_api_core::network::Network;
 use carmine_api_core::schema::{self};
 use carmine_api_core::types::{
-    DbBlock, Event, IOption, OptionVolatility, OptionWithVolatility, Pool, PoolState,
+    DbBlock, Event, IOption, OptionVolatility, OptionWithVolatility, OraclePrice, Pool, PoolState,
     PoolStateWithTimestamp, Volatility,
 };
 
@@ -115,6 +115,27 @@ pub fn create_pools(data: Vec<Pool>, network: &Network) {
         .on_conflict_do_nothing()
         .execute(&mut connection)
         .expect("Error saving pools");
+}
+
+pub fn create_oracle_price(data: &OraclePrice, network: &Network) {
+    use crate::schema::oracle_prices::dsl::*;
+
+    let mut connection = establish_connection(network);
+
+    diesel::insert_into(oracle_prices)
+        .values(data)
+        .on_conflict_do_nothing()
+        .execute(&mut connection)
+        .expect("Error saving oracle price");
+}
+
+pub fn get_oracle_prices(network: &Network) -> Vec<OraclePrice> {
+    use crate::schema::oracle_prices::dsl::*;
+
+    let connection = &mut establish_connection(network);
+    oracle_prices
+        .load::<OraclePrice>(connection)
+        .expect("Error loading oracle prices")
 }
 
 pub fn get_pools(network: &Network) -> Vec<Pool> {

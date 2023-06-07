@@ -1,5 +1,6 @@
 CREATE TABLE oracle_prices (
   id Text NOT NULL,
+  token_pair Text NOT NULL,
   price Int8 NOT NULL,
   decimals SmallInt NOT NULL,
   last_updated_timestamp Int8 NOT NULL,

@@ -1,17 +1,12 @@
-use carmine_api_core::types::OraclePrice;
+use carmine_api_core::{
+    types::{DbBlock, OracleName, OraclePrice, TokenPair},
+    utils::token_pair_id,
+};
 use starknet::{
     core::types::{BlockId, CallFunction, FieldElement},
     macros::selector,
     providers::{Provider, SequencerGatewayProvider},
 };
-
-pub enum TokenPair {
-    EthUsdc,
-}
-
-pub enum OracleName {
-    Pragma,
-}
 
 pub struct Oracle {
     provider: SequencerGatewayProvider,
@@ -42,7 +37,7 @@ impl Oracle {
         }
     }
 
-    fn pair_id(&self, token_pair: TokenPair) -> FieldElement {
+    fn oracle_specific_token_pair_id(&self, token_pair: &TokenPair) -> FieldElement {
         match (&self.name, token_pair) {
             (OracleName::Pragma, TokenPair::EthUsdc) => {
                 FieldElement::from(19514442401534788 as u64)
@@ -53,16 +48,17 @@ impl Oracle {
     pub async fn get_spot_median(
         &self,
         token_pair: TokenPair,
-        block_number: i64,
+        block: &DbBlock,
     ) -> Result<OraclePrice, String> {
         let entrypoint = selector!("get_spot_median");
+        let block_number = block.block_number;
         let res = self
             .provider
             .call_contract(
                 CallFunction {
                     contract_address: self.oracle_address,
                     entry_point_selector: entrypoint,
-                    calldata: vec![self.pair_id(token_pair)],
+                    calldata: vec![self.oracle_specific_token_pair_id(&token_pair)],
                 },
                 BlockId::Number(block_number as u64),
             )
@@ -92,6 +88,7 @@ impl Oracle {
             let id = format!("{}-{}", block_number, self.oracle_name);
 
             return Ok(OraclePrice {
+                token_pair: token_pair_id(&token_pair),
                 id,
                 price,
                 decimals,
