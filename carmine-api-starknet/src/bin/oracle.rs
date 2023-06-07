@@ -1,9 +1,10 @@
-use carmine_api_starknet::oracle::{Oracle, OracleName};
-use starknet::core::types::BlockId;
+use carmine_api_starknet::oracle::{Oracle, OracleName, TokenPair};
 
 #[tokio::main]
 async fn main() {
     let pragma = Oracle::new(OracleName::Pragma);
 
-    pragma.get_spot_median(BlockId::Number(73605)).await;
+    let res = pragma.get_spot_median(TokenPair::EthUsdc, 74540).await;
+
+    println!("{:?}", res);
 }

@@ -1,4 +1,6 @@
-use crate::schema::{blocks, events, options, options_volatility, pool_state, pools};
+use crate::schema::{
+    blocks, events, options, options_volatility, oracle_prices, pool_state, pools,
+};
 use carmine_api_airdrop::merkle_tree::MerkleTree;
 use diesel::prelude::*;
 use serde::Serialize;
@@ -138,4 +140,17 @@ pub struct OptionVolatility {
     pub block_number: i64,
     pub volatility: Option<String>,
     pub option_position: Option<String>,
+}
+
+#[derive(Associations, Debug, Clone, Queryable, Insertable, Serialize, PartialEq, Selectable)]
+#[diesel(belongs_to(DbBlock, foreign_key = block_number))]
+#[diesel(table_name = oracle_prices)]
+pub struct OraclePrice {
+    pub id: String,
+    pub price: i64,
+    pub decimals: i16,
+    pub last_updated_timestamp: i64,
+    pub num_sources_aggregated: i16,
+    pub oracle_name: String,
+    pub block_number: i64,
 }

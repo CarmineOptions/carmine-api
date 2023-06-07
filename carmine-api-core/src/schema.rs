@@ -63,6 +63,18 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    oracle_prices (id) {
+        id -> Text,
+        price -> Int8,
+        decimals -> SmallInt,
+        last_updated_timestamp -> Int8,
+        num_sources_aggregated -> SmallInt,
+        oracle_name -> Text,
+        block_number -> Int8,
+    }
+}
+
 diesel::allow_tables_to_appear_in_same_query!(
     events,
     options,
@@ -70,7 +82,9 @@ diesel::allow_tables_to_appear_in_same_query!(
     pool_state,
     pools,
     options_volatility,
+    oracle_prices,
 );
 
 diesel::joinable!(pool_state -> blocks (block_number));
 diesel::joinable!(options_volatility -> blocks (block_number));
+diesel::joinable!(oracle_prices -> blocks (block_number));
