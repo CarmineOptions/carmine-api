@@ -2,9 +2,12 @@ use std::{collections::HashMap, vec};
 
 use carmine_api_core::{
     network::{call_lp_address, put_lp_address, Network},
-    types::{AppData, Event, IOption, TradeHistory},
+    types::{AppData, Event, IOption, OraclePrice, TokenPair, TradeHistory},
+    utils::token_pair_id,
 };
-use carmine_api_db::{get_events, get_options, get_options_volatility, get_pool_state};
+use carmine_api_db::{
+    get_events, get_options, get_options_volatility, get_oracle_prices, get_pool_state,
+};
 use carmine_api_starknet::carmine::Carmine;
 
 mod apy;
@@ -62,6 +65,7 @@ impl Cache {
         let state_eth_usdc_put = get_pool_state(self.put_pool_address, &self.network);
         let apy_eth_usdc_call = self.calculate_apy_for_pool(&self.call_pool_address);
         let apy_eth_usdc_put = self.calculate_apy_for_pool(&self.put_pool_address);
+        let oracle_prices = self.generate_oracle_prices_hash_map();
         AppData {
             all_non_expired,
             trade_history,
@@ -70,6 +74,7 @@ impl Cache {
             state_eth_usdc_put,
             apy_eth_usdc_call,
             apy_eth_usdc_put,
+            oracle_prices,
         }
     }
 
@@ -86,6 +91,43 @@ impl Cache {
             acc.insert(option.option_address.clone(), option);
             acc
         })
+    }
+
+    fn set_oracle_prices_pair(
+        &self,
+        prices_map: &mut HashMap<String, Vec<OraclePrice>>,
+        pair_id: String,
+        prices: Vec<OraclePrice>,
+    ) {
+        let data = prices
+            .into_iter()
+            .filter(|oracle_price| &oracle_price.token_pair == &pair_id)
+            .collect();
+
+        println!("oracle_prices data: {:?}", data);
+
+        prices_map.insert(pair_id, data);
+        println!(
+            "oracle_prices map inside single token pair: {:?}",
+            prices_map
+        );
+    }
+
+    fn generate_oracle_prices_hash_map(&self) -> HashMap<String, Vec<OraclePrice>> {
+        let mut map: HashMap<String, Vec<OraclePrice>> = HashMap::new();
+        let oracle_prices = get_oracle_prices(&self.network);
+
+        println!("oracle_prices: {:?}", oracle_prices);
+
+        self.set_oracle_prices_pair(
+            &mut map,
+            token_pair_id(&TokenPair::EthUsdc),
+            oracle_prices.clone(),
+        );
+
+        println!("oracle_prices map: {:?}", map);
+
+        map
     }
 
     fn generate_trade_history(&self) -> Vec<TradeHistory> {

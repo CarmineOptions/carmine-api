@@ -41,3 +41,7 @@ name = "apy"
 [[bin]]
 path = "./src/bin/get_state.rs"
 name = "get_state"
+
+[[bin]]
+path = "./src/bin/oracle.rs"
+name = "oracle"

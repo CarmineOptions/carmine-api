@@ -1,17 +1,22 @@
 use std::time::{Duration, Instant};
 
-use carmine_api_core::{network::Network, types::DbBlock};
+use carmine_api_core::{
+    network::Network,
+    types::{DbBlock, OracleName, TokenPair},
+};
 use carmine_api_db::{
-    create_batch_of_pool_states, create_batch_of_volatilities, create_block, get_last_block_in_db,
+    create_batch_of_pool_states, create_batch_of_volatilities, create_block, create_oracle_price,
+    get_last_block_in_db,
 };
 use starknet::core::types::{Block, BlockId};
 use tokio::{join, time::sleep};
 
-use crate::carmine::Carmine;
+use crate::{carmine::Carmine, oracle::Oracle};
 
 pub struct AmmStateObserver {
     network: Network,
     carmine: Carmine,
+    pragma: Oracle,
 }
 
 impl AmmStateObserver {
@@ -19,6 +24,7 @@ impl AmmStateObserver {
         AmmStateObserver {
             carmine: Carmine::new(Network::Mainnet),
             network: Network::Mainnet,
+            pragma: Oracle::new(OracleName::Pragma),
         }
     }
 
@@ -36,17 +42,23 @@ impl AmmStateObserver {
             timestamp: i64::try_from(strk_block.timestamp).unwrap(),
         };
 
-        let (options_volatility_result, amm_state_result) = join!(
+        let (options_volatility_result, amm_state_result, pragma_eth_usdc_result) = join!(
             self.carmine.get_all_options_volatility(&block),
-            self.carmine.get_amm_state(&block)
+            self.carmine.get_amm_state(&block),
+            self.pragma.get_spot_median(TokenPair::EthUsdc, &block),
         );
 
-        match (options_volatility_result, amm_state_result) {
-            (Ok(options_volatility), Ok(amm_state)) => {
+        match (
+            options_volatility_result,
+            amm_state_result,
+            pragma_eth_usdc_result,
+        ) {
+            (Ok(options_volatility), Ok(amm_state), Ok(pragma_eth_usdc)) => {
                 // got everything - store it to the database
                 create_block(&block, &self.network);
                 create_batch_of_volatilities(&options_volatility, &self.network);
                 create_batch_of_pool_states(&amm_state, &self.network);
+                create_oracle_price(&pragma_eth_usdc, &self.network);
                 Ok(())
             }
             _ => Err(()),
