@@ -316,3 +316,27 @@ pub async fn option_volatility(data: web::Data<Arc<Mutex<AppState>>>) -> impl Re
         data: &app_state.mainnet.option_volatility,
     })
 }
+
+#[get("/v1/mainnet/prices/{pair_id}")]
+pub async fn prices(
+    path: web::Path<String>,
+    data: web::Data<Arc<Mutex<AppState>>>,
+) -> impl Responder {
+    let pair_id = path.into_inner();
+    println!("Got pair_id: {}", pair_id);
+    let locked = &data.lock();
+    let app_state = match locked {
+        Ok(app_data) => app_data,
+        _ => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "server_error".to_string(),
+                message: "Failed to read AppState".to_string(),
+            });
+        }
+    };
+
+    HttpResponse::Ok().json(DataResponse {
+        status: "success".to_string(),
+        data: &app_state.mainnet.oracle_prices.get(&pair_id),
+    })
+}

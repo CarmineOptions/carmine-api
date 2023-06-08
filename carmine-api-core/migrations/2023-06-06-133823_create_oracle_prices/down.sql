@@ -1,0 +1,1 @@
+DROP TABLE oracle_prices;
