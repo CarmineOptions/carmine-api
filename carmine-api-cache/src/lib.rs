@@ -105,9 +105,6 @@ impl Cache {
             .collect();
 
         prices_map.insert(pair_id, data);
-        println!(
-            prices_map
-        );
     }
 
     fn generate_oracle_prices_hash_map(&self) -> HashMap<String, Vec<OraclePrice>> {
