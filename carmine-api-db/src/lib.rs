@@ -242,7 +242,7 @@ pub fn get_pool_state(pool_address: &str, network: &Network) -> Vec<PoolStateWit
     use crate::schema::pool_state::dsl::*;
 
     let connection = &mut establish_connection(network);
-    pool_state
+    let mut data: Vec<PoolStateWithTimestamp> = pool_state
         .inner_join(blocks)
         .filter(lp_address.eq(pool_address))
         .select((PoolState::as_select(), DbBlock::as_select()))
@@ -259,7 +259,11 @@ pub fn get_pool_state(pool_address: &str, network: &Network) -> Vec<PoolStateWit
             block_number: block.block_number,
             timestamp: block.timestamp,
         })
-        .collect()
+        .collect();
+
+    data.sort_by(|a, b| a.block_number.cmp(&b.block_number));
+
+    data
 }
 
 pub fn get_options_volatility(network: &Network) -> Vec<OptionWithVolatility> {

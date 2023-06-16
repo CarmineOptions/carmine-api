@@ -104,11 +104,8 @@ impl Cache {
             .filter(|oracle_price| &oracle_price.token_pair == &pair_id)
             .collect();
 
-        println!("oracle_prices data: {:?}", data);
-
         prices_map.insert(pair_id, data);
         println!(
-            "oracle_prices map inside single token pair: {:?}",
             prices_map
         );
     }
