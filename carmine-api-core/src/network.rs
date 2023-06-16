@@ -18,6 +18,12 @@ const MAINNET_CONTRACT_ADDRESS: &str =
 const MAINNET_STARKSCAN_API_BASE_URL: &str = "https://api.starkscan.co/api/v0/events";
 const TESTNET_STARKSCAN_API_BASE_URL: &str = "https://api-testnet.starkscan.co/api/v0/events";
 
+pub enum Protocol {
+    CarmineOptions,
+    Hashstack,
+    ZkLend,
+}
+
 #[derive(Clone, Copy)]
 pub enum Network {
     Testnet,

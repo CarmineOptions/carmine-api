@@ -4,17 +4,26 @@ use std::{
 };
 
 use carmine_api_core::{
-    network::{amm_address, starkscan_base_url, Network},
-    types::Event,
+    network::{amm_address, starkscan_base_url, Network, Protocol},
+    types::{Event, StarkScanEvent, StarkScanEventResult},
 };
 use carmine_api_db::create_batch_of_events;
-use reqwest::{Client, Error};
-use serde::{Deserialize, Serialize};
+use reqwest::{Client, Error, Response};
+use serde::de::DeserializeOwned;
 use tokio::time::sleep;
 
 // 1. 3. 2023
 const CUTOFF_TIMESTAMP: i64 = 1677625200;
 const STARKSCAN_REQUESTS_DELAY_IN_MS: u64 = 1000;
+
+// list of action names that will be stored
+const ALLOWED_ACTIONS: [&'static str; 5] = [
+    "TradeOpen",
+    "TradeClose",
+    "TradeSettle",
+    "DepositLiquidity",
+    "WithdrawLiquidity",
+];
 
 fn cutoff_timestamp() -> i64 {
     match env::var("ENVIRONMENT") {
@@ -29,32 +38,17 @@ fn cutoff_timestamp() -> i64 {
     }
 }
 
-fn api_url(network: &Network) -> String {
+pub fn api_url(network: &Network, protocol: &Protocol) -> String {
     let base = starkscan_base_url(&network);
-    let amm = amm_address(&network);
-    format!("{}?from_address={}&limit=100", base, amm)
+    let from_address = match protocol {
+        Protocol::CarmineOptions => amm_address(&network),
+        Protocol::Hashstack => "0x03dcf5c72ba60eb7b2fe151032769d49dd3df6b04fa3141dffd6e2aa162b7a6e",
+        Protocol::ZkLend => "0x04c0a5193d58f74fbace4b74dcf65481e734ed1714121bdc571da345540efa05",
+    };
+    format!("{}?from_address={}&limit=100", base, from_address)
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct StarkScanEventResult {
-    pub next_url: Option<String>,
-    pub data: Vec<StarkScanEvent>,
-}
-
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct StarkScanEvent {
-    pub block_hash: Option<String>,
-    pub block_number: Option<i64>,
-    pub transaction_hash: String,
-    pub event_index: i64,
-    pub from_address: String,
-    pub keys: Vec<String>,
-    pub data: Vec<String>,
-    pub timestamp: i64,
-    pub key_name: Option<String>,
-}
-
-pub async fn api_call(url: &str) -> Result<StarkScanEventResult, Error> {
+pub async fn api_call(url: &str) -> Result<Response, Error> {
     let api_key = env::var("STARKSCAN_API_KEY").expect("Failed to read API key");
     let mut headers = reqwest::header::HeaderMap::new();
     let client = Client::new();
@@ -62,21 +56,23 @@ pub async fn api_call(url: &str) -> Result<StarkScanEventResult, Error> {
     headers.insert("accept", "applicationjson".parse().unwrap());
     headers.insert("x-api-key", api_key.parse().unwrap());
 
-    let res = client.get(url).headers(headers).send().await?;
+    client.get(url).headers(headers).send().await
+}
 
-    let parsed_result = res.json::<StarkScanEventResult>().await;
-
+pub async fn api_call_json<T: DeserializeOwned>(url: &str) -> Result<T, Error> {
+    let res = api_call(url).await?;
+    let parsed_result = res.json::<T>().await;
     parsed_result
 }
 
-// list of action names that will be stored
-const ALLOWED_ACTIONS: [&'static str; 5] = [
-    "TradeOpen",
-    "TradeClose",
-    "TradeSettle",
-    "DepositLiquidity",
-    "WithdrawLiquidity",
-];
+pub async fn api_call_text(url: &str) -> Result<String, Error> {
+    let res = api_call(url).await?;
+    res.text().await
+}
+
+pub async fn carmine_events_call(url: &str) -> Result<StarkScanEventResult, Error> {
+    api_call_json::<StarkScanEventResult>(url).await
+}
 
 pub fn parse_event(event: StarkScanEvent) -> Option<Event> {
     // if "key_name" is null or not allowed action (eg "ExpireOptionTokenForPool")
@@ -125,11 +121,11 @@ pub fn parse_event(event: StarkScanEvent) -> Option<Event> {
 
 pub async fn get_events_from_starkscan(network: &Network) {
     let mut events: Vec<Event> = Vec::new();
-    let mut current_url = api_url(network);
+    let mut current_url = api_url(network, &Protocol::CarmineOptions);
     let mut count = 0;
 
     'data: loop {
-        let res = match api_call(&current_url).await {
+        let res = match carmine_events_call(&current_url).await {
             Ok(v) => v,
             Err(_) => {
                 println!("Error from StarkScan");
@@ -170,10 +166,10 @@ pub async fn get_new_events_from_starkscan(stored_events: &Vec<Event>, network: 
     let mut new_events: Vec<Event> = Vec::new();
 
     let mut count = 0;
-    let mut current_url = api_url(network);
+    let mut current_url = api_url(network, &Protocol::CarmineOptions);
 
     'data: loop {
-        let res = match api_call(&current_url).await {
+        let res = match carmine_events_call(&current_url).await {
             Ok(v) => v,
             Err(_) => {
                 break 'data;

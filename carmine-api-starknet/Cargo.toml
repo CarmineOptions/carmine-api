@@ -53,3 +53,7 @@ name = "prices"
 [[bin]]
 path = "./src/bin/update_state.rs"
 name = "state"
+
+[[bin]]
+path = "./src/bin/fetch.rs"
+name = "fetch"

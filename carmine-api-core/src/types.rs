@@ -5,7 +5,7 @@ use crate::schema::{
 };
 use carmine_api_airdrop::merkle_tree::MerkleTree;
 use diesel::prelude::*;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct TradeHistory {
@@ -41,6 +41,25 @@ pub struct AppState {
     pub mainnet: AppData,
     pub testnet: AppData,
     pub airdrop: MerkleTree,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StarkScanEventResult {
+    pub next_url: Option<String>,
+    pub data: Vec<StarkScanEvent>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StarkScanEvent {
+    pub block_hash: Option<String>,
+    pub block_number: Option<i64>,
+    pub transaction_hash: String,
+    pub event_index: i64,
+    pub from_address: String,
+    pub keys: Vec<String>,
+    pub data: Vec<String>,
+    pub timestamp: i64,
+    pub key_name: Option<String>,
 }
 
 #[derive(Debug, Clone, Queryable, Insertable, Serialize, PartialEq, Selectable)]
