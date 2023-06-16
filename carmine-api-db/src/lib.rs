@@ -261,7 +261,7 @@ pub fn get_pool_state(pool_address: &str, network: &Network) -> Vec<PoolStateWit
         })
         .collect();
 
-    data.sort_by(|a, b| a.block_number.cmp(&b.block_number));
+    data.sort_by(|a, b| b.block_number.cmp(&a.block_number));
 
     data
 }

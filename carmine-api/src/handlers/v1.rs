@@ -250,15 +250,24 @@ pub async fn pool_state_last(
         Pools::EthUsdcPut => &app_state.mainnet.state_eth_usdc_put,
     };
 
-    let last_state = match state.len() {
-        0 => None,
-        n => Some(&state[n - 1]),
-    };
+    let max_element = state
+        .iter()
+        .max_by_key(|v| v.block_number);
 
-    HttpResponse::Ok().json(DataResponse {
-        status: "success".to_string(),
-        data: last_state,
-    })
+    match max_element {
+        Some(latest) => {
+            HttpResponse::Ok().json(DataResponse {
+                status: "success".to_string(),
+                data: latest,
+            })
+        }
+        None => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "server_error".to_string(),
+                message: "No data".to_string(),
+            });
+        }
+    }
 }
 
 #[get("/v1/mainnet/{pool}/apy")]
