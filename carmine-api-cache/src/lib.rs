@@ -117,15 +117,11 @@ impl Cache {
         let mut map: HashMap<String, Vec<OraclePrice>> = HashMap::new();
         let oracle_prices = get_oracle_prices(&self.network);
 
-        println!("oracle_prices: {:?}", oracle_prices);
-
         self.set_oracle_prices_pair(
             &mut map,
             token_pair_id(&TokenPair::EthUsdc),
             oracle_prices.clone(),
         );
-
-        println!("oracle_prices map: {:?}", map);
 
         map
     }
