@@ -15,6 +15,7 @@ use tokio::try_join;
 const OPTION_NEAR_MATURITY: &'static str =
     "Unable to calculate position value, please wait till option with maturity";
 const STALE_PRICE: &'static str = "Received price which is over an hour old";
+const BLACK_SCHOLES: &'static str = "Black scholes function failed when calculating";
 const TWO_DAYS_SECS: i64 = 172800;
 
 fn format_call_contract_result(res: CallContractResult) -> Vec<String> {
@@ -442,6 +443,11 @@ impl Carmine {
                 // cannot be calculated - return None
                 Ok(None)
             }
+            Err(e) if e.to_string().contains(BLACK_SCHOLES) => {
+                // this specific error message means that pool position
+                // cannot be calculated - return None
+                Ok(None)
+            }
             Err(e) => Err(e),
         }
     }
@@ -478,6 +484,11 @@ impl Carmine {
             }
             Err(e) if e.to_string().contains(STALE_PRICE) => {
                 // this specific error message means that LP token value
+                // cannot be calculated - return None
+                Ok(None)
+            }
+            Err(e) if e.to_string().contains(BLACK_SCHOLES) => {
+                // this specific error message means that pool position
                 // cannot be calculated - return None
                 Ok(None)
             }
