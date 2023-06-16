@@ -104,11 +104,8 @@ impl Cache {
             .filter(|oracle_price| &oracle_price.token_pair == &pair_id)
             .collect();
 
-        println!("oracle_prices data: {:?}", data);
-
         prices_map.insert(pair_id, data);
         println!(
-            "oracle_prices map inside single token pair: {:?}",
             prices_map
         );
     }
@@ -117,15 +114,11 @@ impl Cache {
         let mut map: HashMap<String, Vec<OraclePrice>> = HashMap::new();
         let oracle_prices = get_oracle_prices(&self.network);
 
-        println!("oracle_prices: {:?}", oracle_prices);
-
         self.set_oracle_prices_pair(
             &mut map,
             token_pair_id(&TokenPair::EthUsdc),
             oracle_prices.clone(),
         );
-
-        println!("oracle_prices map: {:?}", map);
 
         map
     }

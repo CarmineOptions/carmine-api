@@ -28,7 +28,7 @@ impl AmmStateObserver {
         }
     }
 
-    async fn update_single_block(&self, block_number: i64) -> Result<(), ()> {
+    pub async fn update_single_block(&self, block_number: i64) -> Result<(), ()> {
         let strk_block = match self
             .carmine
             .get_block_by_id(BlockId::Number(block_number as u64))

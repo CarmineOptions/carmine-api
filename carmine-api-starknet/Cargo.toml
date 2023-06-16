@@ -43,5 +43,13 @@ path = "./src/bin/get_state.rs"
 name = "get_state"
 
 [[bin]]
-path = "./src/bin/oracle.rs"
+path = "./src/bin/run_oracle.rs"
 name = "oracle"
+
+[[bin]]
+path = "./src/bin/add_prices.rs"
+name = "prices"
+
+[[bin]]
+path = "./src/bin/update_state.rs"
+name = "state"

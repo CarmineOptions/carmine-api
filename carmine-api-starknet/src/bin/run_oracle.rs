@@ -1,4 +1,4 @@
-use carmine_api_core::types::{DbBlock, OracleName, TokenPair};
+use carmine_api_core::types::{OracleName, TokenPair, DbBlock};
 use carmine_api_starknet::oracle::Oracle;
 
 #[tokio::main]
