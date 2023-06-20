@@ -32,7 +32,7 @@ pub struct AppData {
     pub option_volatility: Vec<OptionWithVolatility>,
     pub state_eth_usdc_call: Vec<PoolStateWithTimestamp>,
     pub state_eth_usdc_put: Vec<PoolStateWithTimestamp>,
-    pub oracle_prices: HashMap<String, Vec<OraclePrice>>,
+    pub oracle_prices: HashMap<String, Vec<OraclePriceConcise>>,
     pub apy_eth_usdc_call: f64,
     pub apy_eth_usdc_put: f64,
 }
@@ -198,5 +198,13 @@ pub struct OraclePrice {
     pub last_updated_timestamp: i64,
     pub num_sources_aggregated: i16,
     pub oracle_name: String,
+    pub block_number: i64,
+}
+
+#[derive(Serialize)]
+pub struct OraclePriceConcise {
+    pub price: i64,
+    pub decimals: i16,
+    pub last_updated_timestamp: i64,
     pub block_number: i64,
 }
