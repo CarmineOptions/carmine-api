@@ -14,9 +14,29 @@ const MAINNET_PUT_LP_ADDRESS: &str =
 const MAINNET_CONTRACT_ADDRESS: &str =
     "0x76dbabc4293db346b0a56b29b6ea9fe18e93742c73f12348c8747ecfc1050aa";
 
+const HASHSTACK_ADDRESS: &str =
+    "0x03dcf5c72ba60eb7b2fe151032769d49dd3df6b04fa3141dffd6e2aa162b7a6e";
+const ZKLEND_ADDRESS: &str = "0x04c0a5193d58f74fbace4b74dcf65481e734ed1714121bdc571da345540efa05";
+
 // StarkScan API
 const MAINNET_STARKSCAN_API_BASE_URL: &str = "https://api.starkscan.co/api/v0/events";
 const TESTNET_STARKSCAN_API_BASE_URL: &str = "https://api-testnet.starkscan.co/api/v0/events";
+
+pub enum Protocol {
+    CarmineOptions,
+    Hashstack,
+    ZkLend,
+}
+
+impl fmt::Display for Protocol {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Protocol::CarmineOptions => write!(f, "CarmineOptions"),
+            Protocol::Hashstack => write!(f, "Hashstack"),
+            Protocol::ZkLend => write!(f, "ZkLend"),
+        }
+    }
+}
 
 #[derive(Clone, Copy)]
 pub enum Network {
@@ -58,6 +78,21 @@ pub fn starkscan_base_url(network: &Network) -> &'static str {
     match &network {
         Network::Mainnet => MAINNET_STARKSCAN_API_BASE_URL,
         Network::Testnet => TESTNET_STARKSCAN_API_BASE_URL,
+    }
+}
+
+pub fn protocol_address(network: &Network, protocol: &Protocol) -> &'static str {
+    match protocol {
+        Protocol::CarmineOptions => match network {
+            Network::Mainnet => {
+                "0x076dbabc4293db346b0a56b29b6ea9fe18e93742c73f12348c8747ecfc1050aa"
+            }
+            Network::Testnet => {
+                "0x042a7d485171a01b8c38b6b37e0092f0f096e9d3f945c50c77799171916f5a54"
+            }
+        },
+        Protocol::Hashstack => HASHSTACK_ADDRESS,
+        Protocol::ZkLend => ZKLEND_ADDRESS,
     }
 }
 

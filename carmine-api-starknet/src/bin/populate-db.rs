@@ -1,12 +1,11 @@
 use carmine_api_core::network::Network;
 use carmine_api_db::{get_events, get_options};
-use carmine_api_starknet::starkscan::get_events_from_starkscan;
+use carmine_api_starknet::{carmine::Carmine, starkscan::get_events_from_starkscan};
 use dotenvy::dotenv;
 
 async fn populate_network(n: &Network) {
-    // let c = Carmine::new(*n);
-    get_events_from_starkscan(n).await;
-    // c.get_options_with_addresses().await;
+    let c = Carmine::new(*n);
+    c.get_options_with_addresses().await;
 }
 
 fn validate_db(n: &Network) {
@@ -23,6 +22,8 @@ async fn main() {
     dotenv().ok();
 
     let networks = vec![Network::Testnet, Network::Mainnet];
+
+    get_events_from_starkscan().await;
 
     for n in networks.iter() {
         populate_network(&n).await;

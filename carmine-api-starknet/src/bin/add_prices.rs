@@ -29,7 +29,7 @@ async fn main() {
     let state_updater = AmmStateObserver::new();
     let pragma = Oracle::new(OracleName::Pragma);
 
-    let mut current_block_number = 40119;
+    let mut current_block_number = 39319;
     let increment = 10;
 
     loop {
