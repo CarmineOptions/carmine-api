@@ -1,10 +1,11 @@
-use carmine_api_core::network::Network;
+use carmine_api_core::network::{protocol_address, Network, Protocol};
 use carmine_api_core::schema::{self};
 use carmine_api_core::types::{
     DbBlock, Event, IOption, OptionVolatility, OptionWithVolatility, OraclePrice, Pool, PoolState,
-    PoolStateWithTimestamp, Volatility,
+    PoolStateWithTimestamp, StarkScanEventSettled, Volatility,
 };
 
+use diesel::dsl::max;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use std::env;
@@ -58,6 +59,22 @@ pub fn create_batch_of_events(new_events: &Vec<Event>, network: &Network) {
 
     for chunk in chunks {
         diesel::insert_into(events)
+            .values(chunk)
+            .on_conflict_do_nothing()
+            .execute(&mut connection)
+            .expect("Error saving batch of events");
+    }
+}
+
+pub fn create_batch_of_starkscan_events(events: &Vec<StarkScanEventSettled>, network: &Network) {
+    use crate::schema::starkscan_events::dsl::*;
+
+    let mut connection = establish_connection(network);
+
+    let chunks = events.chunks(BATCH_SIZE);
+
+    for chunk in chunks {
+        diesel::insert_into(starkscan_events)
             .values(chunk)
             .on_conflict_do_nothing()
             .execute(&mut connection)
@@ -129,6 +146,34 @@ pub fn create_oracle_price(data: &OraclePrice, network: &Network) {
         .expect("Error saving oracle price");
 }
 
+pub fn get_last_timestamp_for_protocol_event(
+    network: &Network,
+    protocol: &Protocol,
+) -> Option<i64> {
+    use crate::schema::starkscan_events::dsl::*;
+
+    let connection = &mut establish_connection(network);
+
+    starkscan_events
+        .filter(from_address.eq(protocol_address(network, protocol)))
+        .select(max(timestamp))
+        .first(connection)
+        .expect("Error loading last timestamp for protocol event")
+}
+
+// TODO: move events (Carmine specific) to starkscan_events (general)
+pub fn get_last_timestamp_carmine_event(network: &Network) -> Option<i64> {
+    use crate::schema::events::dsl::*;
+
+    let connection = &mut establish_connection(network);
+
+    events
+        .filter(from_address.eq(protocol_address(network, &Protocol::CarmineOptions)))
+        .select(max(timestamp))
+        .first(connection)
+        .expect("Error loading last timestamp for protocol event")
+}
+
 pub fn get_oracle_prices(network: &Network) -> Vec<OraclePrice> {
     use crate::schema::oracle_prices::dsl::*;
 
@@ -162,6 +207,28 @@ pub fn get_events_by_caller_address(address: &str, network: &Network) -> Vec<Eve
         .filter(caller.eq(address))
         .load::<Event>(connection)
         .expect("Error loading events by caller address")
+}
+
+pub fn get_option_with_address(
+    network: &Network,
+    in_option_side: i16,
+    in_maturity: i64,
+    in_strike_price: &String,
+    in_lp_address: &String,
+) -> Option<IOption> {
+    use crate::schema::options::dsl::*;
+
+    let connection = &mut establish_connection(network);
+    let res: Option<IOption> = options
+        .filter(lp_address.eq(in_lp_address))
+        .filter(maturity.eq(in_maturity))
+        .filter(strike_price.eq(in_strike_price))
+        .filter(option_side.eq(in_option_side))
+        .first::<IOption>(connection)
+        .optional()
+        .expect("Error loading options");
+
+    res
 }
 
 pub fn get_options(network: &Network) -> Vec<IOption> {

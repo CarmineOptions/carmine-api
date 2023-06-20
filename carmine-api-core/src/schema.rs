@@ -76,6 +76,21 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    starkscan_events (id) {
+        id -> Text,
+        block_hash -> Text,
+        block_number -> Int8,
+        transaction_hash -> Text,
+        event_index -> Int8,
+        from_address -> Text,
+        keys -> Array<Text>,
+        data -> Array<Text>,
+        timestamp -> Int8,
+        key_name -> Text,
+    }
+}
+
 diesel::allow_tables_to_appear_in_same_query!(
     events,
     options,
@@ -84,6 +99,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     pools,
     options_volatility,
     oracle_prices,
+    starkscan_events,
 );
 
 diesel::joinable!(pool_state -> blocks (block_number));

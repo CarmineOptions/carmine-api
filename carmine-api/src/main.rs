@@ -16,7 +16,6 @@ use std::sync::{Arc, Mutex};
 use tokio::time::{sleep, Duration};
 
 const UPDATE_APP_STATE_INTERVAL: u64 = 300;
-const FETCH_DATA_INTO_DATABASE_INTERVAL: u64 = 550;
 
 const LOCAL_IP: &str = "127.0.0.1";
 const DOCKER_IP: &str = "0.0.0.0";
@@ -120,8 +119,8 @@ async fn main() -> std::io::Result<()> {
     // fetches data and updates database
     actix_web::rt::spawn(async {
         loop {
-            sleep(Duration::from_secs(FETCH_DATA_INTO_DATABASE_INTERVAL)).await;
             update_database().await;
+            println!("Database updated");
         }
     });
 
