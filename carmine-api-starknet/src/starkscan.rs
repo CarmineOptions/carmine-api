@@ -1,19 +1,18 @@
-use std::{
-    env,
-    time::{Duration, SystemTime, UNIX_EPOCH},
-};
+use std::{env, time::Duration};
 
+use async_recursion::async_recursion;
 use carmine_api_core::{
     network::{amm_address, starkscan_base_url, Network, Protocol},
-    types::{Event, StarkScanEvent, StarkScanEventResult},
+    types::{Event, StarkScanEvent, StarkScanEventResult, StarkScanEventSettled},
 };
-use carmine_api_db::create_batch_of_events;
+use carmine_api_db::{
+    create_batch_of_events, create_batch_of_starkscan_events, get_last_timestamp_carmine_event,
+    get_last_timestamp_for_protocol_event,
+};
 use reqwest::{Client, Error, Response};
 use serde::de::DeserializeOwned;
 use tokio::time::sleep;
 
-// 1. 3. 2023
-const CUTOFF_TIMESTAMP: i64 = 1677625200;
 const STARKSCAN_REQUESTS_DELAY_IN_MS: u64 = 1000;
 
 // list of action names that will be stored
@@ -25,27 +24,14 @@ const ALLOWED_ACTIONS: [&'static str; 5] = [
     "WithdrawLiquidity",
 ];
 
-fn cutoff_timestamp() -> i64 {
-    match env::var("ENVIRONMENT") {
-        Ok(v) if v == "local" => {
-            // for local development
-            // only fetch events from
-            // last 24h
-            let one_day_ago = SystemTime::now() - Duration::from_secs(24 * 60 * 60);
-            one_day_ago.duration_since(UNIX_EPOCH).unwrap().as_secs() as i64
-        }
-        _ => CUTOFF_TIMESTAMP,
-    }
-}
-
-pub fn api_url(network: &Network, protocol: &Protocol) -> String {
+pub fn api_url(network: &Network, protocol: &Protocol, limit: u8) -> String {
     let base = starkscan_base_url(&network);
     let from_address = match protocol {
         Protocol::CarmineOptions => amm_address(&network),
         Protocol::Hashstack => "0x03dcf5c72ba60eb7b2fe151032769d49dd3df6b04fa3141dffd6e2aa162b7a6e",
         Protocol::ZkLend => "0x04c0a5193d58f74fbace4b74dcf65481e734ed1714121bdc571da345540efa05",
     };
-    format!("{}?from_address={}&limit=100", base, from_address)
+    format!("{}?from_address={}&limit={}", base, from_address, limit)
 }
 
 pub async fn api_call(url: &str) -> Result<Response, Error> {
@@ -70,7 +56,7 @@ pub async fn api_call_text(url: &str) -> Result<String, Error> {
     res.text().await
 }
 
-pub async fn carmine_events_call(url: &str) -> Result<StarkScanEventResult, Error> {
+pub async fn events_call(url: &str) -> Result<StarkScanEventResult, Error> {
     api_call_json::<StarkScanEventResult>(url).await
 }
 
@@ -119,108 +105,118 @@ pub fn parse_event(event: StarkScanEvent) -> Option<Event> {
     })
 }
 
-pub async fn get_events_from_starkscan(network: &Network) {
-    let mut events: Vec<Event> = Vec::new();
-    let mut current_url = api_url(network, &Protocol::CarmineOptions);
-    let mut count = 0;
+// TODO: move Carmine events to Starkscan_events and then this will not be necessary
+pub fn parse_settled_event(event: StarkScanEventSettled) -> Option<Event> {
+    // if "key_name" is null or not allowed action (eg "ExpireOptionTokenForPool")
+    // we can't handle the event so we don't store it
+    if !ALLOWED_ACTIONS.iter().any(|&v| v == event.key_name) {
+        return None;
+    };
 
-    'data: loop {
-        let res = match carmine_events_call(&current_url).await {
-            Ok(v) => v,
-            Err(_) => {
-                println!("Error from StarkScan");
-                break 'data;
-            }
-        };
-        count = count + 1;
-
-        let data = res.data;
-
-        for event in data {
-            if let Some(parsed_event) = parse_event(event) {
-                events.push(parsed_event);
-            }
-        }
-
-        if let Some(next_url) = res.next_url {
-            current_url = next_url;
-        } else {
-            break 'data;
-        }
-        sleep(Duration::from_millis(STARKSCAN_REQUESTS_DELAY_IN_MS)).await;
+    // accessing data by index, make sure the length is correct
+    if event.data.len() != 6 {
+        return None;
     }
 
-    println!("Got events from Starkscan with {} requests", count);
-
-    // update DB
-    create_batch_of_events(&events, network);
+    Some(Event {
+        block_hash: event.block_hash,
+        block_number: event.block_number,
+        transaction_hash: event.transaction_hash,
+        event_index: event.event_index,
+        from_address: event.from_address,
+        timestamp: event.timestamp,
+        action: event.key_name,
+        caller: String::from(&event.data[0]),
+        token_address: String::from(&event.data[1]),
+        capital_transfered: String::from(&event.data[2]),
+        tokens_minted: String::from(&event.data[4]),
+    })
 }
 
-// TODO: abstract to remove code duplicity
-pub async fn get_new_events_from_starkscan(stored_events: &Vec<Event>, network: &Network) {
-    // collection of already stored TXs
-    let stored_txs: Vec<String> = stored_events
-        .into_iter()
-        .map(|e| String::from(&e.transaction_hash))
-        .collect();
-    let mut new_events: Vec<Event> = Vec::new();
+fn get_settled_event(event: StarkScanEvent) -> Option<StarkScanEventSettled> {
+    if event.block_hash.is_some() && event.block_number.is_some() && event.key_name.is_some() {
+        return Some(StarkScanEventSettled {
+            id: format!("{}_{}", event.transaction_hash, event.event_index),
+            block_hash: event.block_hash.unwrap(),
+            block_number: event.block_number.unwrap(),
+            transaction_hash: event.transaction_hash,
+            event_index: event.event_index,
+            from_address: event.from_address,
+            keys: event.keys,
+            data: event.data,
+            timestamp: event.timestamp,
+            key_name: event.key_name.unwrap(),
+        });
+    }
+    return None;
+}
 
-    let mut count = 0;
-    let mut current_url = api_url(network, &Protocol::CarmineOptions);
-
-    'data: loop {
-        let res = match carmine_events_call(&current_url).await {
-            Ok(v) => v,
-            Err(_) => {
-                break 'data;
-            }
-        };
-        count = count + 1;
-
-        let data = res.data;
-
-        let fetched_len = data.len();
-
-        let filtered_events: Vec<StarkScanEvent> = data
-            .into_iter()
-            .filter(|strakscan_event| !stored_txs.contains(&strakscan_event.transaction_hash))
-            .collect();
-
-        let filtered_len = filtered_events.len();
-
-        for event in filtered_events {
-            // only check events up to this timestamp
-            // every next event is just as old or older
-            // therefore it is safe to break top loop
-            if event.timestamp < cutoff_timestamp() {
-                println!("Cutoff timestamp reached");
-                break 'data;
-            }
-
-            if let Some(parsed_event) = parse_event(event) {
-                new_events.push(parsed_event);
-            }
+#[async_recursion]
+async fn _fetch_events(url: &str, data: &mut Vec<StarkScanEventSettled>, cutoff_timestamp: i64) {
+    let starkscan_response = match events_call(url).await {
+        Ok(v) => v,
+        Err(e) => {
+            println!("Error from StarkScan: {:?}", e);
+            return;
         }
+    };
+    let next_url_option = &starkscan_response.next_url;
 
-        if fetched_len != filtered_len {
-            // reached TXs already stored in the DB - stop fetching
-            break 'data;
-        }
-
-        if let Some(next_url) = res.next_url {
-            current_url = next_url;
+    for event in starkscan_response.data {
+        if event.timestamp > cutoff_timestamp {
+            if let Some(settled) = get_settled_event(event) {
+                data.push(settled);
+            }
         } else {
-            break 'data;
+            return;
         }
-        sleep(Duration::from_millis(STARKSCAN_REQUESTS_DELAY_IN_MS)).await;
     }
 
-    println!(
-        "Fetched {} previously not stored events with {} requests",
-        new_events.len(),
-        count
-    );
+    if let Some(next_url) = next_url_option {
+        // prevent "limit exceeded"
+        sleep(Duration::from_millis(STARKSCAN_REQUESTS_DELAY_IN_MS)).await;
+        return _fetch_events(next_url, data, cutoff_timestamp).await;
+    }
+}
 
+pub async fn fetch_events(
+    network: &Network,
+    protocol: &Protocol,
+    cutoff_timestamp: i64,
+) -> Vec<StarkScanEventSettled> {
+    println!("Fetching events for {}", protocol);
+    let mut data: Vec<StarkScanEventSettled> = vec![];
+    let url = api_url(network, protocol, 100);
+    _fetch_events(&url, &mut data, cutoff_timestamp).await;
+    println!("Fetched {} events for {}", &data.len(), protocol);
+    data
+}
+
+pub async fn get_events_from_starkscan() {
+    // no longer updating events for testnet
+    let network = &Network::Mainnet;
+    let last_timestamp = match get_last_timestamp_carmine_event(network) {
+        Some(t) => t,
+        None => return,
+    };
+
+    let events = fetch_events(network, &Protocol::CarmineOptions, last_timestamp).await;
+    let parsed_events: Vec<Event> = events
+        .into_iter()
+        .filter_map(|e| parse_settled_event(e))
+        .collect();
     // update DB
-    create_batch_of_events(&new_events, network);
+    create_batch_of_events(&parsed_events, network);
+    println!("Stored {} events from Starkscan", &parsed_events.len());
+}
+
+pub async fn update_lending_protocol_events(protocol: &Protocol) {
+    let network = Network::Mainnet;
+    let last_timestamp = match get_last_timestamp_for_protocol_event(&network, protocol) {
+        Some(t) => t,
+        // Carmine mainnet launch timestamp
+        None => 1680864820,
+    };
+    let new_events = fetch_events(&network, protocol, last_timestamp).await;
+    create_batch_of_starkscan_events(&new_events, &network);
 }

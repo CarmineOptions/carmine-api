@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+async-recursion = "1.0.4"
 carmine-api-core = { path = "../carmine-api-core" }
 carmine-api-db = { path = "../carmine-api-db" }
 diesel = { version = "2.0.0", features = ["postgres"] }

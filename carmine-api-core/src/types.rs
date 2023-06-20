@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::schema::{
-    blocks, events, options, options_volatility, oracle_prices, pool_state, pools,
+    blocks, events, options, options_volatility, oracle_prices, pool_state, pools, starkscan_events,
 };
 use carmine_api_airdrop::merkle_tree::MerkleTree;
 use diesel::prelude::*;
@@ -60,6 +60,21 @@ pub struct StarkScanEvent {
     pub data: Vec<String>,
     pub timestamp: i64,
     pub key_name: Option<String>,
+}
+
+#[derive(Debug, Clone, Queryable, Insertable, Serialize, PartialEq, Selectable)]
+#[diesel(table_name = starkscan_events)]
+pub struct StarkScanEventSettled {
+    pub id: String,
+    pub block_hash: String,
+    pub block_number: i64,
+    pub transaction_hash: String,
+    pub event_index: i64,
+    pub from_address: String,
+    pub keys: Vec<String>,
+    pub data: Vec<String>,
+    pub timestamp: i64,
+    pub key_name: String,
 }
 
 #[derive(Debug, Clone, Queryable, Insertable, Serialize, PartialEq, Selectable)]

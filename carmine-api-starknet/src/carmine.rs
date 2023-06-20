@@ -1,6 +1,6 @@
 use carmine_api_core::network::{amm_address, call_lp_address, put_lp_address, Network};
 use carmine_api_core::types::{DbBlock, IOption, OptionVolatility, PoolState};
-use carmine_api_db::{create_batch_of_options, get_options, get_pools};
+use carmine_api_db::{create_batch_of_options, get_option_with_address, get_options, get_pools};
 use futures::future::join_all;
 use futures::FutureExt;
 use starknet::core::types::{Block, CallContractResult, CallFunction, FieldElement};
@@ -242,11 +242,45 @@ impl Carmine {
 
         let mut options: Vec<IOption> = vec![];
 
+        let mut cache_hit = 0;
+        let mut fetched = 0;
+
         for option_vec in chunks {
             if option_vec.len() != 6 {
                 println!("Wrong option_vec size!");
                 continue;
             }
+
+            let option_side = format!("{}", option_vec[0])
+                .parse::<i16>()
+                .expect("Failed to parse side");
+            let maturity = format!("{}", option_vec[1])
+                .parse::<i64>()
+                .expect("Failed to parse maturity");
+            let strike_price = to_hex(option_vec[2]);
+            let lp_address = to_hex(*pool_address);
+
+            let db_hit = get_option_with_address(
+                &self.network,
+                option_side,
+                maturity,
+                &strike_price,
+                &lp_address,
+            );
+
+            if let Some(option_with_address) = db_hit {
+                options.push(option_with_address);
+                cache_hit += 1;
+                continue;
+            }
+
+            // this part only runs if option not already in the DB
+
+            let option_type = format!("{}", option_vec[5])
+                .parse::<i16>()
+                .expect("Failed to parse type");
+            let quote_token_address = to_hex(option_vec[3]);
+            let base_token_address = to_hex(option_vec[4]);
 
             // avoid running into rate limit starknet error
             sleep(Duration::from_secs(2)).await;
@@ -263,20 +297,6 @@ impl Carmine {
                 Ok(v) => v.to_lowercase(),
             };
 
-            let option_side = format!("{}", option_vec[0])
-                .parse::<i16>()
-                .expect("Failed to parse side");
-            let option_type = format!("{}", option_vec[5])
-                .parse::<i16>()
-                .expect("Failed to parse type");
-            let maturity = format!("{}", option_vec[1])
-                .parse::<i64>()
-                .expect("Failed to parse maturity");
-            let strike_price = to_hex(option_vec[2]);
-            let quote_token_address = to_hex(option_vec[3]);
-            let base_token_address = to_hex(option_vec[4]);
-            let lp_address = to_hex(*pool_address);
-
             let option = IOption {
                 option_side,
                 maturity,
@@ -287,9 +307,14 @@ impl Carmine {
                 option_address,
                 lp_address,
             };
-
+            fetched += 1;
             options.push(option);
         }
+
+        println!(
+            "{} options from cache, {} options newly fetched",
+            cache_hit, fetched
+        );
 
         create_batch_of_options(&options, &self.network);
     }
