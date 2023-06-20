@@ -2,7 +2,7 @@ use std::{collections::HashMap, vec};
 
 use carmine_api_core::{
     network::{call_lp_address, put_lp_address, Network},
-    types::{AppData, Event, IOption, OraclePrice, TokenPair, TradeHistory},
+    types::{AppData, Event, IOption, OraclePrice, OraclePriceConcise, TokenPair, TradeHistory},
     utils::token_pair_id,
 };
 use carmine_api_db::{
@@ -95,20 +95,26 @@ impl Cache {
 
     fn set_oracle_prices_pair(
         &self,
-        prices_map: &mut HashMap<String, Vec<OraclePrice>>,
+        prices_map: &mut HashMap<String, Vec<OraclePriceConcise>>,
         pair_id: String,
         prices: Vec<OraclePrice>,
     ) {
         let data = prices
             .into_iter()
             .filter(|oracle_price| &oracle_price.token_pair == &pair_id)
+            .map(|full_price| OraclePriceConcise {
+                price: full_price.price,
+                decimals: full_price.decimals,
+                last_updated_timestamp: full_price.last_updated_timestamp,
+                block_number: full_price.block_number,
+            })
             .collect();
 
         prices_map.insert(pair_id, data);
     }
 
-    fn generate_oracle_prices_hash_map(&self) -> HashMap<String, Vec<OraclePrice>> {
-        let mut map: HashMap<String, Vec<OraclePrice>> = HashMap::new();
+    fn generate_oracle_prices_hash_map(&self) -> HashMap<String, Vec<OraclePriceConcise>> {
+        let mut map: HashMap<String, Vec<OraclePriceConcise>> = HashMap::new();
         let oracle_prices = get_oracle_prices(&self.network);
 
         self.set_oracle_prices_pair(
