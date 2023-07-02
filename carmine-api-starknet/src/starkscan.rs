@@ -224,7 +224,6 @@ fn get_settled_event(event: StarkScanEvent) -> Option<StarkScanEventSettled> {
 
 #[async_recursion]
 async fn _fetch_events(url: &str, data: &mut Vec<StarkScanEventSettled>, cutoff_timestamp: i64) {
-    println!("Fetching from {}", url);
     let starkscan_response = match events_call(url).await {
         Ok(v) => v,
         Err(e) => {

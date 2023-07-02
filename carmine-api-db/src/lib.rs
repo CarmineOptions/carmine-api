@@ -73,13 +73,18 @@ pub fn create_batch_of_starkscan_events(events: &Vec<StarkScanEventSettled>, net
 
     let chunks = events.chunks(BATCH_SIZE);
 
+    let mut inserted: u32 = 0;
+
     for chunk in chunks {
-        diesel::insert_into(starkscan_events)
+        let res = diesel::insert_into(starkscan_events)
             .values(chunk)
             .on_conflict_do_nothing()
             .execute(&mut connection)
             .expect("Error saving batch of events");
+        inserted += res as u32;
     }
+
+    println!("Inserted {} Starkscan events", inserted);
 }
 
 pub fn create_option(option: IOption, network: &Network) {
