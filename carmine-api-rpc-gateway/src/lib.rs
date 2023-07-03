@@ -28,6 +28,8 @@ pub struct RpcCallBody {
 pub enum Entrypoint {
     GetOptionWithPositionOfUser,
     GetAllNonExpiredOptionsWithPremia,
+    GetUserPoolInfos,
+    GetTotalPremia,
 }
 
 pub enum Contract {
@@ -37,6 +39,7 @@ pub enum Contract {
 pub enum RpcNode {
     BlastAPI,
     Infura,
+    InfuraTestnet,
 }
 
 #[derive(Debug, Deserialize)]
@@ -57,6 +60,12 @@ pub fn map_entrypoint_to_selector(entry_point: Entrypoint) -> String {
         }
         Entrypoint::GetAllNonExpiredOptionsWithPremia => {
             selector!("get_all_non_expired_options_with_premia")
+        }
+        Entrypoint::GetUserPoolInfos => {
+            selector!("get_user_pool_infos")
+        }
+        Entrypoint::GetTotalPremia => {
+            selector!("get_total_premia")
         }
     };
     to_hex(felt)
@@ -93,6 +102,8 @@ const BLAST_API_URL: &'static str =
     "https://starknet-mainnet.blastapi.io/887824dd-2f0b-448d-8549-09598869e9bb";
 const INFURA_URL: &'static str =
     "https://starknet-mainnet.infura.io/v3/df11605e57a14558b13a24a111661f52";
+const INFURA_TESTNET_URL: &'static str =
+    "https://starknet-goerli.infura.io/v3/df11605e57a14558b13a24a111661f52";
 
 pub async fn rpc_call(
     contract: Contract,
@@ -104,6 +115,7 @@ pub async fn rpc_call(
     let url = match node {
         RpcNode::BlastAPI => BLAST_API_URL,
         RpcNode::Infura => INFURA_URL,
+        RpcNode::InfuraTestnet => INFURA_TESTNET_URL,
     };
     let client = reqwest::Client::new();
     let res = client
