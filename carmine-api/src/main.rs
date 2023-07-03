@@ -104,11 +104,13 @@ async fn main() -> std::io::Result<()> {
             println!("Updating AppState");
             mainnet_cache.update().await;
             testnet_cache.update().await;
+            let airdrop = MerkleTree::new();
+
             let mut app_state = app_state1.lock().unwrap();
             *app_state = AppState {
                 mainnet: mainnet_cache.get_app_data(),
                 testnet: testnet_cache.get_app_data(),
-                airdrop: MerkleTree::new(),
+                airdrop,
             };
             println!("AppState updated");
         }
