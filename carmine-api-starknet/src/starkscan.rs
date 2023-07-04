@@ -1,4 +1,4 @@
-use std::{env, time::Duration};
+use std::{cmp::min, env, time::Duration};
 
 use async_recursion::async_recursion;
 use carmine_api_core::{
@@ -12,6 +12,74 @@ use carmine_api_db::{
 use reqwest::{Client, Error, Response};
 use serde::de::DeserializeOwned;
 use tokio::time::sleep;
+
+pub struct StarkscanUrlBuilder<'a> {
+    url: String,
+    first_param: bool,
+    limit_set: bool,
+    network: &'a Network,
+}
+
+impl<'a> StarkscanUrlBuilder<'a> {
+    pub fn new(network: &'a Network) -> Self {
+        StarkscanUrlBuilder {
+            url: starkscan_base_url(&network).to_owned(),
+            first_param: true,
+            limit_set: false,
+            network,
+        }
+    }
+    fn append_param(&mut self, key: &str, value: &str) {
+        let delimiter = match self.first_param {
+            true => {
+                self.first_param = false;
+                "?"
+            }
+            false => "&",
+        };
+        self.url = format!("{}{}{}={}", self.url, delimiter, key, value);
+    }
+    fn append_num_param(&mut self, key: &str, n: u32) {
+        self.append_param(key, n.to_string().as_str());
+    }
+    fn set_limit(&mut self, n: u8) {
+        if !self.limit_set {
+            self.append_num_param("limit", min(n as u32, 100));
+            self.limit_set = true;
+        }
+    }
+    pub fn protocol(mut self, protocol: &Protocol) -> Self {
+        let from_address = match protocol {
+            Protocol::CarmineOptions => amm_address(self.network),
+            Protocol::Hashstack => {
+                "0x03dcf5c72ba60eb7b2fe151032769d49dd3df6b04fa3141dffd6e2aa162b7a6e"
+            }
+            Protocol::ZkLend => {
+                "0x04c0a5193d58f74fbace4b74dcf65481e734ed1714121bdc571da345540efa05"
+            }
+        };
+        self.append_param("from_address", from_address);
+        self
+    }
+    pub fn from_block(mut self, n: u32) -> Self {
+        self.append_num_param("from_block", n);
+        self
+    }
+    pub fn to_block(mut self, n: u32) -> Self {
+        self.append_num_param("to_block", n);
+        self
+    }
+    pub fn limit(mut self, n: u8) -> Self {
+        self.set_limit(n);
+        self
+    }
+    pub fn get_url(mut self) -> String {
+        if !self.limit_set {
+            self.set_limit(100);
+        }
+        self.url
+    }
+}
 
 const STARKSCAN_REQUESTS_DELAY_IN_MS: u64 = 1000;
 
@@ -31,7 +99,10 @@ pub fn api_url(network: &Network, protocol: &Protocol, limit: u8) -> String {
         Protocol::Hashstack => "0x03dcf5c72ba60eb7b2fe151032769d49dd3df6b04fa3141dffd6e2aa162b7a6e",
         Protocol::ZkLend => "0x04c0a5193d58f74fbace4b74dcf65481e734ed1714121bdc571da345540efa05",
     };
-    format!("{}?from_address={}&limit={}", base, from_address, limit)
+    format!(
+        "{}?from_address={}&limit={}&from_block=30000&to_block=48804",
+        base, from_address, limit
+    )
 }
 
 pub async fn api_call(url: &str) -> Result<Response, Error> {
@@ -105,7 +176,7 @@ pub fn parse_event(event: StarkScanEvent) -> Option<Event> {
     })
 }
 
-// TODO: move Carmine events to Starkscan_events and then this will not be necessary
+// TODO: move Carmine events to Starkscan_events and then this will replace parse_event
 pub fn parse_settled_event(event: StarkScanEventSettled) -> Option<Event> {
     // if "key_name" is null or not allowed action (eg "ExpireOptionTokenForPool")
     // we can't handle the event so we don't store it
@@ -162,13 +233,19 @@ async fn _fetch_events(url: &str, data: &mut Vec<StarkScanEventSettled>, cutoff_
     };
     let next_url_option = &starkscan_response.next_url;
 
-    for event in starkscan_response.data {
-        if event.timestamp > cutoff_timestamp {
-            if let Some(settled) = get_settled_event(event) {
-                data.push(settled);
+    if let Some(message) = starkscan_response.message {
+        println!("Starkscan returned message: {}", message);
+    }
+
+    if let Some(response_data) = starkscan_response.data {
+        for event in response_data {
+            if event.timestamp > cutoff_timestamp {
+                if let Some(settled) = get_settled_event(event) {
+                    data.push(settled);
+                }
+            } else {
+                return;
             }
-        } else {
-            return;
         }
     }
 
@@ -180,15 +257,11 @@ async fn _fetch_events(url: &str, data: &mut Vec<StarkScanEventSettled>, cutoff_
 }
 
 pub async fn fetch_events(
-    network: &Network,
-    protocol: &Protocol,
+    initial_url: String,
     cutoff_timestamp: i64,
 ) -> Vec<StarkScanEventSettled> {
-    println!("Fetching events for {}", protocol);
     let mut data: Vec<StarkScanEventSettled> = vec![];
-    let url = api_url(network, protocol, 100);
-    _fetch_events(&url, &mut data, cutoff_timestamp).await;
-    println!("Fetched {} events for {}", &data.len(), protocol);
+    _fetch_events(&initial_url, &mut data, cutoff_timestamp).await;
     data
 }
 
@@ -200,7 +273,11 @@ pub async fn get_events_from_starkscan() {
         None => return,
     };
 
-    let events = fetch_events(network, &Protocol::CarmineOptions, last_timestamp).await;
+    let url = StarkscanUrlBuilder::new(network)
+        .protocol(&Protocol::CarmineOptions)
+        .get_url();
+
+    let events = fetch_events(url, last_timestamp).await;
     let parsed_events: Vec<Event> = events
         .into_iter()
         .filter_map(|e| parse_settled_event(e))
@@ -217,6 +294,23 @@ pub async fn update_lending_protocol_events(protocol: &Protocol) {
         // Carmine mainnet launch timestamp
         None => 1680864820,
     };
-    let new_events = fetch_events(&network, protocol, last_timestamp).await;
+    let url = StarkscanUrlBuilder::new(&network)
+        .protocol(protocol)
+        .get_url();
+    let new_events = fetch_events(url, last_timestamp).await;
+    create_batch_of_starkscan_events(&new_events, &network);
+}
+
+pub async fn update_block_range(protocol: &Protocol, from: u32, to: u32) {
+    let network = Network::Mainnet;
+    // we want to fetch till there is no "next_url"
+    let last_timestamp = 0;
+    let url = StarkscanUrlBuilder::new(&network)
+        .protocol(protocol)
+        .from_block(from)
+        .to_block(to)
+        .get_url();
+
+    let new_events = fetch_events(url, last_timestamp).await;
     create_batch_of_starkscan_events(&new_events, &network);
 }

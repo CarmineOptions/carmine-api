@@ -46,7 +46,8 @@ pub struct AppState {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct StarkScanEventResult {
     pub next_url: Option<String>,
-    pub data: Vec<StarkScanEvent>,
+    pub data: Option<Vec<StarkScanEvent>>,
+    pub message: Option<String>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
