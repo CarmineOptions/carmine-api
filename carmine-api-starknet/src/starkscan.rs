@@ -2,7 +2,7 @@ use std::{cmp::min, env, time::Duration};
 
 use async_recursion::async_recursion;
 use carmine_api_core::{
-    network::{amm_address, starkscan_base_url, Network, Protocol},
+    network::{protocol_address, starkscan_base_url, Network, Protocol},
     types::{Event, StarkScanEvent, StarkScanEventResult, StarkScanEventSettled},
 };
 use carmine_api_db::{
@@ -49,15 +49,7 @@ impl<'a> StarkscanUrlBuilder<'a> {
         }
     }
     pub fn protocol(mut self, protocol: &Protocol) -> Self {
-        let from_address = match protocol {
-            Protocol::CarmineOptions => amm_address(self.network),
-            Protocol::Hashstack => {
-                "0x03dcf5c72ba60eb7b2fe151032769d49dd3df6b04fa3141dffd6e2aa162b7a6e"
-            }
-            Protocol::ZkLend => {
-                "0x04c0a5193d58f74fbace4b74dcf65481e734ed1714121bdc571da345540efa05"
-            }
-        };
+        let from_address = protocol_address(&self.network, protocol);
         self.append_param("from_address", from_address);
         self
     }
@@ -91,19 +83,6 @@ const ALLOWED_ACTIONS: [&'static str; 5] = [
     "DepositLiquidity",
     "WithdrawLiquidity",
 ];
-
-pub fn api_url(network: &Network, protocol: &Protocol, limit: u8) -> String {
-    let base = starkscan_base_url(&network);
-    let from_address = match protocol {
-        Protocol::CarmineOptions => amm_address(&network),
-        Protocol::Hashstack => "0x03dcf5c72ba60eb7b2fe151032769d49dd3df6b04fa3141dffd6e2aa162b7a6e",
-        Protocol::ZkLend => "0x04c0a5193d58f74fbace4b74dcf65481e734ed1714121bdc571da345540efa05",
-    };
-    format!(
-        "{}?from_address={}&limit={}&from_block=30000&to_block=48804",
-        base, from_address, limit
-    )
-}
 
 pub async fn api_call(url: &str) -> Result<Response, Error> {
     let api_key = env::var("STARKSCAN_API_KEY").expect("Failed to read API key");
