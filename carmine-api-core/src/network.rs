@@ -17,6 +17,11 @@ const MAINNET_CONTRACT_ADDRESS: &str =
 const HASHSTACK_ADDRESS: &str =
     "0x03dcf5c72ba60eb7b2fe151032769d49dd3df6b04fa3141dffd6e2aa162b7a6e";
 const ZKLEND_ADDRESS: &str = "0x04c0a5193d58f74fbace4b74dcf65481e734ed1714121bdc571da345540efa05";
+const ZETH_ADDRESS: &str = "0x01b5bd713e72fdc5d63ffd83762f81297f6175a5e0a4771cdadbc1dd5fe72cb1";
+const ZUSDC_ADDRESS: &str = "0x047ad51726d891f972e74e4ad858a261b43869f7126ce7436ee0b2529a98f486";
+const ZUSDT_ADDRESS: &str = "0x00811d8da5dc8a2206ea7fd0b28627c2d77280a515126e62baa4d78e22714c4a";
+const ZDAI_ADDRESS: &str = "0x062fa7afe1ca2992f8d8015385a279f49fad36299754fb1e9866f4f052289376";
+const ZWBTC_ADDRESS: &str = "0x02b9ea3acdb23da566cee8e8beae3125a1458e720dea68c4a9a7a2d8eb5bbb4a";
 
 // StarkScan API
 const MAINNET_STARKSCAN_API_BASE_URL: &str = "https://api.starkscan.co/api/v0/events";
@@ -26,6 +31,11 @@ pub enum Protocol {
     CarmineOptions,
     Hashstack,
     ZkLend,
+    ZETH,
+    ZUSDC,
+    ZUSDT,
+    ZDAI,
+    ZWBTC,
 }
 
 impl fmt::Display for Protocol {
@@ -34,6 +44,11 @@ impl fmt::Display for Protocol {
             Protocol::CarmineOptions => write!(f, "CarmineOptions"),
             Protocol::Hashstack => write!(f, "Hashstack"),
             Protocol::ZkLend => write!(f, "ZkLend"),
+            Protocol::ZETH => write!(f, "zETH"),
+            Protocol::ZUSDC => write!(f, "zUSDC"),
+            Protocol::ZUSDT => write!(f, "zUSDT"),
+            Protocol::ZDAI => write!(f, "zDAI"),
+            Protocol::ZWBTC => write!(f, "zWBTC"),
         }
     }
 }
@@ -93,6 +108,11 @@ pub fn protocol_address(network: &Network, protocol: &Protocol) -> &'static str 
         },
         Protocol::Hashstack => HASHSTACK_ADDRESS,
         Protocol::ZkLend => ZKLEND_ADDRESS,
+        Protocol::ZETH => ZETH_ADDRESS,
+        Protocol::ZUSDC => ZUSDC_ADDRESS,
+        Protocol::ZUSDT => ZUSDT_ADDRESS,
+        Protocol::ZDAI => ZDAI_ADDRESS,
+        Protocol::ZWBTC => ZWBTC_ADDRESS,
     }
 }
 
