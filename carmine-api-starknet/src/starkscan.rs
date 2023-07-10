@@ -266,7 +266,7 @@ pub async fn get_events_from_starkscan() {
     println!("Stored {} events from Starkscan", &parsed_events.len());
 }
 
-pub async fn update_lending_protocol_events(protocol: &Protocol) {
+pub async fn update_protocol_events(protocol: &Protocol) {
     let network = Network::Mainnet;
     let last_timestamp = match get_last_timestamp_for_protocol_event(&network, protocol) {
         Some(t) => t,
