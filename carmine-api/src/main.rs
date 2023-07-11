@@ -1,4 +1,5 @@
 mod handlers;
+mod telegram_bot;
 mod types;
 
 use actix_cors::Cors;
@@ -9,13 +10,14 @@ use carmine_api_airdrop::merkle_tree::MerkleTree;
 use carmine_api_cache::Cache;
 use carmine_api_core::network::Network;
 use carmine_api_core::types::AppState;
-use carmine_api_starknet::update_database;
+use carmine_api_starknet::{update_database_amm_state, update_database_events};
 use dotenvy::dotenv;
 use std::env;
 use std::sync::{Arc, Mutex};
 use tokio::time::{sleep, Duration};
 
 const UPDATE_APP_STATE_INTERVAL: u64 = 300;
+const UPDATE_EVENTS_INTERVAL: u64 = 600;
 
 const LOCAL_IP: &str = "127.0.0.1";
 const DOCKER_IP: &str = "0.0.0.0";
@@ -68,15 +70,15 @@ async fn main() -> std::io::Result<()> {
 
     let mainnet = mainnet_cache.get_app_data();
 
-    println!("✨  Got Mainnet data");
+    println!("✨ Got Mainnet data");
 
     let testnet = testnet_cache.get_app_data();
 
-    println!("✨  Got Testnet data");
+    println!("✨ Got Testnet data");
 
     let airdrop = MerkleTree::new();
 
-    println!("✨  Got Airdrop data");
+    println!("✨ Got Airdrop data");
 
     println!("🛠️  Creating app state...");
 
@@ -116,13 +118,59 @@ async fn main() -> std::io::Result<()> {
         }
     });
 
-    println!("🛠️  Spawning DB updating thread...");
-
-    // fetches data and updates database
+    println!("🛠️  Spawning DB events updating thread...");
+    // fetches events and updates database
+    // events fetching is fast and there is a limit
+    // on requests we can make, therefore it is important
+    // to wait in between executions to avoid "Limit exceeded"
     actix_web::rt::spawn(async {
+        let mut startup = true;
+        let mut should_report = true;
         loop {
-            update_database().await;
-            println!("Database updated");
+            if startup {
+                startup = false;
+            } else {
+                sleep(Duration::from_secs(UPDATE_EVENTS_INTERVAL)).await;
+            }
+            if let Err(err) = actix_web::rt::spawn(async { update_database_events().await }).await {
+                if should_report {
+                    println!("Update database events panicked\n\n{:?}", err);
+                    telegram_bot::send_message(
+                        "Carmine API `update_database_events` just panicked",
+                    )
+                    .await;
+                    // prevent multiple messages for the same problem
+                    should_report = false;
+                }
+            } else {
+                println!("Database updated with events");
+            }
+        }
+    });
+
+    println!("🛠️  Spawning DB amm state updating thread...");
+    // fetches amm state and updates database
+    // blockchain calls are slow and there is
+    // no limit on how many can be made, therefore
+    // no sleep is required in this loop
+    actix_web::rt::spawn(async {
+        let mut should_report = true;
+        loop {
+            if let Err(err) =
+                actix_web::rt::spawn(async { update_database_amm_state().await }).await
+            {
+                if should_report {
+                    println!("Update database amm state panicked\n\n{:?}", err);
+                    telegram_bot::send_message(
+                        "Carmine API `update_database_amm_state` just panicked",
+                    )
+                    .await;
+                    // prevent multiple messages for the same problem
+                    should_report = false;
+                }
+            } else {
+                println!("Database updated with AMM state");
+            }
         }
     });
 

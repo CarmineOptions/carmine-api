@@ -111,7 +111,7 @@ pub fn create_batch_of_options(new_options: &Vec<IOption>, network: &Network) {
             .values(chunk)
             .on_conflict_do_nothing()
             .execute(&mut connection)
-            .expect("Error saving batch of events");
+            .expect("Error saving batch of options");
     }
 }
 
@@ -193,6 +193,18 @@ pub fn get_pools(network: &Network) -> Vec<Pool> {
 
     let connection = &mut establish_connection(network);
     pools.load::<Pool>(connection).expect("Error loading pools")
+}
+
+pub fn get_protocol_events(network: &Network, protocol: &Protocol) -> Vec<StarkScanEventSettled> {
+    use crate::schema::starkscan_events::dsl::*;
+
+    let address = protocol_address(network, protocol);
+
+    let connection = &mut establish_connection(network);
+    starkscan_events
+        .filter(from_address.eq(address))
+        .load::<StarkScanEventSettled>(connection)
+        .expect("Error loading starkscan events")
 }
 
 pub fn get_events(network: &Network) -> Vec<Event> {

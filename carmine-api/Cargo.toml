@@ -14,5 +14,7 @@ carmine-api-core = { path = "../carmine-api-core" }
 carmine-api-starknet = { path = "../carmine-api-starknet" }
 dotenvy = "0.15.6"
 env_logger = "0.10.0"
+lazy_static = "1.4.0"
 serde = { version = "1.0.156", features = ["derive"] }
+teloxide = "0.12.2"
 tokio = "1.26.0"
