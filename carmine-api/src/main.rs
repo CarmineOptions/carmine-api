@@ -1,4 +1,5 @@
 mod handlers;
+mod telegram_bot;
 mod types;
 
 use actix_cors::Cors;
@@ -69,15 +70,15 @@ async fn main() -> std::io::Result<()> {
 
     let mainnet = mainnet_cache.get_app_data();
 
-    println!("✨  Got Mainnet data");
+    println!("✨ Got Mainnet data");
 
     let testnet = testnet_cache.get_app_data();
 
-    println!("✨  Got Testnet data");
+    println!("✨ Got Testnet data");
 
     let airdrop = MerkleTree::new();
 
-    println!("✨  Got Airdrop data");
+    println!("✨ Got Airdrop data");
 
     println!("🛠️  Creating app state...");
 
@@ -124,14 +125,26 @@ async fn main() -> std::io::Result<()> {
     // to wait in between executions to avoid "Limit exceeded"
     actix_web::rt::spawn(async {
         let mut startup = true;
+        let mut should_report = true;
         loop {
             if startup {
                 startup = false;
             } else {
                 sleep(Duration::from_secs(UPDATE_EVENTS_INTERVAL)).await;
             }
-            update_database_events().await;
-            println!("Database updated with events");
+            if let Err(err) = actix_web::rt::spawn(async { update_database_events().await }).await {
+                if should_report {
+                    println!("Update database events panicked\n\n{:?}", err);
+                    telegram_bot::send_message(
+                        "Carmine API `update_database_events` just panicked",
+                    )
+                    .await;
+                    // prevent multiple messages for the same problem
+                    should_report = false;
+                }
+            } else {
+                println!("Database updated with events");
+            }
         }
     });
 
@@ -141,9 +154,23 @@ async fn main() -> std::io::Result<()> {
     // no limit on how many can be made, therefore
     // no sleep is required in this loop
     actix_web::rt::spawn(async {
+        let mut should_report = true;
         loop {
-            update_database_amm_state().await;
-            println!("Database updated with AMM state");
+            if let Err(err) =
+                actix_web::rt::spawn(async { update_database_amm_state().await }).await
+            {
+                if should_report {
+                    println!("Update database amm state panicked\n\n{:?}", err);
+                    telegram_bot::send_message(
+                        "Carmine API `update_database_amm_state` just panicked",
+                    )
+                    .await;
+                    // prevent multiple messages for the same problem
+                    should_report = false;
+                }
+            } else {
+                println!("Database updated with AMM state");
+            }
         }
     });
 

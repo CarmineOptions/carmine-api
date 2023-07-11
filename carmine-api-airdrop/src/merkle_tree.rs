@@ -184,14 +184,17 @@ pub fn hash(a: &FieldElement, b: &FieldElement) -> FieldElement {
 }
 
 pub fn read_airdrop() -> Vec<Airdrop> {
-    let path = Path::new("carmine-api-airdrop/src/air-drop.json");
-    let path = if path.exists() {
-        path
-    } else {
-        // copied inside Dockerfile
-        Path::new("air-drop.json")
+    let possible_paths = vec![
+        "carmine-api-airdrop/src/air-drop.json",
+        "src/air-drop.json",
+        "air-drop.json",
+    ];
+    let right_path_res = possible_paths.iter().find(|path| Path::new(path).exists());
+    let right_path = match right_path_res {
+        Some(v) => Path::new(v),
+        None => panic!("Incorect airdrop file path"),
     };
-    let file = File::open(path).expect("Failed to read file");
+    let file = File::open(right_path).expect("Failed to read file");
     let reader = std::io::BufReader::new(file);
     let airdrop: Vec<Airdrop> = serde_json::from_reader(reader).expect("Failed to parse airdrop");
     airdrop
