@@ -1,12 +1,15 @@
 use std::{collections::HashMap, vec};
 
 use carmine_api_core::{
-    network::{call_lp_address, put_lp_address, Network},
-    types::{AppData, Event, IOption, OraclePrice, OraclePriceConcise, TokenPair, TradeHistory},
+    network::{call_lp_address, put_lp_address, Network, Protocol},
+    types::{
+        AppData, IOption, OraclePrice, OraclePriceConcise, StarkScanEventSettled, TokenPair,
+        TradeHistory,
+    },
     utils::token_pair_id,
 };
 use carmine_api_db::{
-    get_events, get_options, get_options_volatility, get_oracle_prices, get_pool_state,
+    get_options, get_options_volatility, get_oracle_prices, get_pool_state, get_protocol_events,
 };
 use carmine_api_starknet::carmine::Carmine;
 
@@ -24,7 +27,7 @@ const ALLOWED_METHODS: &'static [&'static str; 5] = &[
 pub struct Cache {
     network: Network,
     carmine: Carmine,
-    events: Vec<Event>,
+    events: Vec<StarkScanEventSettled>,
     options: HashMap<String, IOption>,
     all_non_expired: Vec<String>,
     trade_history: Vec<TradeHistory>,
@@ -36,7 +39,7 @@ impl Cache {
     pub fn new(network: Network) -> Self {
         let network = network;
         let carmine = Carmine::new(network);
-        let events = get_events(&network);
+        let events = get_protocol_events(&network, &Protocol::CarmineOptions);
         let options_vec = get_options(&network);
         let options = Cache::options_vec_to_hashmap(options_vec);
         let all_non_expired = vec![];
@@ -52,7 +55,7 @@ impl Cache {
             put_pool_address: put_lp_address(&network),
         };
 
-        cache.trade_history = Cache::generate_trade_history(&cache);
+        cache.trade_history = Cache::generate_trade_history(&mut cache);
 
         cache
     }
@@ -127,50 +130,48 @@ impl Cache {
     }
 
     fn generate_trade_history(&self) -> Vec<TradeHistory> {
-        let mut arr: Vec<TradeHistory> = Vec::new();
-
-        for event in &self.events {
-            if !ALLOWED_METHODS
-                .iter()
-                .any(|&action| action == &*event.action)
-            {
-                continue;
-            }
-
-            let option = match self.options.get(&event.token_address) {
-                Some(v) => Some(v.clone()),
-                None => None,
-            };
-
-            let liquidity_pool = match event.action.as_str() {
-                "DepositLiquidity" | "WithdrawLiquidity"
-                    if event.token_address.as_str() == self.put_pool_address =>
+        let mut trade_history: Vec<TradeHistory> = self
+            .events
+            .iter()
+            .filter(|event| ALLOWED_METHODS.contains(&event.key_name.as_str()))
+            .map(|e| {
+                let token_address = e.data[1].to_owned();
+                let action = String::from(&e.key_name);
+                let option = match self.options.get(&token_address) {
+                    Some(v) => Some(v.clone()),
+                    None => None,
+                };
+                // gotta do this because of closure
+                let put_pool_address = self.put_pool_address;
+                let call_pool_address = self.call_pool_address;
+                let liquidity_pool: Option<String> = if action.as_str() == "DepositLiquidity"
+                    || action.as_str() == "WithdrawLiquidity"
                 {
-                    Some("Put".to_string())
-                }
-                "DepositLiquidity" | "WithdrawLiquidity"
-                    if event.token_address.as_str() == self.call_pool_address =>
-                {
-                    Some("Call".to_string())
-                }
-                _ => None,
-            };
+                    let res = if token_address.as_str() == put_pool_address {
+                        Some("Put".to_string())
+                    } else if token_address.as_str() == call_pool_address {
+                        Some("Call".to_string())
+                    } else {
+                        None
+                    };
+                    res
+                } else {
+                    None
+                };
 
-            let trade_history = TradeHistory {
-                timestamp: event.timestamp,
-                action: String::from(&event.action),
-                caller: String::from(&event.caller),
-                capital_transfered: String::from(&event.capital_transfered),
-                tokens_minted: String::from(&event.tokens_minted),
-                option,
-                liquidity_pool,
-            };
-            arr.push(trade_history);
-        }
-        // sort by timestamp in ascending order
-        arr.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
-
-        arr
+                TradeHistory {
+                    timestamp: e.timestamp,
+                    action,
+                    caller: e.data[0].to_owned(),
+                    capital_transfered: e.data[2].to_owned(),
+                    tokens_minted: e.data[4].to_owned(),
+                    option,
+                    liquidity_pool,
+                }
+            })
+            .collect::<Vec<TradeHistory>>();
+        trade_history.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
+        trade_history
     }
 
     fn calculate_apy_for_pool(&self, pool_address: &str) -> f64 {
@@ -185,7 +186,7 @@ impl Cache {
     }
 
     pub fn update_events(&mut self) {
-        self.events = get_events(&self.network);
+        self.events = get_protocol_events(&self.network, &Protocol::CarmineOptions);
     }
 
     pub async fn update_all_non_expired(&mut self) {
@@ -196,7 +197,7 @@ impl Cache {
     }
 
     pub fn update_trade_history(&mut self) {
-        self.trade_history = Cache::generate_trade_history(&self);
+        self.trade_history = Cache::generate_trade_history(self);
     }
 
     pub async fn update(&mut self) {
