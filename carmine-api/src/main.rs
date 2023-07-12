@@ -16,7 +16,7 @@ use std::env;
 use std::sync::{Arc, Mutex};
 use tokio::time::{sleep, Duration};
 
-const UPDATE_APP_STATE_INTERVAL: u64 = 30;
+const UPDATE_APP_STATE_INTERVAL: u64 = 300;
 const UPDATE_EVENTS_INTERVAL: u64 = 900;
 const UPDATE_AMM_STATE_INTERVAL: u64 = 1200;
 
