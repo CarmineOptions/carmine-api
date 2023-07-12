@@ -11,15 +11,16 @@ async fn main() {
     env::set_var("ENVIRONMENT", "docker");
     env::set_var("DB_IP", "34.76.28.66");
 
-    let zklend_genesis_block = 48660;
+    let _zklend_genesis_block = 48660;
 
-    let first_block = zklend_genesis_block;
-    let last_block = 97000;
+    let first_block = 99300;
+    let last_block = 99400;
     let mut cur_from = first_block;
-    let increment = 1000;
+    let increment = 50;
 
     loop {
-        update_block_range(&Protocol::ZDAI, cur_from, cur_from + increment).await;
+        update_block_range(&Protocol::ZkLend, cur_from, cur_from + increment).await;
+        println!("Fetched {} - {}", cur_from, cur_from + increment);
         cur_from += increment;
         if cur_from > last_block {
             break;
