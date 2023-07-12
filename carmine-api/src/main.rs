@@ -16,7 +16,7 @@ use std::env;
 use std::sync::{Arc, Mutex};
 use tokio::time::{sleep, Duration};
 
-const UPDATE_APP_STATE_INTERVAL: u64 = 600;
+const UPDATE_APP_STATE_INTERVAL: u64 = 30;
 const UPDATE_EVENTS_INTERVAL: u64 = 900;
 const UPDATE_AMM_STATE_INTERVAL: u64 = 1200;
 
@@ -77,11 +77,11 @@ async fn main() -> std::io::Result<()> {
 
     println!("✨ Got Testnet data");
 
+    let airdrop: MerkleTree = MerkleTree::new();
+
     println!("✨ Got Airdrop data");
 
     println!("🛠️  Creating app state...");
-
-    let airdrop = MerkleTree::new();
 
     let app_state = Data::new(Arc::new(Mutex::new(AppState {
         mainnet,
@@ -91,7 +91,7 @@ async fn main() -> std::io::Result<()> {
 
     println!("🛠️  Cloning app state...");
 
-    let app_state1 = app_state.clone();
+    let app_state_clone = app_state.clone();
 
     println!("🛠️  Spawning app state updating thread...");
 
@@ -107,14 +107,13 @@ async fn main() -> std::io::Result<()> {
             println!("Updating AppState");
             mainnet_cache.update().await;
             testnet_cache.update().await;
-            let airdrop = MerkleTree::new();
+            let mainnet = mainnet_cache.get_app_data();
+            let testnet = testnet_cache.get_app_data();
 
-            let mut app_state = app_state1.lock().unwrap();
-            *app_state = AppState {
-                mainnet: mainnet_cache.get_app_data(),
-                testnet: testnet_cache.get_app_data(),
-                airdrop,
-            };
+            let mut app_state_lock = app_state_clone.lock().unwrap();
+            app_state_lock.mainnet = mainnet;
+            app_state_lock.testnet = testnet;
+            drop(app_state_lock);
             println!("AppState updated");
         }
     });
