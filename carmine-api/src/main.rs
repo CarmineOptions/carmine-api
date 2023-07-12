@@ -16,8 +16,9 @@ use std::env;
 use std::sync::{Arc, Mutex};
 use tokio::time::{sleep, Duration};
 
-const UPDATE_APP_STATE_INTERVAL: u64 = 300;
-const UPDATE_EVENTS_INTERVAL: u64 = 600;
+const UPDATE_APP_STATE_INTERVAL: u64 = 600;
+const UPDATE_EVENTS_INTERVAL: u64 = 900;
+const UPDATE_AMM_STATE_INTERVAL: u64 = 1200;
 
 const LOCAL_IP: &str = "127.0.0.1";
 const DOCKER_IP: &str = "0.0.0.0";
@@ -76,11 +77,11 @@ async fn main() -> std::io::Result<()> {
 
     println!("✨ Got Testnet data");
 
-    let airdrop = MerkleTree::new();
-
     println!("✨ Got Airdrop data");
 
     println!("🛠️  Creating app state...");
+
+    let airdrop = MerkleTree::new();
 
     let app_state = Data::new(Arc::new(Mutex::new(AppState {
         mainnet,
@@ -124,7 +125,7 @@ async fn main() -> std::io::Result<()> {
     // on requests we can make, therefore it is important
     // to wait in between executions to avoid "Limit exceeded"
     actix_web::rt::spawn(async {
-        let mut startup = true;
+        let mut startup: bool = true;
         let mut should_report = true;
         loop {
             if startup {
@@ -154,8 +155,14 @@ async fn main() -> std::io::Result<()> {
     // no limit on how many can be made, therefore
     // no sleep is required in this loop
     actix_web::rt::spawn(async {
+        let mut startup: bool = true;
         let mut should_report = true;
         loop {
+            if startup {
+                startup = false;
+            } else {
+                sleep(Duration::from_secs(UPDATE_AMM_STATE_INTERVAL)).await;
+            }
             if let Err(err) =
                 actix_web::rt::spawn(async { update_database_amm_state().await }).await
             {

@@ -213,7 +213,12 @@ async fn _fetch_events(url: &str, data: &mut Vec<StarkScanEventSettled>, cutoff_
     let next_url_option = &starkscan_response.next_url;
 
     if let Some(message) = starkscan_response.message {
+        // if message something went wrong
+        // print and run same URL again
         println!("Starkscan returned message: {}", message);
+        // prevent "limit exceeded"
+        sleep(Duration::from_millis(STARKSCAN_REQUESTS_DELAY_IN_MS)).await;
+        return _fetch_events(url, data, cutoff_timestamp).await;
     }
 
     if let Some(response_data) = starkscan_response.data {
@@ -291,5 +296,6 @@ pub async fn update_block_range(protocol: &Protocol, from: u32, to: u32) {
         .get_url();
 
     let new_events = fetch_events(url, last_timestamp).await;
+    println!("Got {} events", new_events.len());
     create_batch_of_starkscan_events(&new_events, &network);
 }
