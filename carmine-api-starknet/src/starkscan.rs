@@ -3,12 +3,14 @@ use std::{cmp::min, env, time::Duration};
 use async_recursion::async_recursion;
 use carmine_api_core::{
     network::{protocol_address, starkscan_base_url, Network, Protocol},
+    telegram_bot,
     types::{Event, StarkScanEvent, StarkScanEventResult, StarkScanEventSettled},
 };
 use carmine_api_db::{
     create_batch_of_events, create_batch_of_starkscan_events, get_last_timestamp_carmine_event,
     get_last_timestamp_for_protocol_event,
 };
+use log;
 use reqwest::{Client, Error, Response};
 use serde::de::DeserializeOwned;
 use tokio::time::sleep;
@@ -206,7 +208,9 @@ async fn _fetch_events(url: &str, data: &mut Vec<StarkScanEventSettled>, cutoff_
     let starkscan_response = match events_call(url).await {
         Ok(v) => v,
         Err(e) => {
-            println!("Error from StarkScan: {:?}", e);
+            let msg = format!("Error from StarkScan:\n\n {:?}\n\nURL: {}", e, url);
+            log::error!("{}", msg);
+            telegram_bot::send_message(&msg).await;
             return;
         }
     };

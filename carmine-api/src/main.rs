@@ -1,5 +1,4 @@
 mod handlers;
-mod telegram_bot;
 mod types;
 
 use actix_cors::Cors;
@@ -9,6 +8,7 @@ use actix_web::{http::header, App, HttpServer};
 use carmine_api_airdrop::merkle_tree::MerkleTree;
 use carmine_api_cache::Cache;
 use carmine_api_core::network::Network;
+use carmine_api_core::telegram_bot;
 use carmine_api_core::types::AppState;
 use carmine_api_starknet::{update_database_amm_state, update_database_events};
 use dotenvy::dotenv;
