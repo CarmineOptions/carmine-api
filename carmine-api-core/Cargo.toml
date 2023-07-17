@@ -8,4 +8,6 @@ edition = "2021"
 [dependencies]
 carmine-api-airdrop = { path = "../carmine-api-airdrop" }
 diesel = { version = "2.0.0", features = ["postgres"] }
+lazy_static = "1.4.0"
 serde = { version = "1.0.156", features = ["derive"] }
+teloxide = "0.12.2"

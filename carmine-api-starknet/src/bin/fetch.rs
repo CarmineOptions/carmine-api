@@ -12,9 +12,10 @@ async fn main() {
     env::set_var("DB_IP", "34.76.28.66");
 
     let _zklend_genesis_block = 48660;
+    let _hashstack_genesis_block = 21178;
 
-    let first_block = 99300;
-    let last_block = 99400;
+    let first_block = 103800;
+    let last_block = 104000;
     let mut cur_from = first_block;
     let increment = 50;
 
