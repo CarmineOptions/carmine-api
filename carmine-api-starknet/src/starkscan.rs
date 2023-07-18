@@ -3,12 +3,13 @@ use std::{cmp::min, env, time::Duration};
 use async_recursion::async_recursion;
 use carmine_api_core::{
     network::{protocol_address, starkscan_base_url, Network, Protocol},
+    telegram_bot,
     types::{Event, StarkScanEvent, StarkScanEventResult, StarkScanEventSettled},
 };
 use carmine_api_db::{
-    create_batch_of_events, create_batch_of_starkscan_events, get_last_timestamp_carmine_event,
-    get_last_timestamp_for_protocol_event,
+    create_batch_of_events, get_last_timestamp_carmine_event, get_last_timestamp_for_protocol_event,
 };
+use log;
 use reqwest::{Client, Error, Response};
 use serde::de::DeserializeOwned;
 use tokio::time::sleep;
@@ -206,7 +207,12 @@ async fn _fetch_events(url: &str, data: &mut Vec<StarkScanEventSettled>, cutoff_
     let starkscan_response = match events_call(url).await {
         Ok(v) => v,
         Err(e) => {
-            println!("Error from StarkScan: {:?}", e);
+            // request failed, we cannot store partly fetched events, because that
+            // would create hole in the data -> throw away incomplete events
+            data.clear();
+            let msg = format!("Error from StarkScan:\n\n {:?}\n\nURL: {}", e, url);
+            log::error!("{}", msg);
+            telegram_bot::send_message(&msg).await;
             return;
         }
     };
@@ -271,7 +277,7 @@ pub async fn get_events_from_starkscan() {
     println!("Stored {} events from Starkscan", &parsed_events.len());
 }
 
-pub async fn update_protocol_events(protocol: &Protocol) {
+pub async fn get_protocol_events(protocol: &Protocol) -> Vec<StarkScanEventSettled> {
     let network = Network::Mainnet;
     let last_timestamp = match get_last_timestamp_for_protocol_event(&network, protocol) {
         Some(t) => t,
@@ -281,11 +287,14 @@ pub async fn update_protocol_events(protocol: &Protocol) {
     let url = StarkscanUrlBuilder::new(&network)
         .protocol(protocol)
         .get_url();
-    let new_events = fetch_events(url, last_timestamp).await;
-    create_batch_of_starkscan_events(&new_events, &network);
+    fetch_events(url, last_timestamp).await
 }
 
-pub async fn update_block_range(protocol: &Protocol, from: u32, to: u32) {
+pub async fn get_block_range_events(
+    protocol: &Protocol,
+    from: u32,
+    to: u32,
+) -> Vec<StarkScanEventSettled> {
     let network = Network::Mainnet;
     // we want to fetch till there is no "next_url"
     let last_timestamp = 0;
@@ -295,7 +304,5 @@ pub async fn update_block_range(protocol: &Protocol, from: u32, to: u32) {
         .to_block(to)
         .get_url();
 
-    let new_events = fetch_events(url, last_timestamp).await;
-    println!("Got {} events", new_events.len());
-    create_batch_of_starkscan_events(&new_events, &network);
+    fetch_events(url, last_timestamp).await
 }
