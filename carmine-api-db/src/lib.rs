@@ -207,6 +207,23 @@ pub fn get_protocol_events(network: &Network, protocol: &Protocol) -> Vec<StarkS
         .expect("Error loading starkscan events")
 }
 
+pub fn get_protocol_events_from_block(
+    network: &Network,
+    protocol: &Protocol,
+    from_block_number: i64,
+) -> Vec<StarkScanEventSettled> {
+    use crate::schema::starkscan_events::dsl::*;
+
+    let address = protocol_address(network, protocol);
+
+    let connection = &mut establish_connection(network);
+    starkscan_events
+        .filter(block_number.gt(from_block_number))
+        .filter(from_address.eq(address))
+        .load::<StarkScanEventSettled>(connection)
+        .expect("Error loading starkscan events")
+}
+
 pub fn get_events(network: &Network) -> Vec<Event> {
     use crate::schema::events::dsl::*;
 

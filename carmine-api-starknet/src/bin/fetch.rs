@@ -1,7 +1,8 @@
 use std::env;
 
-use carmine_api_core::network::Protocol;
-use carmine_api_starknet::starkscan::update_block_range;
+use carmine_api_core::network::{Network, Protocol};
+use carmine_api_db::create_batch_of_starkscan_events;
+use carmine_api_starknet::starkscan::get_block_range_events;
 
 use dotenvy::dotenv;
 
@@ -14,13 +15,15 @@ async fn main() {
     let _zklend_genesis_block = 48660;
     let _hashstack_genesis_block = 21178;
 
-    let first_block = 103800;
-    let last_block = 104000;
+    let first_block = 108500;
+    let last_block = 109500;
     let mut cur_from = first_block;
     let increment = 50;
 
     loop {
-        update_block_range(&Protocol::ZkLend, cur_from, cur_from + increment).await;
+        let events =
+            get_block_range_events(&Protocol::ZkLend, cur_from, cur_from + increment).await;
+        create_batch_of_starkscan_events(&events, &Network::Mainnet);
         println!("Fetched {} - {}", cur_from, cur_from + increment);
         cur_from += increment;
         if cur_from > last_block {
