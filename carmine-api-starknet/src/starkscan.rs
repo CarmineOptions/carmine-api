@@ -9,7 +9,6 @@ use carmine_api_core::{
 use carmine_api_db::{
     create_batch_of_events, get_last_timestamp_carmine_event, get_last_timestamp_for_protocol_event,
 };
-use log;
 use reqwest::{Client, Error, Response};
 use serde::de::DeserializeOwned;
 use tokio::time::sleep;
@@ -210,9 +209,8 @@ async fn _fetch_events(url: &str, data: &mut Vec<StarkScanEventSettled>, cutoff_
             // request failed, we cannot store partly fetched events, because that
             // would create hole in the data -> throw away incomplete events
             data.clear();
-            let msg = format!("Error from StarkScan:\n\n {:?}\n\nURL: {}", e, url);
-            log::error!("{}", msg);
-            telegram_bot::send_message(&msg).await;
+            println!("Error from StarkScan: {:?}, URL: {}", e, url);
+            telegram_bot::send_message("Starkscan events fetching failed").await;
             return;
         }
     };
