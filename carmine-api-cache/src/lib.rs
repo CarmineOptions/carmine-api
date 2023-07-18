@@ -10,6 +10,7 @@ use carmine_api_core::{
 };
 use carmine_api_db::{
     get_options, get_options_volatility, get_oracle_prices, get_pool_state, get_protocol_events,
+    get_protocol_events_from_block,
 };
 use carmine_api_starknet::carmine::Carmine;
 
@@ -186,7 +187,21 @@ impl Cache {
     }
 
     pub fn update_events(&mut self) {
-        self.events = get_protocol_events(&self.network, &Protocol::CarmineOptions);
+        let max_block_number_option = self.events.iter().max_by_key(|event| event.block_number);
+        let max_block_number = match max_block_number_option {
+            Some(event) => event.block_number,
+            // did not find max block number, get all events
+            None => {
+                self.events = get_protocol_events(&self.network, &Protocol::CarmineOptions);
+                return;
+            }
+        };
+        let new_events = get_protocol_events_from_block(
+            &self.network,
+            &Protocol::CarmineOptions,
+            max_block_number,
+        );
+        self.events.extend(new_events)
     }
 
     pub async fn update_all_non_expired(&mut self) {
