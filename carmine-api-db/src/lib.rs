@@ -10,7 +10,7 @@ use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use std::env;
 
-const BATCH_SIZE: usize = 100;
+const BATCH_SIZE: usize = 500;
 
 fn get_db_url(network: &Network) -> String {
     let environment = env::var("ENVIRONMENT").expect("Could not read \"ENVIRONMENT\"");
