@@ -89,7 +89,7 @@ pub async fn api_call(url: &str) -> Result<Response, Error> {
     let mut headers = reqwest::header::HeaderMap::new();
     let client = Client::new();
 
-    headers.insert("accept", "applicationjson".parse().unwrap());
+    headers.insert("accept", "application/json".parse().unwrap());
     headers.insert("x-api-key", api_key.parse().unwrap());
 
     client.get(url).headers(headers).send().await
