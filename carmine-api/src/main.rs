@@ -150,18 +150,10 @@ async fn main() -> std::io::Result<()> {
 
     println!("🛠️  Spawning DB amm state updating thread...");
     // fetches amm state and updates database
-    // blockchain calls are slow and there is
-    // no limit on how many can be made, therefore
-    // no sleep is required in this loop
     actix_web::rt::spawn(async {
-        let mut startup: bool = true;
         let mut should_report = true;
         loop {
-            if startup {
-                startup = false;
-            } else {
-                sleep(Duration::from_secs(UPDATE_AMM_STATE_INTERVAL)).await;
-            }
+            sleep(Duration::from_secs(UPDATE_AMM_STATE_INTERVAL)).await;
             if let Err(err) =
                 actix_web::rt::spawn(async { update_database_amm_state().await }).await
             {
