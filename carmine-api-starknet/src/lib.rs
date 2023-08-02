@@ -25,6 +25,31 @@ pub async fn update_database_events() {
         Protocol::ZUSDC,
         Protocol::ZUSDT,
         Protocol::ZDAI,
+        Protocol::NostraETH,
+        Protocol::NostraETHCollateral,
+        Protocol::NostraETHInterest,
+        Protocol::NostraETHDebt,
+        Protocol::NostraETHInterestCollateral,
+        Protocol::NostraUSDC,
+        Protocol::NostraUSDCCollateral,
+        Protocol::NostraUSDCInterest,
+        Protocol::NostraUSDCDebt,
+        Protocol::NostraUSDCInterestCollateral,
+        Protocol::NostraUSDT,
+        Protocol::NostraUSDTCollateral,
+        Protocol::NostraUSDTInterest,
+        Protocol::NostraUSDTDebt,
+        Protocol::NostraUSDTInterestCollateral,
+        Protocol::NostraDAI,
+        Protocol::NostraDAICollateral,
+        Protocol::NostraDAIInterest,
+        Protocol::NostraDAIDebt,
+        Protocol::NostraDAIInterestCollateral,
+        Protocol::NostraWBTC,
+        Protocol::NostraWBTCCollateral,
+        Protocol::NostraWBTCInterest,
+        Protocol::NostraWBTCDebt,
+        Protocol::NostraWBTCInterestCollateral,
     ];
 
     for protocol in protocols {
@@ -35,7 +60,7 @@ pub async fn update_database_events() {
         events.extend(current_events);
 
         // give DNS resolver time to cooldown
-        sleep(Duration::from_secs(5)).await;
+        sleep(Duration::from_secs(2)).await;
     }
     create_batch_of_starkscan_events(&events, &Network::Mainnet);
 }
