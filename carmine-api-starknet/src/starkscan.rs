@@ -279,8 +279,7 @@ pub async fn get_protocol_events(protocol: &Protocol) -> Vec<StarkScanEventSettl
     let network = Network::Mainnet;
     let last_timestamp = match get_last_timestamp_for_protocol_event(&network, protocol) {
         Some(t) => t,
-        // Carmine mainnet launch timestamp
-        None => 1680864820,
+        None => 0,
     };
     let url = StarkscanUrlBuilder::new(&network)
         .protocol(protocol)
