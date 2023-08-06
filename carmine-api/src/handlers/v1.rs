@@ -6,7 +6,10 @@ use crate::{
     },
 };
 use actix_web::{get, web, HttpResponse, Responder};
-use carmine_api_core::{network::Network, types::AppState};
+use carmine_api_core::{
+    network::Network,
+    types::{AppState, PoolStateWithTimestamp},
+};
 use std::sync::{Arc, Mutex};
 
 const TESTNET: &'static str = "testnet";
@@ -212,11 +215,16 @@ pub async fn pool_state(
 
     HttpResponse::Ok().json(DataResponse {
         status: "success".to_string(),
-        data: match pool {
-            Pools::EthUsdcCall => &app_state.mainnet.state_eth_usdc_call,
-            Pools::EthUsdcPut => &app_state.mainnet.state_eth_usdc_put,
-        },
+        data: vec![] as Vec<PoolStateWithTimestamp>,
     })
+
+    // HttpResponse::Ok().json(DataResponse {
+    //     status: "success".to_string(),
+    //     data: match pool {
+    //         Pools::EthUsdcCall => &app_state.mainnet.state_eth_usdc_call,
+    //         Pools::EthUsdcPut => &app_state.mainnet.state_eth_usdc_put,
+    //     },
+    // })
 }
 
 #[get("/v1/mainnet/{pool}/state")]
@@ -250,17 +258,13 @@ pub async fn pool_state_last(
         Pools::EthUsdcPut => &app_state.mainnet.state_eth_usdc_put,
     };
 
-    let max_element = state
-        .iter()
-        .max_by_key(|v| v.block_number);
+    let max_element = state.iter().max_by_key(|v| v.block_number);
 
     match max_element {
-        Some(latest) => {
-            HttpResponse::Ok().json(DataResponse {
-                status: "success".to_string(),
-                data: latest,
-            })
-        }
+        Some(latest) => HttpResponse::Ok().json(DataResponse {
+            status: "success".to_string(),
+            data: latest,
+        }),
         None => {
             return HttpResponse::InternalServerError().json(GenericResponse {
                 status: "server_error".to_string(),
