@@ -123,30 +123,30 @@ async fn main() -> std::io::Result<()> {
     // events fetching is fast and there is a limit
     // on requests we can make, therefore it is important
     // to wait in between executions to avoid "Limit exceeded"
-    // actix_web::rt::spawn(async {
-    //     let mut startup: bool = true;
-    //     let mut should_report = true;
-    //     loop {
-    //         if startup {
-    //             startup = false;
-    //         } else {
-    //             sleep(Duration::from_secs(UPDATE_EVENTS_INTERVAL)).await;
-    //         }
-    //         if let Err(err) = actix_web::rt::spawn(async { update_database_events().await }).await {
-    //             if should_report {
-    //                 println!("Update database events panicked\n\n{:?}", err);
-    //                 telegram_bot::send_message(
-    //                     "Carmine API `update_database_events` just panicked",
-    //                 )
-    //                 .await;
-    //                 // prevent multiple messages for the same problem
-    //                 should_report = false;
-    //             }
-    //         } else {
-    //             println!("Database updated with events");
-    //         }
-    //     }
-    // });
+    actix_web::rt::spawn(async {
+        let mut startup: bool = true;
+        let mut should_report = true;
+        loop {
+            if startup {
+                startup = false;
+            } else {
+                sleep(Duration::from_secs(UPDATE_EVENTS_INTERVAL)).await;
+            }
+            if let Err(err) = actix_web::rt::spawn(async { update_database_events().await }).await {
+                if should_report {
+                    println!("Update database events panicked\n\n{:?}", err);
+                    telegram_bot::send_message(
+                        "Carmine API `update_database_events` just panicked",
+                    )
+                    .await;
+                    // prevent multiple messages for the same problem
+                    should_report = false;
+                }
+            } else {
+                println!("Database updated with events");
+            }
+        }
+    });
 
     println!("🛠️  Spawning DB amm state updating thread...");
     // fetches amm state and updates database
