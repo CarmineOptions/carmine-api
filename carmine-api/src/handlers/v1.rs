@@ -5,11 +5,8 @@ use crate::{
         TradeHistoryResponse,
     },
 };
-use actix_web::{get, web, HttpResponse, Responder};
-use carmine_api_core::{
-    network::Network,
-    types::{AppState, PoolStateWithTimestamp},
-};
+use actix_web::{get, http::header::AcceptEncoding, web, HttpResponse, Responder};
+use carmine_api_core::{network::Network, types::AppState};
 use std::sync::{Arc, Mutex};
 
 const TESTNET: &'static str = "testnet";
@@ -213,18 +210,15 @@ pub async fn pool_state(
         }
     };
 
-    HttpResponse::Ok().json(DataResponse {
-        status: "success".to_string(),
-        data: vec![] as Vec<PoolStateWithTimestamp>,
-    })
-
-    // HttpResponse::Ok().json(DataResponse {
-    //     status: "success".to_string(),
-    //     data: match pool {
-    //         Pools::EthUsdcCall => &app_state.mainnet.state_eth_usdc_call,
-    //         Pools::EthUsdcPut => &app_state.mainnet.state_eth_usdc_put,
-    //     },
-    // })
+    HttpResponse::Ok()
+        .insert_header(AcceptEncoding(vec!["gzip".parse().unwrap()]))
+        .json(DataResponse {
+            status: "success".to_string(),
+            data: match pool {
+                Pools::EthUsdcCall => &app_state.mainnet.state_eth_usdc_call,
+                Pools::EthUsdcPut => &app_state.mainnet.state_eth_usdc_put,
+            },
+        })
 }
 
 #[get("/v1/mainnet/{pool}/state")]
