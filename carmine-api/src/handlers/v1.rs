@@ -5,7 +5,7 @@ use crate::{
         TradeHistoryResponse,
     },
 };
-use actix_web::{get, web, HttpResponse, Responder};
+use actix_web::{get, http::header::AcceptEncoding, web, HttpResponse, Responder};
 use carmine_api_core::{
     network::Network,
     types::{AppState, PoolStateWithTimestamp},
@@ -219,13 +219,15 @@ pub async fn pool_state(
     };
     println!("Got appstate data");
 
-    HttpResponse::Ok().json(DataResponse {
-        status: "success".to_string(),
-        data: match pool {
-            Pools::EthUsdcCall => &app_state.mainnet.state_eth_usdc_call,
-            Pools::EthUsdcPut => &app_state.mainnet.state_eth_usdc_put,
-        },
-    })
+    HttpResponse::Ok()
+        .insert_header(AcceptEncoding(vec!["gzip".parse().unwrap()]))
+        .json(DataResponse {
+            status: "success".to_string(),
+            data: match pool {
+                Pools::EthUsdcCall => &app_state.mainnet.state_eth_usdc_call,
+                Pools::EthUsdcPut => &app_state.mainnet.state_eth_usdc_put,
+            },
+        })
 }
 
 #[get("/v1/mainnet/{pool}/state")]
