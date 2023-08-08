@@ -2,7 +2,7 @@ mod handlers;
 mod types;
 
 use actix_cors::Cors;
-use actix_web::middleware::Logger;
+use actix_web::middleware::{self, Logger};
 use actix_web::web::Data;
 use actix_web::{http::header, App, HttpServer};
 use carmine_api_airdrop::merkle_tree::MerkleTree;
@@ -189,6 +189,7 @@ async fn main() -> std::io::Result<()> {
             .configure(handlers::config)
             .wrap(cors)
             .wrap(Logger::default())
+            .wrap(middleware::Compress::default())
     })
     // .bind(("127.0.0.1", 8000))?
     .bind((ip_address(), 8000))?
