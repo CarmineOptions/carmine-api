@@ -192,39 +192,40 @@ pub async fn pool_state(
     path: web::Path<String>,
     data: web::Data<Arc<Mutex<AppState>>>,
 ) -> impl Responder {
+    println!("Executing pool state handler");
     let pool = match path.into_inner().as_str() {
         ETH_USDC_CALL => Pools::EthUsdcCall,
         ETH_USDC_PUT => Pools::EthUsdcPut,
         _ => {
+            println!("Got invalid pool");
             return HttpResponse::BadRequest().json(GenericResponse {
                 status: "bad_request".to_string(),
                 message: "Specify network in the path".to_string(),
             });
         }
     };
+    println!("Got pool");
     let locked = &data.lock();
+    println!("Locked appstate");
     let app_state = match locked {
         Ok(app_data) => app_data,
-        _ => {
+        Err(e) => {
+            println!("Failed getting app_state: {:?}", e);
             return HttpResponse::InternalServerError().json(GenericResponse {
                 status: "server_error".to_string(),
                 message: "Failed to read AppState".to_string(),
             });
         }
     };
+    println!("Got appstate data");
 
     HttpResponse::Ok().json(DataResponse {
         status: "success".to_string(),
-        data: vec![] as Vec<PoolStateWithTimestamp>,
+        data: match pool {
+            Pools::EthUsdcCall => &app_state.mainnet.state_eth_usdc_call,
+            Pools::EthUsdcPut => &app_state.mainnet.state_eth_usdc_put,
+        },
     })
-
-    // HttpResponse::Ok().json(DataResponse {
-    //     status: "success".to_string(),
-    //     data: match pool {
-    //         Pools::EthUsdcCall => &app_state.mainnet.state_eth_usdc_call,
-    //         Pools::EthUsdcPut => &app_state.mainnet.state_eth_usdc_put,
-    //     },
-    // })
 }
 
 #[get("/v1/mainnet/{pool}/state")]
