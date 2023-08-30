@@ -330,7 +330,6 @@ pub async fn prices(
     data: web::Data<Arc<Mutex<AppState>>>,
 ) -> impl Responder {
     let pair_id = path.into_inner();
-    println!("Got pair_id: {}", pair_id);
     let locked = &data.lock();
     let app_state = match locked {
         Ok(app_data) => app_data,
