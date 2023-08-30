@@ -3,11 +3,16 @@ version: '3.9'
 services:
   api:
     build: .
-    environment:
-      - STARKSCAN_API_KEY=[secret]
-      - ENVIRONMENT=docker
-      - DB_USER=postgres
-      - DB_PASSWORD=[secret]
-      - DB_IP=[secret]
+    env_file:
+      - .env
+    ports:
+      - 8000:8000
+
+  fetcher:
+    build:
+      context: .
+      dockerfile: Dockerfile.fetcher
+    env_file:
+      - .env
     ports:
       - 8000:8000

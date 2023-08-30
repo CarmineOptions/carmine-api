@@ -35,7 +35,10 @@ impl AmmStateObserver {
             .await
         {
             Ok(v) => v,
-            Err(_) => return Err(()),
+            Err(_) => {
+                println!("Failed getting block number {}", block_number);
+                return Err(());
+            }
         };
         let block = DbBlock {
             block_number: i64::try_from(strk_block.block_number.unwrap()).unwrap(),

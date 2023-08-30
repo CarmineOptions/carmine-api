@@ -8,7 +8,7 @@ use starknet::macros::selector;
 use starknet::providers::{SequencerGatewayProvider, SequencerGatewayProviderError};
 use starknet::{self, core::types::BlockId, providers::Provider};
 use std::str::FromStr;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::time::sleep;
 use tokio::try_join;
 
@@ -17,6 +17,8 @@ const OPTION_NEAR_MATURITY: &'static str =
 const STALE_PRICE: &'static str = "Received price which is over an hour old";
 const BLACK_SCHOLES: &'static str = "Black scholes function failed when calculating";
 const TWO_DAYS_SECS: i64 = 172800;
+
+const MAX_RETRIES: usize = 5;
 
 fn format_call_contract_result(res: CallContractResult) -> Vec<String> {
     let mut arr: Vec<String> = vec![];
@@ -365,21 +367,30 @@ impl Carmine {
         function_descriptor: FunctionDescriptor<'_>,
     ) -> Result<FieldElement, starknet::providers::ProviderError<SequencerGatewayProviderError>>
     {
-        match self
-            .provider
-            .call_contract(
-                CallFunction {
-                    contract_address: self.amm_address,
-                    entry_point_selector: function_descriptor.selector,
-                    calldata,
-                },
-                BlockId::Number(block_number as u64),
-            )
-            .await
-        {
-            Ok(call_result) => Ok(call_result.result[0]),
-            Err(e) => Err(e),
+        for retry in 0..=MAX_RETRIES {
+            match self
+                .provider
+                .call_contract(
+                    CallFunction {
+                        contract_address: self.amm_address,
+                        entry_point_selector: function_descriptor.selector,
+                        calldata: calldata.to_vec(),
+                    },
+                    BlockId::Number(block_number as u64),
+                )
+                .await
+            {
+                Ok(call_result) => return Ok(call_result.result[0]),
+                Err(e) => {
+                    if retry < MAX_RETRIES {
+                        sleep(Duration::from_secs(1)).await; // Wait before retrying
+                    } else {
+                        return Err(e);
+                    }
+                }
+            }
         }
+        unreachable!();
     }
 
     pub async fn get_pool_locked_capital(
@@ -536,13 +547,16 @@ impl Carmine {
         ),
         starknet::providers::ProviderError<SequencerGatewayProviderError>,
     > {
-        match try_join!(
+        let now = Instant::now();
+        let res = try_join!(
             self.get_pool_locked_capital(block_number, pool),
             self.get_unlocked_capital(block_number, pool),
             self.get_lpool_balance(block_number, pool),
             self.get_value_of_pool_position(block_number, pool),
             self.get_value_of_lp_token(block_number, pool),
-        ) {
+        );
+        println!("Fetched AMM state in {:.2?}", now.elapsed());
+        match res {
             Ok((
                 pool_locked_capital,
                 unlocked_capital,
@@ -621,16 +635,18 @@ impl Carmine {
         &self,
         block: &DbBlock,
     ) -> Result<Vec<OptionVolatility>, ()> {
+        let now = Instant::now();
+
         let options = get_options(&self.network);
         let mut to_store: Vec<OptionVolatility> = vec![];
 
-        let mut futures = vec![];
+        let mut non_expired_options: Vec<IOption> = vec![];
         for opt in options {
-            // until maturity + two days, keep getting volatility and position
+            // non expired
             if opt.maturity + TWO_DAYS_SECS > block.timestamp {
-                futures.push(self.get_option_volatility(opt, block.block_number));
+                non_expired_options.push(opt);
 
-            // else set volatility to None
+            // for expired set volatility to None
             } else {
                 let option_volatility = OptionVolatility {
                     block_number: block.block_number,
@@ -642,23 +658,38 @@ impl Carmine {
             }
         }
 
-        // await all options
-        let results = join_all(futures).await;
+        // volatility fails if too many requests, break it into chunks
+        let chunk_size = 50;
 
-        for res in results {
-            let (volatility_option, option_position_option, option_address) = res;
+        let vector_of_vectors: Vec<Vec<IOption>> = non_expired_options
+            .chunks(chunk_size)
+            .map(|chunk| chunk.to_vec()) // Convert each chunk to a vector
+            .collect();
 
-            let volatility = volatility_option.map(|v| to_hex(v));
-            let option_position = option_position_option.map(|v| to_hex(v));
+        for chunk in vector_of_vectors {
+            let mut futures = vec![];
 
-            to_store.push(OptionVolatility {
-                block_number: block.block_number,
-                option_address,
-                volatility,
-                option_position,
-            });
+            for opt in chunk {
+                futures.push(self.get_option_volatility(opt, block.block_number));
+            }
+
+            let results = join_all(futures).await;
+
+            for res in results {
+                let (volatility_option, option_position_option, option_address) = res;
+
+                let volatility = volatility_option.map(|v| to_hex(v));
+                let option_position = option_position_option.map(|v| to_hex(v));
+
+                to_store.push(OptionVolatility {
+                    block_number: block.block_number,
+                    option_address,
+                    volatility,
+                    option_position,
+                });
+            }
         }
-
+        println!("Options volatility fetched in {:.2?}", now.elapsed());
         Ok(to_store)
     }
 

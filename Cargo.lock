@@ -558,6 +558,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "carmine-api-fetcher"
+version = "0.1.0"
+dependencies = [
+ "actix-web",
+ "carmine-api-core",
+ "carmine-api-starknet",
+ "tokio",
+]
+
+[[package]]
 name = "carmine-api-starknet"
 version = "0.1.0"
 dependencies = [
