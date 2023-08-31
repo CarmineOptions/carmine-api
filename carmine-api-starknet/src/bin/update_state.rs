@@ -7,7 +7,7 @@ use dotenvy::dotenv;
 async fn main() {
     dotenv().ok();
     env::set_var("ENVIRONMENT", "docker");
-    env::set_var("DB_IP", "34.76.28.66");
+    env::set_var("DB_IP", "34.159.91.62");
 
     let state_updater = AmmStateObserver::new();
 

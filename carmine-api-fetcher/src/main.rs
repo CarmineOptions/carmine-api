@@ -6,8 +6,6 @@ use tokio::time::{sleep, Duration};
 use carmine_api_core::telegram_bot;
 use carmine_api_starknet::{update_database_amm_state, update_database_events};
 
-const UPDATE_DELAY: u64 = 20;
-
 const LOCAL_IP: &str = "127.0.0.1";
 const DOCKER_IP: &str = "0.0.0.0";
 
@@ -36,7 +34,12 @@ async fn main() -> std::io::Result<()> {
             } else {
                 println!("Database updated with events");
             }
-            sleep(Duration::from_secs(UPDATE_DELAY)).await;
+            sleep(Duration::from_secs(150)).await;
+        }
+    });
+
+    actix_web::rt::spawn(async move {
+        loop {
             if let Err(err) =
                 actix_web::rt::spawn(async { update_database_amm_state().await }).await
             {
@@ -48,7 +51,7 @@ async fn main() -> std::io::Result<()> {
             } else {
                 println!("Database updated with AMM state");
             }
-            sleep(Duration::from_secs(UPDATE_DELAY)).await;
+            sleep(Duration::from_secs(150)).await;
         }
     });
 
