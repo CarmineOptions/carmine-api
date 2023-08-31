@@ -74,38 +74,56 @@ impl Carmine {
 
     pub async fn get_all_non_expired_options_with_premia(&self) -> Result<Vec<String>, ()> {
         let entrypoint = selector!("get_all_non_expired_options_with_premia");
-        let call = self.provider.call_contract(
-            CallFunction {
-                contract_address: self.amm_address,
-                entry_point_selector: entrypoint,
-                calldata: vec![self.call_lp_address],
-            },
-            BlockId::Latest,
-        );
-        let put = self.provider.call_contract(
-            CallFunction {
-                contract_address: self.amm_address,
-                entry_point_selector: entrypoint,
-                calldata: vec![self.put_lp_address],
-            },
-            BlockId::Latest,
-        );
 
-        let contract_results = join_all(vec![call, put]).await;
+        let call = loop {
+            match self
+                .provider
+                .call_contract(
+                    CallFunction {
+                        contract_address: self.amm_address,
+                        entry_point_selector: entrypoint,
+                        calldata: vec![self.call_lp_address],
+                    },
+                    BlockId::Latest,
+                )
+                .await
+            {
+                Ok(res) => break res,
+                Err(e) => {
+                    println!("Failed getting call options\n{:?}", e);
+                    sleep(Duration::from_secs(10)).await;
+                }
+            };
+        };
+
+        let put = loop {
+            match self
+                .provider
+                .call_contract(
+                    CallFunction {
+                        contract_address: self.amm_address,
+                        entry_point_selector: entrypoint,
+                        calldata: vec![self.put_lp_address],
+                    },
+                    BlockId::Latest,
+                )
+                .await
+            {
+                Ok(res) => break res,
+                Err(e) => {
+                    println!("Failed getting put options\n{:?}", e);
+                    sleep(Duration::from_secs(10)).await;
+                }
+            };
+        };
+
+        let contract_results = vec![call, put];
 
         let mut fetched_data: Vec<String> = Vec::new();
 
         for result in contract_results {
-            match result {
-                Ok(v) => {
-                    let mut formatted = format_call_contract_result(v);
-                    fetched_data.append(&mut formatted);
-                }
-                Err(_) => {
-                    println!("Failed fetching non-expired options");
-                    return Err(());
-                }
-            }
+            let mut formatted = format_call_contract_result(result);
+            fetched_data.append(&mut formatted);
         }
         Ok(fetched_data)
     }

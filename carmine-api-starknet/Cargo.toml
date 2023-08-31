@@ -56,5 +56,9 @@ path = "./src/bin/update_state.rs"
 name = "state"
 
 [[bin]]
+path = "./src/bin/update_events.rs"
+name = "events"
+
+[[bin]]
 path = "./src/bin/fetch.rs"
 name = "fetch"
