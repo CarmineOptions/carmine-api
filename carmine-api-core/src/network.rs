@@ -36,6 +36,7 @@ pub enum Protocol {
     ZUSDT,
     ZDAI,
     ZWBTC,
+    NostraInterestModel,
     NostraETH,
     NostraETHCollateral,
     NostraETHInterest,
@@ -74,6 +75,7 @@ impl fmt::Display for Protocol {
             Protocol::ZUSDT => write!(f, "zUSDT"),
             Protocol::ZDAI => write!(f, "zDAI"),
             Protocol::ZWBTC => write!(f, "zWBTC"),
+            Protocol::NostraInterestModel => write!(f, "NostraInterestModel"),
             Protocol::NostraETH => write!(f, "NostraETH"),
             Protocol::NostraETHCollateral => write!(f, "NostraETHCollateral"),
             Protocol::NostraETHInterest => write!(f, "NostraETHInterest"),
@@ -163,6 +165,9 @@ pub fn protocol_address(network: &Network, protocol: &Protocol) -> &'static str 
         Protocol::ZUSDT => ZUSDT_ADDRESS,
         Protocol::ZDAI => ZDAI_ADDRESS,
         Protocol::ZWBTC => ZWBTC_ADDRESS,
+        Protocol::NostraInterestModel => {
+            "0x03d39f7248fb2bfb960275746470f7fb470317350ad8656249ec66067559e892"
+        }
         Protocol::NostraETH => "0x04f89253e37ca0ab7190b2e9565808f105585c9cacca6b2fa6145553fa061a41",
         Protocol::NostraETHCollateral => {
             "0x0553cea5d1dc0e0157ffcd36a51a0ced717efdadd5ef1b4644352bb45bd35453"

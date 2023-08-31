@@ -25,6 +25,7 @@ pub async fn update_database_events() {
         Protocol::ZUSDC,
         Protocol::ZUSDT,
         Protocol::ZDAI,
+        Protocol::NostraInterestModel,
         Protocol::NostraETH,
         Protocol::NostraETHCollateral,
         Protocol::NostraETHInterest,
