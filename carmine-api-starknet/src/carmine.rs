@@ -5,7 +5,7 @@ use futures::future::join_all;
 use futures::FutureExt;
 use starknet::core::types::{Block, CallContractResult, CallFunction, FieldElement};
 use starknet::macros::selector;
-use starknet::providers::{SequencerGatewayProvider, SequencerGatewayProviderError};
+use starknet::providers::SequencerGatewayProvider;
 use starknet::{self, core::types::BlockId, providers::Provider};
 use std::str::FromStr;
 use std::time::{Duration, Instant};
@@ -158,43 +158,56 @@ impl Carmine {
 
         let contract_results = join_all(vec![call, put]).await;
 
-        for (i, result) in contract_results.into_iter().enumerate() {
-            if let Ok(call_res) = result {
-                let data = call_res.result;
-                assert_eq!(data.len(), 6, "Got wrong size Option result");
+        let filtered_call: Vec<CallContractResult> = contract_results
+            .into_iter()
+            .filter_map(|result| match result {
+                Ok(value) => Some(value),
+                Err(_) => None,
+            })
+            .collect();
 
-                let option_side = format!("{}", data[0])
-                    .parse::<i16>()
-                    .expect("Failed to parse side");
-                let option_type = format!("{}", data[5])
-                    .parse::<i16>()
-                    .expect("Failed to parse type");
-                let maturity = format!("{}", data[1])
-                    .parse::<i64>()
-                    .expect("Failed to parse maturity");
-                let strike_price = to_hex(data[2]);
-                let quote_token_address = to_hex(data[3]);
-                let base_token_address = to_hex(data[4]);
-                let lp_address = match i {
-                    0 => to_hex(self.call_lp_address),
-                    1 => to_hex(self.put_lp_address),
-                    _ => unreachable!("Hardcoded 2 lp_pools"),
-                };
+        // only one option can be found
+        assert_eq!(
+            filtered_call.len(),
+            1,
+            "Option Info - Unexpected number of results"
+        );
 
-                return Ok(IOption {
-                    option_side,
-                    option_type,
-                    strike_price,
-                    maturity,
-                    quote_token_address,
-                    base_token_address,
-                    option_address: String::from(option_address),
-                    lp_address,
-                });
-            }
-        }
+        let call_res = &filtered_call[0];
 
-        Err("Failed to find option with given address")
+        println!("{:?}", call_res);
+
+        let data = &call_res.result;
+        assert_eq!(data.len(), 6, "Got wrong size Option result");
+
+        let option_side = format!("{}", data[0])
+            .parse::<i16>()
+            .expect("Failed to parse side");
+        let option_type = format!("{}", data[5])
+            .parse::<i16>()
+            .expect("Failed to parse type");
+        let maturity = format!("{}", data[1])
+            .parse::<i64>()
+            .expect("Failed to parse maturity");
+        let strike_price = to_hex(data[2]);
+        let quote_token_address = to_hex(data[3]);
+        let base_token_address = to_hex(data[4]);
+        let lp_address = match option_side {
+            0 => to_hex(self.call_lp_address),
+            1 => to_hex(self.put_lp_address),
+            _ => unreachable!("Hardcoded 2 lp_pools"),
+        };
+
+        return Ok(IOption {
+            option_side,
+            option_type,
+            strike_price,
+            maturity,
+            quote_token_address,
+            base_token_address,
+            option_address: String::from(option_address),
+            lp_address,
+        });
     }
 
     pub async fn get_option_token_address(
@@ -246,7 +259,7 @@ impl Carmine {
 
         let data: Vec<FieldElement> = match contract_result {
             Err(provider_error) => {
-                println!("{:?}", provider_error);
+                println!("Failed getting options {:?}", provider_error);
                 return;
             }
             Ok(v) => {
@@ -383,8 +396,7 @@ impl Carmine {
         block_number: i64,
         calldata: Vec<FieldElement>,
         function_descriptor: FunctionDescriptor<'_>,
-    ) -> Result<FieldElement, starknet::providers::ProviderError<SequencerGatewayProviderError>>
-    {
+    ) -> Result<CallContractResult, &str> {
         for retry in 0..=MAX_RETRIES {
             match self
                 .provider
@@ -398,12 +410,13 @@ impl Carmine {
                 )
                 .await
             {
-                Ok(call_result) => return Ok(call_result.result[0]),
+                Ok(call_result) => return Ok(call_result),
                 Err(e) => {
                     if retry < MAX_RETRIES {
                         sleep(Duration::from_secs(1)).await; // Wait before retrying
                     } else {
-                        return Err(e);
+                        println!("amm_call failed MAX_RETRIES: {:?}", e);
+                        return Err("amm_call failed MAX_RETRIES");
                     }
                 }
             }
@@ -415,25 +428,33 @@ impl Carmine {
         &self,
         block_number: i64,
         pool: FieldElement,
-    ) -> Result<FieldElement, starknet::providers::ProviderError<SequencerGatewayProviderError>>
-    {
-        self.amm_call(
-            block_number,
-            vec![pool],
-            FunctionDescriptor {
-                name: "get_pool_locked_capital",
-                selector: selector!("get_pool_locked_capital"),
-            },
-        )
-        .await
+    ) -> Result<FieldElement, &str> {
+        match self
+            .amm_call(
+                block_number,
+                vec![pool],
+                FunctionDescriptor {
+                    name: "get_pool_locked_capital",
+                    selector: selector!("get_pool_locked_capital"),
+                },
+            )
+            .await
+        {
+            Ok(res) => {
+                if res.result.is_empty() {
+                    return Err("get_pool_locked_capital empty result");
+                }
+                Ok(res.result[0])
+            }
+            Err(e) => Err(e),
+        }
     }
 
     pub async fn get_unlocked_capital(
         &self,
         block_number: i64,
         pool: FieldElement,
-    ) -> Result<FieldElement, starknet::providers::ProviderError<SequencerGatewayProviderError>>
-    {
+    ) -> Result<FieldElement, &str> {
         match self
             .amm_call(
                 block_number,
@@ -445,7 +466,12 @@ impl Carmine {
             )
             .await
         {
-            Ok(v) => Ok(v),
+            Ok(res) => {
+                if res.result.is_empty() {
+                    return Err("get_unlocked_capital empty result");
+                }
+                Ok(res.result[0])
+            }
             Err(e) => Err(e),
         }
     }
@@ -454,27 +480,33 @@ impl Carmine {
         &self,
         block_number: i64,
         pool: FieldElement,
-    ) -> Result<FieldElement, starknet::providers::ProviderError<SequencerGatewayProviderError>>
-    {
-        self.amm_call(
-            block_number,
-            vec![pool],
-            FunctionDescriptor {
-                name: "get_lpool_balance",
-                selector: selector!("get_lpool_balance"),
-            },
-        )
-        .await
+    ) -> Result<FieldElement, &str> {
+        match self
+            .amm_call(
+                block_number,
+                vec![pool],
+                FunctionDescriptor {
+                    name: "get_lpool_balance",
+                    selector: selector!("get_lpool_balance"),
+                },
+            )
+            .await
+        {
+            Ok(res) => {
+                if res.result.is_empty() {
+                    return Err("get_lpool_balance empty result");
+                }
+                Ok(res.result[0])
+            }
+            Err(e) => Err(e),
+        }
     }
 
     pub async fn get_value_of_pool_position(
         &self,
         block_number: i64,
         pool: FieldElement,
-    ) -> Result<
-        Option<FieldElement>,
-        starknet::providers::ProviderError<SequencerGatewayProviderError>,
-    > {
+    ) -> Result<Option<FieldElement>, &str> {
         match self
             .amm_call(
                 block_number,
@@ -486,7 +518,12 @@ impl Carmine {
             )
             .await
         {
-            Ok(v) => Ok(Some(v)),
+            Ok(res) => {
+                if res.result.is_empty() {
+                    return Ok(None);
+                }
+                Ok(Some(res.result[0]))
+            }
             Err(e) if e.to_string().contains(OPTION_NEAR_MATURITY) => {
                 // this specific error message means that LP token value
                 // cannot be calculated - return None
@@ -510,10 +547,7 @@ impl Carmine {
         &self,
         block_number: i64,
         pool: FieldElement,
-    ) -> Result<
-        Option<FieldElement>,
-        starknet::providers::ProviderError<SequencerGatewayProviderError>,
-    > {
+    ) -> Result<Option<FieldElement>, &str> {
         match self
             .amm_call(
                 block_number,
@@ -530,7 +564,12 @@ impl Carmine {
             )
             .await
         {
-            Ok(v) => Ok(Some(v)),
+            Ok(res) => {
+                if res.result.is_empty() {
+                    return Ok(None);
+                }
+                Ok(Some(res.result[0]))
+            }
             Err(e) if e.to_string().contains(OPTION_NEAR_MATURITY) => {
                 // this specific error message means that LP token value
                 // cannot be calculated - return None
@@ -550,6 +589,35 @@ impl Carmine {
         }
     }
 
+    pub async fn option_exists(&self, option: &IOption, block_number: i64) -> bool {
+        let lp_address = FieldElement::from_str(option.lp_address.as_str()).unwrap();
+        let maturity = FieldElement::from_str(format!("{:#x}", option.maturity).as_str()).unwrap();
+        let strike = FieldElement::from_str(option.strike_price.as_str()).unwrap();
+        let side = FieldElement::from(option.option_side as u8);
+
+        match self
+            .amm_call(
+                block_number,
+                vec![lp_address, side, maturity, strike],
+                FunctionDescriptor {
+                    name: "get_option_token_address",
+                    selector: selector!("get_option_token_address"),
+                },
+            )
+            .await
+        {
+            Ok(res) => {
+                let address = res.result[0];
+                address.eq(&FieldElement::ZERO)
+            }
+            Err(e) => {
+                println!("Failed option_exists: {:#?}", e);
+                // assume it does not exist
+                false
+            }
+        }
+    }
+
     pub async fn get_locked_unlocked_total_capital_for_pool(
         &self,
         pool: FieldElement,
@@ -563,7 +631,7 @@ impl Carmine {
             Option<FieldElement>,
             FieldElement,
         ),
-        starknet::providers::ProviderError<SequencerGatewayProviderError>,
+        &str,
     > {
         let now = Instant::now();
         let res = try_join!(
@@ -659,101 +727,153 @@ impl Carmine {
         let mut to_store: Vec<OptionVolatility> = vec![];
 
         let mut non_expired_options: Vec<IOption> = vec![];
+        let mut recently_expired_options: Vec<IOption> = vec![];
+
         for opt in options {
-            // non expired
-            if opt.maturity + TWO_DAYS_SECS > block.timestamp {
-                non_expired_options.push(opt);
-
-            // for expired set volatility to None
-            } else {
-                let option_volatility = OptionVolatility {
-                    block_number: block.block_number,
-                    option_address: opt.option_address,
-                    volatility: None,
-                    option_position: None,
-                };
-                to_store.push(option_volatility);
+            if opt.maturity > block.timestamp {
+                if self.option_exists(&opt, block.block_number).await {
+                    non_expired_options.push(opt);
+                }
+            } else if opt.maturity + TWO_DAYS_SECS > block.timestamp {
+                if self.option_exists(&opt, block.block_number).await {
+                    recently_expired_options.push(opt);
+                }
             }
         }
 
-        // volatility fails if too many requests, break it into chunks
-        let chunk_size = 50;
+        let mut futures = vec![];
 
-        let vector_of_vectors: Vec<Vec<IOption>> = non_expired_options
-            .chunks(chunk_size)
-            .map(|chunk| chunk.to_vec()) // Convert each chunk to a vector
-            .collect();
-
-        for chunk in vector_of_vectors {
-            let mut futures = vec![];
-
-            for opt in chunk {
-                futures.push(self.get_option_volatility(opt, block.block_number));
-            }
-
-            let results = join_all(futures).await;
-
-            for res in results {
-                let (volatility_option, option_position_option, option_address) = res;
-
-                let volatility = volatility_option.map(|v| to_hex(v));
-                let option_position = option_position_option.map(|v| to_hex(v));
-
-                to_store.push(OptionVolatility {
-                    block_number: block.block_number,
-                    option_address,
-                    volatility,
-                    option_position,
-                });
-            }
+        for opt in recently_expired_options {
+            futures.push(self.get_option_volatility_and_position(opt, block.block_number, false));
         }
+
+        for opt in non_expired_options {
+            futures.push(self.get_option_volatility_and_position(opt, block.block_number, true));
+        }
+
+        let results = join_all(futures).await;
+
+        for res in results {
+            let (volatility_option, option_position_option, option_address) = res;
+
+            let volatility = volatility_option.map(|v| to_hex(v));
+            let option_position = option_position_option.map(|v| to_hex(v));
+
+            to_store.push(OptionVolatility {
+                block_number: block.block_number,
+                option_address,
+                volatility,
+                option_position,
+            });
+        }
+
         println!("Options volatility fetched in {:.2?}", now.elapsed());
         Ok(to_store)
     }
 
-    pub async fn get_option_volatility(
+    pub async fn option_volatility(
+        &self,
+        lp_address: FieldElement,
+        maturity: FieldElement,
+        strike: FieldElement,
+        block_number: i64,
+    ) -> Result<FieldElement, &str> {
+        match self
+            .amm_call(
+                block_number,
+                vec![lp_address, maturity, strike],
+                FunctionDescriptor {
+                    name: "get_pool_volatility_auto",
+                    selector: selector!("get_pool_volatility_auto"),
+                },
+            )
+            .await
+        {
+            Ok(res) => {
+                if res.result.is_empty() {
+                    return Err("option_volatility empty result");
+                }
+                Ok(res.result[0])
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    pub async fn option_position(
+        &self,
+        lp_address: FieldElement,
+        maturity: FieldElement,
+        strike: FieldElement,
+        side: FieldElement,
+        block_number: i64,
+    ) -> Result<FieldElement, &str> {
+        match self
+            .amm_call(
+                block_number,
+                vec![lp_address, side, maturity, strike],
+                FunctionDescriptor {
+                    name: "get_pool_volatility_auto",
+                    selector: selector!("get_pool_volatility_auto"),
+                },
+            )
+            .await
+        {
+            Ok(res) => {
+                if res.result.is_empty() {
+                    return Err("option_position empty result");
+                }
+                Ok(res.result[0])
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    pub async fn get_option_volatility_and_position(
         &self,
         opt: IOption,
         block_number: i64,
+        fetch_volatility: bool,
     ) -> (Option<FieldElement>, Option<FieldElement>, String) {
         let lp_address = FieldElement::from_str(opt.lp_address.as_str()).unwrap();
         let maturity = FieldElement::from_str(format!("{:#x}", opt.maturity).as_str()).unwrap();
         let strike = FieldElement::from_str(opt.strike_price.as_str()).unwrap();
         let side = FieldElement::from(opt.option_side as u8);
 
-        let volatility_future = Box::pin(self.provider.call_contract(
-            CallFunction {
-                contract_address: self.amm_address,
-                entry_point_selector: selector!("get_pool_volatility_auto"),
-                calldata: vec![lp_address, maturity, strike],
-            },
-            BlockId::Number(block_number as u64),
-        ));
+        // we need volatility on some options, position on all
+        if fetch_volatility {
+            let volatility_future =
+                self.option_volatility(lp_address, maturity, strike, block_number);
+            let position_future =
+                self.option_position(lp_address, maturity, strike, side, block_number);
 
-        let position_future = Box::pin(self.provider.call_contract(
-            CallFunction {
-                contract_address: self.amm_address,
-                entry_point_selector: selector!("get_option_position"),
-                calldata: vec![lp_address, side, maturity, strike],
-            },
-            BlockId::Number(block_number as u64),
-        ));
+            match try_join!(volatility_future, position_future) {
+                Ok((volatility, position)) => {
+                    (Some(volatility), Some(position), opt.option_address)
+                }
+                Err(err) => {
+                    println!(
+                        "Failed getting option volatility and position for block {}: {}",
+                        block_number, err
+                    );
+                    (None, None, opt.option_address)
+                }
+            }
+        } else {
+            let position = self
+                .option_position(lp_address, maturity, strike, side, block_number)
+                .await;
 
-        let mut results = join_all(vec![volatility_future, position_future]).await;
-
-        let volatility_result = results.remove(0);
-        let position_result = results.remove(0);
-
-        let volatility: Option<FieldElement> = match volatility_result {
-            Ok(v) => Some(v.result[0]),
-            Err(_) => None,
-        };
-        let position: Option<FieldElement> = match position_result {
-            Ok(v) => Some(v.result[0]),
-            Err(_) => None,
-        };
-
-        (volatility, position, opt.option_address)
+            match position {
+                Ok(position) => (None, Some(position), opt.option_address),
+                Err(err) => {
+                    println!(
+                        "Failed getting option position for block {}: {}",
+                        block_number, err
+                    );
+                    (None, None, opt.option_address)
+                }
+            }
+        }
     }
 
     pub async fn get_block_by_id(&self, block_id: BlockId) -> Result<Block, ()> {

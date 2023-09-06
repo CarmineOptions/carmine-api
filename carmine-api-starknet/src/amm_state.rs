@@ -96,6 +96,8 @@ impl AmmStateObserver {
         println!("getting data from block #{} to #{}", start, finish);
 
         let mut n = start;
+        let mut blocks_updated = 0;
+        let started_updating = Instant::now();
 
         while n <= finish {
             let now = Instant::now();
@@ -104,6 +106,11 @@ impl AmmStateObserver {
                     println!("Updated block #{} in {:.2?}", n, now.elapsed());
                     // only increment if successfull
                     n = n + increment;
+                    blocks_updated += 1;
+                    println!(
+                        "Average block update time: {}",
+                        started_updating.elapsed().as_secs() / blocks_updated
+                    );
                 }
                 Err(_) => {
                     println!(

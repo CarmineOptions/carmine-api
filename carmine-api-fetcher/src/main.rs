@@ -23,20 +23,20 @@ async fn liveness() -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    actix_web::rt::spawn(async move {
-        loop {
-            if let Err(err) = actix_web::rt::spawn(async { update_database_events().await }).await {
-                // failed, probably network overload, wait to send message
-                sleep(Duration::from_secs(10)).await;
-                println!("update_database_events panicked\n{:?}", err);
-                telegram_bot::send_message("Carmine API `update_database_events` just panicked")
-                    .await;
-            } else {
-                println!("Database updated with events");
-            }
-            sleep(Duration::from_secs(150)).await;
-        }
-    });
+    // actix_web::rt::spawn(async move {
+    //     loop {
+    //         if let Err(err) = actix_web::rt::spawn(async { update_database_events().await }).await {
+    //             // failed, probably network overload, wait to send message
+    //             sleep(Duration::from_secs(10)).await;
+    //             println!("update_database_events panicked\n{:?}", err);
+    //             telegram_bot::send_message("Carmine API `update_database_events` just panicked")
+    //                 .await;
+    //         } else {
+    //             println!("Database updated with events");
+    //         }
+    //         sleep(Duration::from_secs(150)).await;
+    //     }
+    // });
 
     actix_web::rt::spawn(async move {
         loop {

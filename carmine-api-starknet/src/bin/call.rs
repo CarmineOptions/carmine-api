@@ -1,39 +1,31 @@
 use std::env;
 
 use carmine_api_core::network::Network;
-use carmine_api_db::{get_block_by_number, update_option_volatility};
 use carmine_api_starknet::carmine::Carmine;
 use dotenvy::dotenv;
+use starknet::providers::{jsonrpc::JsonRpcClient, Provider};
 
 #[tokio::main]
 async fn main() {
     dotenv().ok();
     env::set_var("ENVIRONMENT", "docker");
-    env::set_var("DB_IP", "34.76.28.66");
+    env::set_var("DB_IP", "34.159.91.62");
 
-    let network = Network::Mainnet;
     let carmine = Carmine::new(Network::Mainnet);
+    let option_info = carmine
+        .get_option_info_from_addresses(
+            "0x2f1ff24d90c395622a9db14ee2ba65be07d5238843c3188af42686d2144c3f3",
+        )
+        .await;
 
-    let mut block_number = 45237;
+    let res = Provider::call_contract();
 
-    loop {
-        if let Some(block) = get_block_by_number(block_number, &network) {
-            if let Ok(res) = carmine.get_all_options_volatility(&block).await {
-                for data in res {
-                    update_option_volatility(
-                        &network,
-                        block_number,
-                        data.volatility,
-                        data.option_position,
-                        data.option_address,
-                    );
-                }
-                println!("Updated block #{}", block_number);
-                block_number -= 1;
-            }
-        } else {
-            println!("Failed to get block {}", block_number);
-            break;
-        }
+    if let Ok(opt) = option_info {
+        println!("{:#?}\n\n\n", opt);
+
+        let vol = carmine
+            .get_option_volatility_and_position(opt, 195000, true)
+            .await;
+        println!("\nVolatility:\n{:?}", vol);
     }
 }
