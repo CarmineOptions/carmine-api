@@ -367,6 +367,40 @@ pub fn get_pool_state(pool_address: &str, network: &Network) -> Vec<PoolStateWit
     data
 }
 
+pub fn get_pool_state_block_numbers_in_range(
+    start_block: i64,
+    end_block: i64,
+    network: &Network,
+) -> Vec<i64> {
+    use crate::schema::pool_state::dsl::*;
+
+    let connection = &mut establish_connection(network);
+    pool_state
+        .select(block_number)
+        .filter(
+            block_number
+                .gt(start_block - 1)
+                .and(block_number.lt(end_block + 1)),
+        )
+        .order(block_number.asc())
+        .load::<i64>(connection)
+        .expect("Error loading pool_state")
+}
+
+pub fn get_pool_state_block_holes(start: i64, end: i64, network: &Network) -> Vec<i64> {
+    let blocks = get_pool_state_block_numbers_in_range(start, end, network);
+
+    let range_numbers: Vec<i64> = (start..=end).collect();
+
+    let holes: Vec<i64> = range_numbers
+        .iter()
+        .filter(|&x| !blocks.contains(x))
+        .cloned()
+        .collect();
+
+    holes
+}
+
 pub fn get_options_volatility(network: &Network) -> Vec<OptionWithVolatility> {
     use crate::schema::blocks::dsl::*;
     use crate::schema::options::dsl::*;
