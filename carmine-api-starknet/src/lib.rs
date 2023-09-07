@@ -72,7 +72,7 @@ pub async fn update_database_amm_state() {
         let carmine = Carmine::new(network);
         carmine.get_options_with_addresses().await;
     }
-    AmmStateObserver::new().update_state(50).await;
+    AmmStateObserver::new().update_state(10).await;
 }
 
 pub async fn plug_holes_amm_state() {
