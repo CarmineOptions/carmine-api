@@ -40,6 +40,7 @@ pub enum RpcNode {
     BlastAPI,
     Infura,
     InfuraTestnet,
+    CarmineJunoNode,
 }
 
 #[derive(Debug, Deserialize)]
@@ -104,6 +105,7 @@ const INFURA_URL: &'static str =
     "https://starknet-mainnet.infura.io/v3/df11605e57a14558b13a24a111661f52";
 const INFURA_TESTNET_URL: &'static str =
     "https://starknet-goerli.infura.io/v3/df11605e57a14558b13a24a111661f52";
+const CARMINE_JUNO_NODE_URL: &'static str = "https://34.22.208.73";
 
 pub async fn rpc_call(
     contract: Contract,
@@ -116,6 +118,7 @@ pub async fn rpc_call(
         RpcNode::BlastAPI => BLAST_API_URL,
         RpcNode::Infura => INFURA_URL,
         RpcNode::InfuraTestnet => INFURA_TESTNET_URL,
+        RpcNode::CarmineJunoNode => CARMINE_JUNO_NODE_URL,
     };
     let client = reqwest::Client::new();
     let res = client
@@ -159,4 +162,25 @@ pub async fn infura_call(
     calldata: Vec<String>,
 ) -> Result<Vec<String>, String> {
     rpc_call(contract, entry_point, calldata, RpcNode::Infura).await
+}
+
+pub async fn carmine_call(
+    contract: Contract,
+    entry_point: Entrypoint,
+    calldata: Vec<String>,
+) -> Result<Vec<String>, String> {
+    rpc_call(contract, entry_point, calldata, RpcNode::CarmineJunoNode).await
+}
+
+pub async fn carmine_amm_call(
+    entry_point: Entrypoint,
+    calldata: Vec<String>,
+) -> Result<Vec<String>, String> {
+    rpc_call(
+        Contract::AMM,
+        entry_point,
+        calldata,
+        RpcNode::CarmineJunoNode,
+    )
+    .await
 }

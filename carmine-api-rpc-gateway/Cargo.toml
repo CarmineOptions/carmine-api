@@ -16,3 +16,7 @@ tokio = { version = "1.26.0", features = ["macros", "rt-multi-thread"] }
 [[bin]]
 path = "./src/bin/test.rs"
 name = "test"
+
+[[bin]]
+path = "./src/bin/call.rs"
+name = "call"

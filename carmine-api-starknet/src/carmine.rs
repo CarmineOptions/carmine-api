@@ -3,10 +3,12 @@ use carmine_api_core::types::{DbBlock, IOption, OptionVolatility, PoolState};
 use carmine_api_db::{create_batch_of_options, get_option_with_address, get_options, get_pools};
 use futures::future::join_all;
 use futures::FutureExt;
-use starknet::core::types::{Block, CallContractResult, CallFunction, FieldElement};
+use starknet::core::types::{
+    BlockTag, BlockWithTxHashes, FieldElement, FunctionCall, MaybePendingBlockWithTxHashes,
+};
 use starknet::macros::selector;
-use starknet::providers::{SequencerGatewayProvider, SequencerGatewayProviderError};
-use starknet::{self, core::types::BlockId, providers::Provider};
+use starknet::providers::{Provider, SequencerGatewayProvider, SequencerGatewayProviderError};
+use starknet::{self, core::types::BlockId};
 use std::str::FromStr;
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
@@ -20,11 +22,11 @@ const TWO_DAYS_SECS: i64 = 172800;
 
 const MAX_RETRIES: usize = 5;
 
-fn format_call_contract_result(res: CallContractResult) -> Vec<String> {
+fn format_call_contract_result(res: Vec<FieldElement>) -> Vec<String> {
     let mut arr: Vec<String> = vec![];
 
     // first element is length of the result - skip it
-    for v in res.result.into_iter().skip(1) {
+    for v in res.into_iter().skip(1) {
         let base_10 = format!("{}", v);
         arr.push(base_10);
     }
@@ -78,13 +80,13 @@ impl Carmine {
         let call = loop {
             match self
                 .provider
-                .call_contract(
-                    CallFunction {
+                .call(
+                    FunctionCall {
                         contract_address: self.amm_address,
                         entry_point_selector: entrypoint,
                         calldata: vec![self.call_lp_address],
                     },
-                    BlockId::Latest,
+                    BlockId::Tag(BlockTag::Latest),
                 )
                 .await
             {
@@ -99,13 +101,13 @@ impl Carmine {
         let put = loop {
             match self
                 .provider
-                .call_contract(
-                    CallFunction {
+                .call(
+                    FunctionCall {
                         contract_address: self.amm_address,
                         entry_point_selector: entrypoint,
                         calldata: vec![self.put_lp_address],
                     },
-                    BlockId::Latest,
+                    BlockId::Tag(BlockTag::Latest),
                 )
                 .await
             {
@@ -133,8 +135,8 @@ impl Carmine {
         option_address: &str,
     ) -> Result<IOption, &str> {
         let entrypoint = selector!("get_option_info_from_addresses");
-        let call = self.provider.call_contract(
-            CallFunction {
+        let call = self.provider.call(
+            FunctionCall {
                 contract_address: self.amm_address,
                 entry_point_selector: entrypoint,
                 calldata: vec![
@@ -142,10 +144,10 @@ impl Carmine {
                     FieldElement::from_hex_be(option_address).unwrap(),
                 ],
             },
-            BlockId::Latest,
+            BlockId::Tag(BlockTag::Latest),
         );
-        let put = self.provider.call_contract(
-            CallFunction {
+        let put = self.provider.call(
+            FunctionCall {
                 contract_address: self.amm_address,
                 entry_point_selector: entrypoint,
                 calldata: vec![
@@ -153,14 +155,13 @@ impl Carmine {
                     FieldElement::from_hex_be(option_address).unwrap(),
                 ],
             },
-            BlockId::Latest,
+            BlockId::Tag(BlockTag::Latest),
         );
 
         let contract_results = join_all(vec![call, put]).await;
 
         for (i, result) in contract_results.into_iter().enumerate() {
-            if let Ok(call_res) = result {
-                let data = call_res.result;
+            if let Ok(data) = result {
                 assert_eq!(data.len(), 6, "Got wrong size Option result");
 
                 let option_side = format!("{}", data[0])
@@ -207,20 +208,19 @@ impl Carmine {
         let entrypoint = selector!("get_option_token_address");
         let contract_result = self
             .provider
-            .call_contract(
-                CallFunction {
+            .call(
+                FunctionCall {
                     contract_address: self.amm_address,
                     entry_point_selector: entrypoint,
                     calldata: vec![*lptoken_address, option_side, maturity, strike_price],
                 },
-                BlockId::Latest,
+                BlockId::Tag(BlockTag::Latest),
             )
             .await;
 
         match contract_result {
-            Ok(v) => {
-                let data = v.result[0];
-                let address = to_hex(data);
+            Ok(data) => {
+                let address = to_hex(data[0]);
                 return Ok(address);
             }
             Err(e) => {
@@ -234,13 +234,13 @@ impl Carmine {
         let entrypoint = selector!("get_all_options");
         let contract_result = self
             .provider
-            .call_contract(
-                CallFunction {
+            .call(
+                FunctionCall {
                     contract_address: self.amm_address,
                     entry_point_selector: entrypoint,
                     calldata: vec![*pool_address],
                 },
-                BlockId::Latest,
+                BlockId::Tag(BlockTag::Latest),
             )
             .await;
 
@@ -250,7 +250,7 @@ impl Carmine {
                 return;
             }
             Ok(v) => {
-                let mut res = v.result;
+                let mut res = v;
                 // first element is length of result array - remove it
                 res.remove(0);
 
@@ -353,18 +353,18 @@ impl Carmine {
     pub async fn get_all_lptoken_addresses(&self) -> Result<Vec<FieldElement>, ()> {
         let call_result = self
             .provider
-            .call_contract(
-                CallFunction {
+            .call(
+                FunctionCall {
                     contract_address: self.amm_address,
                     entry_point_selector: selector!("get_all_lptoken_addresses"),
                     calldata: vec![],
                 },
-                BlockId::Latest,
+                BlockId::Tag(BlockTag::Latest),
             )
             .await;
 
         let mut data = match call_result {
-            Ok(v) => v.result,
+            Ok(v) => v,
             _ => return Err(()),
         };
 
@@ -388,8 +388,8 @@ impl Carmine {
         for retry in 0..=MAX_RETRIES {
             match self
                 .provider
-                .call_contract(
-                    CallFunction {
+                .call(
+                    FunctionCall {
                         contract_address: self.amm_address,
                         entry_point_selector: function_descriptor.selector,
                         calldata: calldata.to_vec(),
@@ -398,7 +398,7 @@ impl Carmine {
                 )
                 .await
             {
-                Ok(call_result) => return Ok(call_result.result[0]),
+                Ok(call_result) => return Ok(call_result[0]),
                 Err(e) => {
                     if retry < MAX_RETRIES {
                         sleep(Duration::from_secs(1)).await; // Wait before retrying
@@ -721,8 +721,8 @@ impl Carmine {
         let strike = FieldElement::from_str(opt.strike_price.as_str()).unwrap();
         let side = FieldElement::from(opt.option_side as u8);
 
-        let volatility_future = Box::pin(self.provider.call_contract(
-            CallFunction {
+        let volatility_future = Box::pin(self.provider.call(
+            FunctionCall {
                 contract_address: self.amm_address,
                 entry_point_selector: selector!("get_pool_volatility_auto"),
                 calldata: vec![lp_address, maturity, strike],
@@ -730,8 +730,8 @@ impl Carmine {
             BlockId::Number(block_number as u64),
         ));
 
-        let position_future = Box::pin(self.provider.call_contract(
-            CallFunction {
+        let position_future = Box::pin(self.provider.call(
+            FunctionCall {
                 contract_address: self.amm_address,
                 entry_point_selector: selector!("get_option_position"),
                 calldata: vec![lp_address, side, maturity, strike],
@@ -745,31 +745,33 @@ impl Carmine {
         let position_result = results.remove(0);
 
         let volatility: Option<FieldElement> = match volatility_result {
-            Ok(v) => Some(v.result[0]),
+            Ok(v) => Some(v[0]),
             Err(_) => None,
         };
         let position: Option<FieldElement> = match position_result {
-            Ok(v) => Some(v.result[0]),
+            Ok(v) => Some(v[0]),
             Err(_) => None,
         };
 
         (volatility, position, opt.option_address)
     }
 
-    pub async fn get_block_by_id(&self, block_id: BlockId) -> Result<Block, ()> {
-        match self.provider.get_block(block_id).await {
-            Ok(v) => Ok(v),
+    pub async fn get_block_by_id(&self, block_id: BlockId) -> Result<BlockWithTxHashes, &str> {
+        match self.provider.get_block_with_tx_hashes(block_id).await {
+            Ok(maybe_block) => match maybe_block {
+                MaybePendingBlockWithTxHashes::Block(block) => Ok(block),
+                MaybePendingBlockWithTxHashes::PendingBlock(_) => {
+                    Err("Failed getting block, got pending block")
+                }
+            },
             Err(e) => {
                 println!("Failed getting block {:?}", e);
-                Err(())
+                Err("Failed getting block")
             }
         }
     }
 
-    pub async fn get_latest_block(&self) -> Result<Block, ()> {
-        if let Ok(block) = self.get_block_by_id(BlockId::Latest).await {
-            return Ok(block);
-        }
-        Err(())
+    pub async fn get_latest_block(&self) -> Result<BlockWithTxHashes, &str> {
+        self.get_block_by_id(BlockId::Tag(BlockTag::Latest)).await
     }
 }
