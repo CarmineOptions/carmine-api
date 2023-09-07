@@ -3,7 +3,7 @@ use carmine_api_core::{
     utils::token_pair_id,
 };
 use starknet::{
-    core::types::{BlockId, CallFunction, FieldElement},
+    core::types::{BlockId, FieldElement, FunctionCall},
     macros::selector,
     providers::{Provider, SequencerGatewayProvider},
 };
@@ -54,8 +54,8 @@ impl Oracle {
         let block_number = block.block_number;
         let res = self
             .provider
-            .call_contract(
-                CallFunction {
+            .call(
+                FunctionCall {
                     contract_address: self.oracle_address,
                     entry_point_selector: entrypoint,
                     calldata: vec![self.oracle_specific_token_pair_id(&token_pair)],
@@ -71,9 +71,7 @@ impl Oracle {
         // num_sources_aggregated 6
 
         let err_msg = format!("Unexpected oracle call result {:?}", res);
-        if let Ok(call_result) = res {
-            let data: Vec<FieldElement> = call_result.result;
-
+        if let Ok(data) = res {
             if data.len() != 4 {
                 return Err(format!(
                     "Incorrect number of fields in Oracle response: {:?}",

@@ -67,10 +67,14 @@ pub async fn update_database_events() {
 }
 
 pub async fn update_database_amm_state() {
-    let networks = vec![Network::Mainnet, Network::Testnet];
+    let networks = vec![Network::Mainnet];
     for network in networks {
         let carmine = Carmine::new(network);
         carmine.get_options_with_addresses().await;
     }
-    AmmStateObserver::new().update_state().await;
+    AmmStateObserver::new().update_state(50).await;
+}
+
+pub async fn plug_holes_amm_state() {
+    AmmStateObserver::new().plug_holes_in_state().await;
 }

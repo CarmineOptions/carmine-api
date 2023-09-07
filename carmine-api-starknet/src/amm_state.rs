@@ -6,9 +6,9 @@ use carmine_api_core::{
 };
 use carmine_api_db::{
     create_batch_of_pool_states, create_batch_of_volatilities, create_block, create_oracle_price,
-    get_last_block_in_db,
+    get_last_block_in_db, get_pool_state_block_holes,
 };
-use starknet::core::types::{Block, BlockId};
+use starknet::core::types::{BlockId, BlockWithTxHashes};
 use tokio::{join, time::sleep};
 
 use crate::{carmine::Carmine, oracle::Oracle};
@@ -41,7 +41,7 @@ impl AmmStateObserver {
             }
         };
         let block = DbBlock {
-            block_number: i64::try_from(strk_block.block_number.unwrap()).unwrap(),
+            block_number: i64::try_from(strk_block.block_number).unwrap(),
             timestamp: i64::try_from(strk_block.timestamp).unwrap(),
         };
 
@@ -68,11 +68,11 @@ impl AmmStateObserver {
         }
     }
 
-    pub async fn update_state(&self) {
+    pub async fn update_state(&self, n: i64) {
         let last_block_db = get_last_block_in_db(&self.network);
         let last_block_starknet_result = self.carmine.get_latest_block().await;
 
-        let last_block_starknet: Block = match last_block_starknet_result {
+        let last_block_starknet: BlockWithTxHashes = match last_block_starknet_result {
             Ok(block) => block,
             Err(e) => {
                 println!(
@@ -84,11 +84,49 @@ impl AmmStateObserver {
         };
 
         let start = last_block_db.block_number + 1;
-        let finish = i64::try_from(last_block_starknet.block_number.unwrap()).unwrap();
+        let finish = i64::try_from(last_block_starknet.block_number).unwrap();
+
+        let rounded_start = start - start % n;
 
         // do nothing if up to date
-        if start < finish {
-            self.update_state_over_block_range(start, finish, 1).await;
+        if rounded_start < finish {
+            self.update_state_over_block_range(rounded_start, finish, n)
+                .await;
+        }
+    }
+
+    pub async fn plug_holes_in_state(&self) {
+        let last_block_starknet_result = self.carmine.get_latest_block().await;
+        let last_block_starknet: BlockWithTxHashes = match last_block_starknet_result {
+            Ok(block) => block,
+            Err(e) => {
+                println!(
+                    "Failed getting latest block, skipping this update cycle.\n{:?}",
+                    e
+                );
+                return;
+            }
+        };
+
+        let start = 190500;
+        let finish = i64::try_from(last_block_starknet.block_number).unwrap();
+
+        let holes = get_pool_state_block_holes(start, finish, &Network::Mainnet);
+        for block_number in holes {
+            let now = Instant::now();
+            match self.update_single_block(block_number).await {
+                Ok(_) => {
+                    println!("Plugged hole #{} in {:.2?}", block_number, now.elapsed());
+                }
+                Err(_) => {
+                    println!(
+                        "Failed plugging hole #{} in {:.2?}, retrying...",
+                        block_number,
+                        now.elapsed()
+                    );
+                    sleep(Duration::from_secs(10)).await;
+                }
+            }
         }
     }
 

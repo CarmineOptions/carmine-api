@@ -4,7 +4,9 @@ use actix_web::{get, App, HttpResponse, HttpServer, Responder};
 use tokio::time::{sleep, Duration};
 
 use carmine_api_core::telegram_bot;
-use carmine_api_starknet::{update_database_amm_state, update_database_events};
+use carmine_api_starknet::{
+    plug_holes_amm_state, update_database_amm_state, update_database_events,
+};
 
 const LOCAL_IP: &str = "127.0.0.1";
 const DOCKER_IP: &str = "0.0.0.0";
@@ -44,12 +46,27 @@ async fn main() -> std::io::Result<()> {
                 actix_web::rt::spawn(async { update_database_amm_state().await }).await
             {
                 // failed, probably network overload, wait to send message
-                sleep(Duration::from_secs(10)).await;
+                sleep(Duration::from_secs(100)).await;
                 println!("Update database amm state panicked\n{:?}", err);
                 telegram_bot::send_message("Carmine API `update_database_amm_state` just panicked")
                     .await;
             } else {
                 println!("Database updated with AMM state");
+            }
+            sleep(Duration::from_secs(150)).await;
+        }
+    });
+
+    actix_web::rt::spawn(async move {
+        loop {
+            if let Err(err) = actix_web::rt::spawn(async { plug_holes_amm_state().await }).await {
+                // failed, probably network overload, wait to send message
+                sleep(Duration::from_secs(120)).await;
+                println!("Plug holes panicked\n{:?}", err);
+                telegram_bot::send_message("Carmine API `plug_holes_amm_state` just panicked")
+                    .await;
+            } else {
+                println!("Holes in AMM state pluged");
             }
             sleep(Duration::from_secs(150)).await;
         }
