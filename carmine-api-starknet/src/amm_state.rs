@@ -8,7 +8,7 @@ use carmine_api_db::{
     create_batch_of_pool_states, create_batch_of_volatilities, create_block, create_oracle_price,
     get_last_block_in_db, get_pool_state_block_holes,
 };
-use starknet::core::types::{BlockId, BlockWithTxHashes};
+use carmine_api_rpc_gateway::BlockTag;
 use tokio::{join, time::sleep};
 
 use crate::{carmine::Carmine, oracle::Oracle};
@@ -29,9 +29,10 @@ impl AmmStateObserver {
     }
 
     pub async fn update_single_block(&self, block_number: i64) -> Result<(), ()> {
+        let t0 = Instant::now();
         let strk_block = match self
             .carmine
-            .get_block_by_id(BlockId::Number(block_number as u64))
+            .get_block_by_id(BlockTag::Number(block_number))
             .await
         {
             Ok(v) => v,
@@ -50,6 +51,8 @@ impl AmmStateObserver {
             self.carmine.get_amm_state(&block),
             self.pragma.get_spot_median(TokenPair::EthUsdc, &block),
         );
+
+        println!("Fetched single block state in {:.2?}", t0.elapsed());
 
         match (
             options_volatility_result,
@@ -72,11 +75,11 @@ impl AmmStateObserver {
         let last_block_db = get_last_block_in_db(&self.network);
         let last_block_starknet_result = self.carmine.get_latest_block().await;
 
-        let last_block_starknet: BlockWithTxHashes = match last_block_starknet_result {
+        let last_block_starknet: DbBlock = match last_block_starknet_result {
             Ok(block) => block,
             Err(e) => {
                 println!(
-                    "Failed getting latest block, skipping this update cycle.\n{:?}",
+                    "Failed getting latest block, skipping this update cycle.\n{:#?}",
                     e
                 );
                 return;
@@ -97,7 +100,7 @@ impl AmmStateObserver {
 
     pub async fn plug_holes_in_state(&self) {
         let last_block_starknet_result = self.carmine.get_latest_block().await;
-        let last_block_starknet: BlockWithTxHashes = match last_block_starknet_result {
+        let last_block_starknet: DbBlock = match last_block_starknet_result {
             Ok(block) => block,
             Err(e) => {
                 println!(

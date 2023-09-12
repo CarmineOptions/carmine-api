@@ -9,6 +9,7 @@ edition = "2021"
 async-recursion = "1.0.4"
 carmine-api-core = { path = "../carmine-api-core" }
 carmine-api-db = { path = "../carmine-api-db" }
+carmine-api-rpc-gateway = { path = "../carmine-api-rpc-gateway" }
 diesel = { version = "2.0.0", features = ["postgres"] }
 dotenvy = "0.15.6"
 futures = "0.3.27"

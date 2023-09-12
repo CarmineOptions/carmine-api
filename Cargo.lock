@@ -609,6 +609,7 @@ dependencies = [
  "async-recursion",
  "carmine-api-core",
  "carmine-api-db",
+ "carmine-api-rpc-gateway",
  "diesel",
  "dotenvy",
  "futures",

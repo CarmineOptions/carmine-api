@@ -10,7 +10,5 @@ async fn main() {
     env::set_var("DB_IP", "34.159.91.62");
 
     let state_observer = AmmStateObserver::new();
-    state_observer
-        .update_state_over_block_range(190500, 191000, 1)
-        .await;
+    let _ = state_observer.update_single_block(200000).await;
 }
