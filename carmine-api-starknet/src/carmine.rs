@@ -1,38 +1,20 @@
 use carmine_api_core::network::{amm_address, call_lp_address, put_lp_address, Network};
 use carmine_api_core::types::{DbBlock, IOption, OptionVolatility, PoolState};
 use carmine_api_db::{create_batch_of_options, get_option_with_address, get_options, get_pools};
+use carmine_api_rpc_gateway::{
+    carmine_amm_call, carmine_get_block_header, BlockTag, Entrypoint, RpcError,
+};
 use futures::future::join_all;
 use futures::FutureExt;
-use starknet::core::types::{
-    BlockTag, BlockWithTxHashes, FieldElement, FunctionCall, MaybePendingBlockWithTxHashes,
-};
+use starknet::core::types::{FieldElement, FunctionCall};
 use starknet::macros::selector;
-use starknet::providers::{Provider, SequencerGatewayProvider, SequencerGatewayProviderError};
 use starknet::{self, core::types::BlockId};
 use std::str::FromStr;
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
 use tokio::try_join;
 
-const OPTION_NEAR_MATURITY: &'static str =
-    "Unable to calculate position value, please wait till option with maturity";
-const STALE_PRICE: &'static str = "Received price which is over an hour old";
-const BLACK_SCHOLES: &'static str = "Black scholes function failed when calculating";
 const TWO_DAYS_SECS: i64 = 172800;
-
-const MAX_RETRIES: usize = 5;
-
-fn format_call_contract_result(res: Vec<FieldElement>) -> Vec<String> {
-    let mut arr: Vec<String> = vec![];
-
-    // first element is length of the result - skip it
-    for v in res.into_iter().skip(1) {
-        let base_10 = format!("{}", v);
-        arr.push(base_10);
-    }
-
-    arr
-}
 
 fn to_hex(v: FieldElement) -> String {
     format!("{:#x}", v)
@@ -47,115 +29,77 @@ struct FunctionDescriptor<'a> {
 }
 
 pub struct Carmine {
-    provider: SequencerGatewayProvider,
     amm_address: FieldElement,
-    call_lp_address: FieldElement,
-    put_lp_address: FieldElement,
+    call_lp_address_string: &'static str,
+    put_lp_address_string: &'static str,
     network: Network,
 }
 
 impl Carmine {
     pub fn new(network: Network) -> Self {
-        let provider = match network {
-            Network::Mainnet => SequencerGatewayProvider::starknet_alpha_mainnet(),
-            Network::Testnet => SequencerGatewayProvider::starknet_alpha_goerli(),
-        };
-
         let amm_address = FieldElement::from_hex_be(amm_address(&network)).unwrap();
-        let call_lp_address = FieldElement::from_hex_be(call_lp_address(&network)).unwrap();
-        let put_lp_address = FieldElement::from_hex_be(put_lp_address(&network)).unwrap();
+        let call_lp_address_string = call_lp_address(&network);
+        let put_lp_address_string = put_lp_address(&network);
 
         Carmine {
-            provider,
             network,
             amm_address,
-            call_lp_address,
-            put_lp_address,
+            call_lp_address_string,
+            put_lp_address_string,
         }
     }
 
     pub async fn get_all_non_expired_options_with_premia(&self) -> Result<Vec<String>, ()> {
-        let entrypoint = selector!("get_all_non_expired_options_with_premia");
-
-        let call = loop {
-            match self
-                .provider
-                .call(
-                    FunctionCall {
-                        contract_address: self.amm_address,
-                        entry_point_selector: entrypoint,
-                        calldata: vec![self.call_lp_address],
-                    },
-                    BlockId::Tag(BlockTag::Latest),
-                )
-                .await
-            {
-                Ok(res) => break res,
-                Err(e) => {
-                    println!("Failed getting call options\n{:?}", e);
-                    sleep(Duration::from_secs(10)).await;
-                }
-            };
+        let mut call = match carmine_amm_call(
+            Entrypoint::GetAllNonExpiredOptionsWithPremia,
+            vec![self.call_lp_address_string.to_string()],
+            BlockTag::Latest,
+        )
+        .await
+        {
+            Ok(res) => res,
+            Err(_) => return Err(()),
+        };
+        let mut put = match carmine_amm_call(
+            Entrypoint::GetAllNonExpiredOptionsWithPremia,
+            vec![self.put_lp_address_string.to_string()],
+            BlockTag::Latest,
+        )
+        .await
+        {
+            Ok(res) => res,
+            Err(_) => return Err(()),
         };
 
-        let put = loop {
-            match self
-                .provider
-                .call(
-                    FunctionCall {
-                        contract_address: self.amm_address,
-                        entry_point_selector: entrypoint,
-                        calldata: vec![self.put_lp_address],
-                    },
-                    BlockId::Tag(BlockTag::Latest),
-                )
-                .await
-            {
-                Ok(res) => break res,
-                Err(e) => {
-                    println!("Failed getting put options\n{:?}", e);
-                    sleep(Duration::from_secs(10)).await;
-                }
-            };
-        };
+        // remove arr length
+        call.remove(0);
+        put.remove(0);
 
-        let contract_results = vec![call, put];
+        // combine both
+        call.extend(put);
 
-        let mut fetched_data: Vec<String> = Vec::new();
-
-        for result in contract_results {
-            let mut formatted = format_call_contract_result(result);
-            fetched_data.append(&mut formatted);
-        }
-        Ok(fetched_data)
+        Ok(call)
     }
 
     pub async fn get_option_info_from_addresses(
         &self,
         option_address: &str,
     ) -> Result<IOption, &str> {
-        let entrypoint = selector!("get_option_info_from_addresses");
-        let call = self.provider.call(
-            FunctionCall {
-                contract_address: self.amm_address,
-                entry_point_selector: entrypoint,
-                calldata: vec![
-                    self.call_lp_address,
-                    FieldElement::from_hex_be(option_address).unwrap(),
-                ],
-            },
-            BlockId::Tag(BlockTag::Latest),
+        let call = carmine_amm_call(
+            Entrypoint::GetOptionInfoFromAddress,
+            vec![
+                self.call_lp_address_string.to_string(),
+                option_address.to_string(),
+            ],
+            BlockTag::Latest,
         );
-        let put = self.provider.call(
-            FunctionCall {
-                contract_address: self.amm_address,
-                entry_point_selector: entrypoint,
-                calldata: vec![
-                    self.put_lp_address,
-                    FieldElement::from_hex_be(option_address).unwrap(),
-                ],
-            },
-            BlockId::Tag(BlockTag::Latest),
+        let put = carmine_amm_call(
+            Entrypoint::GetOptionInfoFromAddress,
+            vec![
+                self.put_lp_address_string.to_string(),
+                option_address.to_string(),
+            ],
+            BlockTag::Latest,
         );
 
         let contract_results = join_all(vec![call, put]).await;
@@ -164,21 +108,15 @@ impl Carmine {
             if let Ok(data) = result {
                 assert_eq!(data.len(), 6, "Got wrong size Option result");
 
-                let option_side = format!("{}", data[0])
-                    .parse::<i16>()
-                    .expect("Failed to parse side");
-                let option_type = format!("{}", data[5])
-                    .parse::<i16>()
-                    .expect("Failed to parse type");
-                let maturity = format!("{}", data[1])
-                    .parse::<i64>()
-                    .expect("Failed to parse maturity");
-                let strike_price = to_hex(data[2]);
-                let quote_token_address = to_hex(data[3]);
-                let base_token_address = to_hex(data[4]);
+                let option_side = data[0].parse::<i16>().expect("Failed to parse side");
+                let option_type = data[5].parse::<i16>().expect("Failed to parse type");
+                let maturity = data[1].parse::<i64>().expect("Failed to parse maturity");
+                let strike_price = data[2].to_owned();
+                let quote_token_address = data[3].to_owned();
+                let base_token_address = data[4].to_owned();
                 let lp_address = match i {
-                    0 => to_hex(self.call_lp_address),
-                    1 => to_hex(self.put_lp_address),
+                    0 => self.call_lp_address_string.to_string(),
+                    1 => self.put_lp_address_string.to_string(),
                     _ => unreachable!("Hardcoded 2 lp_pools"),
                 };
 
@@ -200,51 +138,40 @@ impl Carmine {
 
     pub async fn get_option_token_address(
         &self,
-        lptoken_address: &FieldElement,
-        option_side: FieldElement,
-        maturity: FieldElement,
-        strike_price: FieldElement,
+        lptoken_address: &String,
+        option_side: String,
+        maturity: String,
+        strike_price: String,
     ) -> Result<String, &str> {
-        let entrypoint = selector!("get_option_token_address");
-        let contract_result = self
-            .provider
-            .call(
-                FunctionCall {
-                    contract_address: self.amm_address,
-                    entry_point_selector: entrypoint,
-                    calldata: vec![*lptoken_address, option_side, maturity, strike_price],
-                },
-                BlockId::Tag(BlockTag::Latest),
-            )
-            .await;
-
-        match contract_result {
-            Ok(data) => {
-                let address = to_hex(data[0]);
-                return Ok(address);
-            }
+        match carmine_amm_call(
+            Entrypoint::GetOptionTokenAddress,
+            vec![
+                lptoken_address.to_owned(),
+                option_side,
+                maturity,
+                strike_price,
+            ],
+            BlockTag::Latest,
+        )
+        .await
+        {
+            Ok(data) => Ok(data[0].to_owned()),
             Err(e) => {
-                println!("Failed \"get_option_token_address\" \n{}", e);
-                return Err("Failed \"get_option_token_address\"");
+                println!("Failed \"get_option_token_address\" \n{:#?}", e);
+                Err("Failed \"get_option_token_address\"")
             }
         }
     }
 
-    async fn get_options_with_addresses_from_single_pool(&self, pool_address: &FieldElement) {
-        let entrypoint = selector!("get_all_options");
-        let contract_result = self
-            .provider
-            .call(
-                FunctionCall {
-                    contract_address: self.amm_address,
-                    entry_point_selector: entrypoint,
-                    calldata: vec![*pool_address],
-                },
-                BlockId::Tag(BlockTag::Latest),
-            )
-            .await;
+    async fn get_options_with_addresses_from_single_pool(&self, pool_address: &String) {
+        let contract_result = carmine_amm_call(
+            Entrypoint::GetAllOptions,
+            vec![pool_address.to_owned()],
+            BlockTag::Latest,
+        )
+        .await;
 
-        let data: Vec<FieldElement> = match contract_result {
+        let data: Vec<String> = match contract_result {
             Err(provider_error) => {
                 println!("{:?}", provider_error);
                 return;
@@ -272,14 +199,12 @@ impl Carmine {
                 continue;
             }
 
-            let option_side = format!("{}", option_vec[0])
-                .parse::<i16>()
-                .expect("Failed to parse side");
-            let maturity = format!("{}", option_vec[1])
-                .parse::<i64>()
-                .expect("Failed to parse maturity");
-            let strike_price = to_hex(option_vec[2]);
-            let lp_address = to_hex(*pool_address);
+            let option_side =
+                i16::from_str_radix(&option_vec[0][2..], 16).expect("Failed to parse side");
+            let maturity =
+                i64::from_str_radix(&option_vec[1][2..], 16).expect("Failed to parse maturity");
+            let strike_price = option_vec[2].to_owned();
+            let lp_address = pool_address.to_owned();
 
             let db_hit = get_option_with_address(
                 &self.network,
@@ -297,17 +222,20 @@ impl Carmine {
 
             // this part only runs if option not already in the DB
 
-            let option_type = format!("{}", option_vec[5])
-                .parse::<i16>()
-                .expect("Failed to parse type");
-            let quote_token_address = to_hex(option_vec[3]);
-            let base_token_address = to_hex(option_vec[4]);
+            let option_type = option_vec[5].parse::<i16>().expect("Failed to parse type");
+            let quote_token_address = option_vec[3].to_owned();
+            let base_token_address = option_vec[4].to_owned();
 
             // avoid running into rate limit starknet error
             sleep(Duration::from_secs(2)).await;
 
             let option_address_result = self
-                .get_option_token_address(pool_address, option_vec[0], option_vec[1], option_vec[2])
+                .get_option_token_address(
+                    pool_address,
+                    option_vec[0].to_owned(),
+                    option_vec[1].to_owned(),
+                    option_vec[2].to_owned(),
+                )
                 .await;
 
             let option_address = match option_address_result {
@@ -344,24 +272,15 @@ impl Carmine {
     /// !This method is extremely slow, because it waits 2s between
     /// Starknet calls to avoid running into "rate limit" error!
     pub async fn get_options_with_addresses(&self) {
-        self.get_options_with_addresses_from_single_pool(&self.call_lp_address)
+        self.get_options_with_addresses_from_single_pool(&self.call_lp_address_string.to_owned())
             .await;
-        self.get_options_with_addresses_from_single_pool(&self.put_lp_address)
+        self.get_options_with_addresses_from_single_pool(&self.put_lp_address_string.to_owned())
             .await;
     }
 
-    pub async fn get_all_lptoken_addresses(&self) -> Result<Vec<FieldElement>, ()> {
-        let call_result = self
-            .provider
-            .call(
-                FunctionCall {
-                    contract_address: self.amm_address,
-                    entry_point_selector: selector!("get_all_lptoken_addresses"),
-                    calldata: vec![],
-                },
-                BlockId::Tag(BlockTag::Latest),
-            )
-            .await;
+    pub async fn get_all_lptoken_addresses(&self) -> Result<Vec<String>, ()> {
+        let call_result =
+            carmine_amm_call(Entrypoint::GetAllLPTokenAddresses, vec![], BlockTag::Latest).await;
 
         let mut data = match call_result {
             Ok(v) => v,
@@ -378,130 +297,56 @@ impl Carmine {
         Ok(data)
     }
 
-    async fn amm_call(
+    pub async fn get_pool_single_value(
         &self,
         block_number: i64,
-        calldata: Vec<FieldElement>,
-        function_descriptor: FunctionDescriptor<'_>,
-    ) -> Result<FieldElement, starknet::providers::ProviderError<SequencerGatewayProviderError>>
-    {
-        for retry in 0..=MAX_RETRIES {
-            match self
-                .provider
-                .call(
-                    FunctionCall {
-                        contract_address: self.amm_address,
-                        entry_point_selector: function_descriptor.selector,
-                        calldata: calldata.to_vec(),
-                    },
-                    BlockId::Number(block_number as u64),
-                )
-                .await
-            {
-                Ok(call_result) => return Ok(call_result[0]),
-                Err(e) => {
-                    if retry < MAX_RETRIES {
-                        sleep(Duration::from_secs(1)).await; // Wait before retrying
-                    } else {
-                        return Err(e);
-                    }
-                }
-            }
+        pool: String,
+        entry_point: Entrypoint,
+    ) -> Result<String, RpcError> {
+        match carmine_amm_call(entry_point, vec![pool], BlockTag::Number(block_number)).await {
+            Ok(v) => Ok(v[0].to_owned()),
+            Err(e) => Err(e),
         }
-        unreachable!();
     }
 
     pub async fn get_pool_locked_capital(
         &self,
         block_number: i64,
-        pool: FieldElement,
-    ) -> Result<FieldElement, starknet::providers::ProviderError<SequencerGatewayProviderError>>
-    {
-        self.amm_call(
-            block_number,
-            vec![pool],
-            FunctionDescriptor {
-                name: "get_pool_locked_capital",
-                selector: selector!("get_pool_locked_capital"),
-            },
-        )
-        .await
+        pool: String,
+    ) -> Result<String, RpcError> {
+        self.get_pool_single_value(block_number, pool, Entrypoint::GetPoolLockedCapital)
+            .await
     }
 
     pub async fn get_unlocked_capital(
         &self,
         block_number: i64,
-        pool: FieldElement,
-    ) -> Result<FieldElement, starknet::providers::ProviderError<SequencerGatewayProviderError>>
-    {
-        match self
-            .amm_call(
-                block_number,
-                vec![pool],
-                FunctionDescriptor {
-                    name: "get_unlocked_capital",
-                    selector: selector!("get_unlocked_capital"),
-                },
-            )
+        pool: String,
+    ) -> Result<String, RpcError> {
+        self.get_pool_single_value(block_number, pool, Entrypoint::GetUnlockedCapital)
             .await
-        {
-            Ok(v) => Ok(v),
-            Err(e) => Err(e),
-        }
     }
 
     pub async fn get_lpool_balance(
         &self,
         block_number: i64,
-        pool: FieldElement,
-    ) -> Result<FieldElement, starknet::providers::ProviderError<SequencerGatewayProviderError>>
-    {
-        self.amm_call(
-            block_number,
-            vec![pool],
-            FunctionDescriptor {
-                name: "get_lpool_balance",
-                selector: selector!("get_lpool_balance"),
-            },
-        )
-        .await
+        pool: String,
+    ) -> Result<String, RpcError> {
+        self.get_pool_single_value(block_number, pool, Entrypoint::GetLpoolBalance)
+            .await
     }
 
     pub async fn get_value_of_pool_position(
         &self,
         block_number: i64,
-        pool: FieldElement,
-    ) -> Result<
-        Option<FieldElement>,
-        starknet::providers::ProviderError<SequencerGatewayProviderError>,
-    > {
+        pool: String,
+    ) -> Result<Option<String>, RpcError> {
         match self
-            .amm_call(
-                block_number,
-                vec![pool],
-                FunctionDescriptor {
-                    name: "get_value_of_pool_position",
-                    selector: selector!("get_value_of_pool_position"),
-                },
-            )
+            .get_pool_single_value(block_number, pool, Entrypoint::GetLpoolBalance)
             .await
         {
             Ok(v) => Ok(Some(v)),
-            Err(e) if e.to_string().contains(OPTION_NEAR_MATURITY) => {
-                // this specific error message means that LP token value
-                // cannot be calculated - return None
-                Ok(None)
-            }
-            Err(e) if e.to_string().contains(STALE_PRICE) => {
-                // this specific error message means that pool position
-                // cannot be calculated - return None
-                Ok(None)
-            }
-            Err(e) if e.to_string().contains(BLACK_SCHOLES) => {
-                // this specific error message means that pool position
-                // cannot be calculated - return None
-                Ok(None)
-            }
+            Err(e) if matches!(e, RpcError::ContractError(_)) => Ok(None),
             Err(e) => Err(e),
         }
     }
@@ -509,71 +354,49 @@ impl Carmine {
     pub async fn get_value_of_lp_token(
         &self,
         block_number: i64,
-        pool: FieldElement,
-    ) -> Result<
-        Option<FieldElement>,
-        starknet::providers::ProviderError<SequencerGatewayProviderError>,
-    > {
-        match self
-            .amm_call(
-                block_number,
-                vec![
-                    pool,
-                    // 10**18 as uint256
-                    FieldElement::from_str(TEN_POW_18).unwrap(),
-                    FieldElement::from_str("0").unwrap(),
-                ],
-                FunctionDescriptor {
-                    name: "get_underlying_for_lptokens",
-                    selector: selector!("get_underlying_for_lptokens"),
-                },
-            )
-            .await
+        pool: String,
+    ) -> Result<Option<String>, RpcError> {
+        match carmine_amm_call(
+            Entrypoint::GetUnderlyingForLptoken,
+            vec![pool, TEN_POW_18.to_owned(), "0".to_owned()],
+            BlockTag::Number(block_number),
+        )
+        .await
         {
-            Ok(v) => Ok(Some(v)),
-            Err(e) if e.to_string().contains(OPTION_NEAR_MATURITY) => {
-                // this specific error message means that LP token value
-                // cannot be calculated - return None
-                Ok(None)
-            }
-            Err(e) if e.to_string().contains(STALE_PRICE) => {
-                // this specific error message means that LP token value
-                // cannot be calculated - return None
-                Ok(None)
-            }
-            Err(e) if e.to_string().contains(BLACK_SCHOLES) => {
-                // this specific error message means that pool position
-                // cannot be calculated - return None
-                Ok(None)
-            }
+            Ok(v) => Ok(Some(v[0].to_owned())),
+            Err(e) if matches!(e, RpcError::ContractError(_)) => Ok(None),
             Err(e) => Err(e),
         }
     }
 
     pub async fn get_locked_unlocked_total_capital_for_pool(
         &self,
-        pool: FieldElement,
+        pool: String,
         block_number: i64,
     ) -> Result<
         (
-            FieldElement,
-            FieldElement,
-            FieldElement,
-            Option<FieldElement>,
-            Option<FieldElement>,
-            FieldElement,
+            String,
+            String,
+            String,
+            Option<String>,
+            Option<String>,
+            String,
         ),
-        starknet::providers::ProviderError<SequencerGatewayProviderError>,
+        RpcError,
     > {
         let now = Instant::now();
         let res = try_join!(
-            self.get_pool_locked_capital(block_number, pool),
-            self.get_unlocked_capital(block_number, pool),
-            self.get_lpool_balance(block_number, pool),
-            self.get_value_of_pool_position(block_number, pool),
-            self.get_value_of_lp_token(block_number, pool),
+            self.get_pool_locked_capital(block_number, pool.to_owned()),
+            self.get_unlocked_capital(block_number, pool.to_owned()),
+            self.get_lpool_balance(block_number, pool.to_owned()),
+            self.get_value_of_pool_position(block_number, pool.to_owned()),
+            self.get_value_of_lp_token(block_number, pool.to_owned()),
         );
-        println!("Fetched AMM state in {:.2?}", now.elapsed());
+        println!(
+            "Fetched pool state {} in {:.2?}",
+            pool.get(0..10).unwrap(),
+            now.elapsed()
+        );
         match res {
             Ok((
                 pool_locked_capital,
@@ -591,16 +414,16 @@ impl Carmine {
             )),
             Err(e) => {
                 println!("Failed getting balance data in block #{}", block_number);
-                println!("{:?}", e);
+                println!("{:#?}", e);
                 Err(e)
             }
         }
     }
 
     pub async fn get_amm_state(&self, block: &DbBlock) -> Result<Vec<PoolState>, ()> {
-        let pool_addresses: Vec<FieldElement> = get_pools(&self.network)
+        let pool_addresses: Vec<String> = get_pools(&self.network)
             .iter()
-            .map(|p| FieldElement::from_str(&p.lp_address).unwrap())
+            .map(|p| p.lp_address.to_owned())
             .collect();
 
         let mut futures = vec![];
@@ -630,17 +453,17 @@ impl Carmine {
             };
 
             cumulative_state.push(PoolState {
-                unlocked_cap: to_hex(unlocked_cap),
-                locked_cap: to_hex(locked_cap),
-                lp_balance: to_hex(lpool_balance),
+                unlocked_cap: unlocked_cap,
+                locked_cap: locked_cap,
+                lp_balance: lpool_balance,
                 pool_position: match value_pool_position {
-                    Some(v) => Some(to_hex(v)),
+                    Some(v) => Some(v),
                     None => None,
                 },
-                lp_address: to_hex(pool_address),
+                lp_address: pool_address,
                 block_number: block.block_number,
                 lp_token_value: match lp_token_value {
-                    Some(v) => Some(to_hex(v)),
+                    Some(v) => Some(v),
                     None => None,
                 },
             });
@@ -664,16 +487,17 @@ impl Carmine {
             if opt.maturity + TWO_DAYS_SECS > block.timestamp {
                 non_expired_options.push(opt);
 
-            // for expired set volatility to None
-            } else {
-                let option_volatility = OptionVolatility {
-                    block_number: block.block_number,
-                    option_address: opt.option_address,
-                    volatility: None,
-                    option_position: None,
-                };
-                to_store.push(option_volatility);
+                // for expired set volatility to None
             }
+            //  else {
+            //     let option_volatility = OptionVolatility {
+            //         block_number: block.block_number,
+            //         option_address: opt.option_address,
+            //         volatility: None,
+            //         option_position: None,
+            //     };
+            //     to_store.push(option_volatility);
+            // }
         }
 
         // volatility fails if too many requests, break it into chunks
@@ -694,10 +518,7 @@ impl Carmine {
             let results = join_all(futures).await;
 
             for res in results {
-                let (volatility_option, option_position_option, option_address) = res;
-
-                let volatility = volatility_option.map(|v| to_hex(v));
-                let option_position = option_position_option.map(|v| to_hex(v));
+                let (volatility, option_position, option_address) = res;
 
                 to_store.push(OptionVolatility {
                     block_number: block.block_number,
@@ -715,28 +536,26 @@ impl Carmine {
         &self,
         opt: IOption,
         block_number: i64,
-    ) -> (Option<FieldElement>, Option<FieldElement>, String) {
-        let lp_address = FieldElement::from_str(opt.lp_address.as_str()).unwrap();
-        let maturity = FieldElement::from_str(format!("{:#x}", opt.maturity).as_str()).unwrap();
-        let strike = FieldElement::from_str(opt.strike_price.as_str()).unwrap();
-        let side = FieldElement::from(opt.option_side as u8);
+    ) -> (Option<String>, Option<String>, String) {
+        let lp_address = opt.lp_address;
+        let maturity = format!("{:#x}", opt.maturity);
+        let strike = opt.strike_price;
+        let side = opt.option_side.to_string();
 
-        let volatility_future = Box::pin(self.provider.call(
-            FunctionCall {
-                contract_address: self.amm_address,
-                entry_point_selector: selector!("get_pool_volatility_auto"),
-                calldata: vec![lp_address, maturity, strike],
-            },
-            BlockId::Number(block_number as u64),
+        let volatility_future = Box::pin(carmine_amm_call(
+            Entrypoint::GetPoolVolatilityAuto,
+            vec![
+                lp_address.to_owned(),
+                maturity.to_owned(),
+                strike.to_owned(),
+            ],
+            BlockTag::Number(block_number),
         ));
 
-        let position_future = Box::pin(self.provider.call(
-            FunctionCall {
-                contract_address: self.amm_address,
-                entry_point_selector: selector!("get_option_position"),
-                calldata: vec![lp_address, side, maturity, strike],
-            },
-            BlockId::Number(block_number as u64),
+        let position_future = Box::pin(carmine_amm_call(
+            Entrypoint::GetOptionPosition,
+            vec![lp_address, side, maturity, strike],
+            BlockTag::Number(block_number),
         ));
 
         let mut results = join_all(vec![volatility_future, position_future]).await;
@@ -744,34 +563,23 @@ impl Carmine {
         let volatility_result = results.remove(0);
         let position_result = results.remove(0);
 
-        let volatility: Option<FieldElement> = match volatility_result {
-            Ok(v) => Some(v[0]),
+        let volatility: Option<String> = match volatility_result {
+            Ok(v) => Some(v[0].to_owned()),
             Err(_) => None,
         };
-        let position: Option<FieldElement> = match position_result {
-            Ok(v) => Some(v[0]),
+        let position: Option<String> = match position_result {
+            Ok(v) => Some(v[0].to_owned()),
             Err(_) => None,
         };
 
         (volatility, position, opt.option_address)
     }
 
-    pub async fn get_block_by_id(&self, block_id: BlockId) -> Result<BlockWithTxHashes, &str> {
-        match self.provider.get_block_with_tx_hashes(block_id).await {
-            Ok(maybe_block) => match maybe_block {
-                MaybePendingBlockWithTxHashes::Block(block) => Ok(block),
-                MaybePendingBlockWithTxHashes::PendingBlock(_) => {
-                    Err("Failed getting block, got pending block")
-                }
-            },
-            Err(e) => {
-                println!("Failed getting block {:?}", e);
-                Err("Failed getting block")
-            }
-        }
+    pub async fn get_block_by_id(&self, block_tag: BlockTag) -> Result<DbBlock, RpcError> {
+        carmine_get_block_header(block_tag).await
     }
 
-    pub async fn get_latest_block(&self) -> Result<BlockWithTxHashes, &str> {
-        self.get_block_by_id(BlockId::Tag(BlockTag::Latest)).await
+    pub async fn get_latest_block(&self) -> Result<DbBlock, RpcError> {
+        self.get_block_by_id(BlockTag::Latest).await
     }
 }

@@ -164,7 +164,7 @@ pub struct PoolStateWithTimestamp {
     pub timestamp: i64,
 }
 
-#[derive(Debug, Clone, Queryable, Insertable, Serialize, PartialEq, Selectable)]
+#[derive(Debug, Clone, Queryable, Insertable, Serialize, Deserialize, PartialEq, Selectable)]
 #[diesel(table_name = blocks)]
 pub struct DbBlock {
     pub block_number: i64,

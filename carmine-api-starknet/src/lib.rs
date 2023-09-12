@@ -66,13 +66,13 @@ pub async fn update_database_events() {
     create_batch_of_starkscan_events(&events, &Network::Mainnet);
 }
 
-pub async fn update_database_amm_state() {
+pub async fn update_database_amm_state(offset: i64) {
     let networks = vec![Network::Mainnet];
     for network in networks {
         let carmine = Carmine::new(network);
         carmine.get_options_with_addresses().await;
     }
-    AmmStateObserver::new().update_state(10).await;
+    AmmStateObserver::new().update_state(offset).await;
 }
 
 pub async fn plug_holes_amm_state() {
