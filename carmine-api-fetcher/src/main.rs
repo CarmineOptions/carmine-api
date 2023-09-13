@@ -9,8 +9,8 @@ use carmine_api_starknet::{
 };
 
 const BLOCK_OFFSET: i64 = 5;
-const PLUG_HOLES: bool = true;
-const GET_NEW_BLOCKS: bool = true;
+const PLUG_HOLES: bool = false;
+const GET_NEW_BLOCKS: bool = false;
 const GET_NEW_EVENTS: bool = true;
 
 const LOCAL_IP: &str = "127.0.0.1";
