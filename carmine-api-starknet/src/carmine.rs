@@ -1,4 +1,4 @@
-use carmine_api_core::network::{amm_address, call_lp_address, put_lp_address, Network};
+use carmine_api_core::network::{call_lp_address, put_lp_address, Network};
 use carmine_api_core::types::{DbBlock, IOption, OptionVolatility, PoolState};
 use carmine_api_db::{create_batch_of_options, get_option_with_address, get_options, get_pools};
 use carmine_api_rpc_gateway::{
@@ -6,16 +6,15 @@ use carmine_api_rpc_gateway::{
 };
 use futures::future::join_all;
 use futures::FutureExt;
-use starknet::core::types::{FieldElement, FunctionCall};
-use starknet::macros::selector;
-use starknet::{self, core::types::BlockId};
-use std::str::FromStr;
+use starknet::core::types::FieldElement;
+use starknet::{self};
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
 use tokio::try_join;
 
 const TWO_DAYS_SECS: i64 = 172800;
 
+#[allow(dead_code)]
 fn to_hex(v: FieldElement) -> String {
     format!("{:#x}", v)
 }
@@ -29,7 +28,6 @@ struct FunctionDescriptor<'a> {
 }
 
 pub struct Carmine {
-    amm_address: FieldElement,
     call_lp_address_string: &'static str,
     put_lp_address_string: &'static str,
     network: Network,
@@ -37,13 +35,11 @@ pub struct Carmine {
 
 impl Carmine {
     pub fn new(network: Network) -> Self {
-        let amm_address = FieldElement::from_hex_be(amm_address(&network)).unwrap();
         let call_lp_address_string = call_lp_address(&network);
         let put_lp_address_string = put_lp_address(&network);
 
         Carmine {
             network,
-            amm_address,
             call_lp_address_string,
             put_lp_address_string,
         }
@@ -342,7 +338,7 @@ impl Carmine {
         pool: String,
     ) -> Result<Option<String>, RpcError> {
         match self
-            .get_pool_single_value(block_number, pool, Entrypoint::GetLpoolBalance)
+            .get_pool_single_value(block_number, pool, Entrypoint::GetValueOfPoolPosition)
             .await
         {
             Ok(v) => Ok(Some(v)),

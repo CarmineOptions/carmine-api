@@ -172,7 +172,7 @@ pub async fn rpc_block_header(block: BlockTag, node: RpcNode) -> Result<DbBlock,
     let response = match request.send().await {
         Ok(response) => response,
         Err(e) => {
-            let msg = format!("Block header call failed: {:#?}", e);
+            let msg = format!("Block header call failed: {:?}", e);
             return Err(RpcError::Other(msg));
         }
     };
