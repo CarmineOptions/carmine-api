@@ -60,8 +60,8 @@ async fn main() -> std::io::Result<()> {
 
     println!("🛠️  Creating cache instances...");
 
-    let mut mainnet_cache = Cache::new(Network::Mainnet);
-    let mut testnet_cache = Cache::new(Network::Testnet);
+    let mut mainnet_cache = Cache::new(Network::Mainnet).await;
+    let mut testnet_cache = Cache::new(Network::Testnet).await;
 
     println!("🛠️  Getting data from DB...");
 

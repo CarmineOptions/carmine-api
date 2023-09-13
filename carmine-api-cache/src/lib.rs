@@ -37,7 +37,7 @@ pub struct Cache {
 }
 
 impl Cache {
-    pub fn new(network: Network) -> Self {
+    pub async fn new(network: Network) -> Self {
         let network = network;
         let carmine = Carmine::new(network);
         let events = get_protocol_events(&network, &Protocol::CarmineOptions);
@@ -57,6 +57,7 @@ impl Cache {
         };
 
         cache.trade_history = Cache::generate_trade_history(&mut cache);
+        cache.update_all_non_expired().await;
 
         cache
     }

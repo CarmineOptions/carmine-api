@@ -8,8 +8,8 @@ use carmine_api_starknet::{
     plug_holes_amm_state, update_database_amm_state, update_database_events,
 };
 
-const BLOCK_OFFSET: i64 = 10;
-const PLUG_HOLES: bool = false;
+const BLOCK_OFFSET: i64 = 5;
+const PLUG_HOLES: bool = true;
 const GET_NEW_BLOCKS: bool = true;
 const GET_NEW_EVENTS: bool = true;
 
@@ -30,7 +30,10 @@ async fn liveness() -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    println!("👷 Starting fetcher");
+
     if GET_NEW_EVENTS {
+        println!("🛠️  Spawning event fetching thread...");
         actix_web::rt::spawn(async move {
             loop {
                 if let Err(err) =
@@ -52,6 +55,7 @@ async fn main() -> std::io::Result<()> {
     }
 
     if GET_NEW_BLOCKS {
+        println!("🛠️  Spawning new blocks fetching thread...");
         actix_web::rt::spawn(async move {
             loop {
                 if let Err(err) =
@@ -74,6 +78,7 @@ async fn main() -> std::io::Result<()> {
     }
 
     if PLUG_HOLES {
+        println!("🛠️  Spawning hole plugging thread...");
         actix_web::rt::spawn(async move {
             loop {
                 if let Err(err) = actix_web::rt::spawn(async { plug_holes_amm_state().await }).await
@@ -90,6 +95,8 @@ async fn main() -> std::io::Result<()> {
             }
         });
     }
+
+    println!("🚀 Fetcher started successfully");
 
     HttpServer::new(|| App::new().service(liveness))
         .bind((ip_address(), 8080))?

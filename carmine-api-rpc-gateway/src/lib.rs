@@ -1,10 +1,22 @@
+use std::env;
+
 use carmine_api_core::{
-    constants,
     network::{amm_address, Network},
     types::DbBlock,
 };
+use lazy_static::lazy_static;
 use reqwest::RequestBuilder;
 use serde::{Deserialize, Serialize};
+
+lazy_static! {
+    static ref BLAST_API_URL: String =
+        env::var("BLAST_API_URL").expect("missing env var BLAST_API_URL");
+    static ref INFURA_URL: String = env::var("INFURA_URL").expect("missing env var INFURA_URL");
+    static ref INFURA_TESTNET_URL: String =
+        env::var("INFURA_TESTNET_URL").expect("missing env var INFURA_TESTNET_URL");
+    static ref CARMINE_JUNO_NODE_URL: String =
+        env::var("CARMINE_JUNO_NODE_URL").expect("missing env var CARMINE_JUNO_NODE_URL");
+}
 
 #[derive(Debug, Serialize)]
 pub struct RpcCallData {
@@ -135,11 +147,11 @@ pub fn build_call_body(
 }
 
 fn rpc_request<T: Serialize>(body: T, node: RpcNode) -> RequestBuilder {
-    let url = match node {
-        RpcNode::BlastAPI => constants::BLAST_API_URL,
-        RpcNode::Infura => constants::INFURA_URL,
-        RpcNode::InfuraTestnet => constants::INFURA_TESTNET_URL,
-        RpcNode::CarmineJunoNode => constants::CARMINE_JUNO_NODE_URL,
+    let url: String = match node {
+        RpcNode::BlastAPI => BLAST_API_URL.to_string(),
+        RpcNode::Infura => INFURA_URL.to_string(),
+        RpcNode::InfuraTestnet => INFURA_TESTNET_URL.to_string(),
+        RpcNode::CarmineJunoNode => CARMINE_JUNO_NODE_URL.to_string(),
     };
 
     let client = reqwest::Client::new();

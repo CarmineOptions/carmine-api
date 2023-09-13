@@ -595,6 +595,8 @@ name = "carmine-api-rpc-gateway"
 version = "0.1.0"
 dependencies = [
  "carmine-api-core",
+ "dotenvy",
+ "lazy_static",
  "reqwest",
  "serde",
  "serde_json",
