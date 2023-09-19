@@ -159,6 +159,43 @@ fn rpc_request<T: Serialize>(body: T, node: RpcNode) -> RequestBuilder {
     client.post(url).json(&body)
 }
 
+pub async fn rpc_latest_block_number(node: RpcNode) -> Result<i64, RpcError> {
+    let body = RpcCallBody {
+        jsonrpc: "2.0".to_owned(),
+        method: "starknet_blockNumber".to_owned(),
+        id: 0,
+        params: vec![],
+    };
+    let request = rpc_request(body, node);
+
+    let response = match request.send().await {
+        Ok(response) => response,
+        Err(e) => {
+            let msg = format!("Block number call failed: {:?}", e);
+            return Err(RpcError::Other(msg));
+        }
+    };
+
+    let parsed_response_option = match response.json::<Option<RpcResponse<i64>>>().await {
+        Ok(res) => res,
+        Err(e) => {
+            println!("Request failed: {:?}", e);
+            return Err(RpcError::Other("RPC block number failed".to_string()));
+        }
+    };
+
+    let block_number = match parsed_response_option {
+        Some(res) if res.result.is_some() => res.result.unwrap(),
+        _ => {
+            return Err(RpcError::Other(
+                "Block number got empty response".to_string(),
+            ));
+        }
+    };
+
+    Ok(block_number)
+}
+
 pub async fn rpc_block_header(block: BlockTag, node: RpcNode) -> Result<DbBlock, RpcError> {
     let params = vec![Params::BlockTag(block)];
     let body = RpcCallBody {
@@ -257,6 +294,10 @@ pub async fn blast_api_call(
     .await
 }
 
+pub async fn blast_api_latest_block_number() -> Result<i64, RpcError> {
+    rpc_latest_block_number(RpcNode::BlastAPI).await
+}
+
 pub async fn infura_call(
     contract: Contract,
     entry_point: Entrypoint,
@@ -270,6 +311,10 @@ pub async fn infura_call(
         RpcNode::Infura,
     )
     .await
+}
+
+pub async fn infura_latest_block_number() -> Result<i64, RpcError> {
+    rpc_latest_block_number(RpcNode::Infura).await
 }
 
 pub async fn carmine_call(
@@ -305,4 +350,8 @@ pub async fn carmine_amm_call(
 
 pub async fn carmine_get_block_header(block: BlockTag) -> Result<DbBlock, RpcError> {
     rpc_block_header(block, RpcNode::CarmineJunoNode).await
+}
+
+pub async fn carmine_latest_block_number() -> Result<i64, RpcError> {
+    rpc_latest_block_number(RpcNode::CarmineJunoNode).await
 }

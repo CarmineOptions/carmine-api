@@ -1,13 +1,17 @@
-use carmine_api_rpc_gateway::{carmine_get_block_header, BlockTag};
+use carmine_api_rpc_gateway::{
+    blast_api_latest_block_number, carmine_latest_block_number, infura_latest_block_number,
+};
 use dotenvy::dotenv;
+use tokio::try_join;
 
 #[tokio::main]
 async fn main() {
     dotenv().ok();
 
-    let res = carmine_get_block_header(BlockTag::Number(200000)).await;
+    let latest_blocks = try_join!(
+        carmine_latest_block_number(),
+        blast_api_latest_block_number(),
+    );
 
-    if let Ok(v) = res {
-        println!("{:#?}", v);
-    }
+    println!("{:#?}", latest_blocks);
 }
