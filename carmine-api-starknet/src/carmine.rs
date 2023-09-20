@@ -217,8 +217,8 @@ impl Carmine {
             }
 
             // this part only runs if option not already in the DB
-
-            let option_type = option_vec[5].parse::<i16>().expect("Failed to parse type");
+            let option_type =
+                i16::from_str_radix(&option_vec[5][2..], 16).expect("Failed to parse type");
             let quote_token_address = option_vec[3].to_owned();
             let base_token_address = option_vec[4].to_owned();
 
