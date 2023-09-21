@@ -16,6 +16,8 @@ lazy_static! {
         env::var("INFURA_TESTNET_URL").expect("missing env var INFURA_TESTNET_URL");
     static ref CARMINE_JUNO_NODE_URL: String =
         env::var("CARMINE_JUNO_NODE_URL").expect("missing env var CARMINE_JUNO_NODE_URL");
+    static ref CARMINE_JUNO_TESTNET_NODE_URL: String = env::var("CARMINE_JUNO_TESTNET_NODE_URL")
+        .expect("missing env var CARMINE_JUNO_TESTNET_NODE_URL");
 }
 
 #[derive(Debug, Serialize)]
@@ -86,6 +88,7 @@ pub enum Entrypoint {
 
 pub enum Contract {
     AMM,
+    AMMTestnet,
 }
 
 pub enum RpcNode {
@@ -93,6 +96,7 @@ pub enum RpcNode {
     Infura,
     InfuraTestnet,
     CarmineJunoNode,
+    CarmineTestnetJunoNode,
 }
 
 #[allow(dead_code)]
@@ -121,6 +125,7 @@ struct RpcResponse<T> {
 pub fn map_contract_to_address(contract: Contract) -> &'static str {
     match contract {
         Contract::AMM => amm_address(&Network::Mainnet),
+        Contract::AMMTestnet => amm_address(&Network::Testnet),
     }
 }
 
@@ -152,6 +157,7 @@ fn rpc_request<T: Serialize>(body: T, node: RpcNode) -> RequestBuilder {
         RpcNode::Infura => INFURA_URL.to_string(),
         RpcNode::InfuraTestnet => INFURA_TESTNET_URL.to_string(),
         RpcNode::CarmineJunoNode => CARMINE_JUNO_NODE_URL.to_string(),
+        RpcNode::CarmineTestnetJunoNode => CARMINE_JUNO_TESTNET_NODE_URL.to_string(),
     };
 
     let client = reqwest::Client::new();
@@ -344,6 +350,21 @@ pub async fn carmine_amm_call(
         calldata,
         block,
         RpcNode::CarmineJunoNode,
+    )
+    .await
+}
+
+pub async fn carmine_testnet_amm_call(
+    entry_point: Entrypoint,
+    calldata: Vec<String>,
+    block: BlockTag,
+) -> Result<Vec<String>, RpcError> {
+    rpc_call(
+        Contract::AMMTestnet,
+        entry_point,
+        calldata,
+        block,
+        RpcNode::CarmineTestnetJunoNode,
     )
     .await
 }
