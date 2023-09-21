@@ -2,7 +2,8 @@ use carmine_api_core::network::{call_lp_address, put_lp_address, Network};
 use carmine_api_core::types::{DbBlock, IOption, OptionVolatility, PoolState};
 use carmine_api_db::{create_batch_of_options, get_option_with_address, get_options, get_pools};
 use carmine_api_rpc_gateway::{
-    carmine_amm_call, carmine_get_block_header, BlockTag, Entrypoint, RpcError,
+    carmine_amm_call, carmine_get_block_header, carmine_testnet_amm_call, BlockTag, Entrypoint,
+    RpcError,
 };
 use futures::future::join_all;
 use futures::FutureExt;
@@ -45,23 +46,37 @@ impl Carmine {
         }
     }
 
+    pub async fn amm_call(
+        &self,
+        entry_point: Entrypoint,
+        calldata: Vec<String>,
+        block: BlockTag,
+    ) -> Result<Vec<String>, RpcError> {
+        match self.network {
+            Network::Mainnet => carmine_amm_call(entry_point, calldata, block).await,
+            Network::Testnet => carmine_testnet_amm_call(entry_point, calldata, block).await,
+        }
+    }
+
     pub async fn get_all_non_expired_options_with_premia(&self) -> Result<Vec<String>, ()> {
-        let mut call = match carmine_amm_call(
-            Entrypoint::GetAllNonExpiredOptionsWithPremia,
-            vec![self.call_lp_address_string.to_string()],
-            BlockTag::Latest,
-        )
-        .await
+        let mut call = match self
+            .amm_call(
+                Entrypoint::GetAllNonExpiredOptionsWithPremia,
+                vec![self.call_lp_address_string.to_string()],
+                BlockTag::Latest,
+            )
+            .await
         {
             Ok(res) => res,
             Err(_) => return Err(()),
         };
-        let mut put = match carmine_amm_call(
-            Entrypoint::GetAllNonExpiredOptionsWithPremia,
-            vec![self.put_lp_address_string.to_string()],
-            BlockTag::Latest,
-        )
-        .await
+        let mut put = match self
+            .amm_call(
+                Entrypoint::GetAllNonExpiredOptionsWithPremia,
+                vec![self.put_lp_address_string.to_string()],
+                BlockTag::Latest,
+            )
+            .await
         {
             Ok(res) => res,
             Err(_) => return Err(()),
@@ -81,7 +96,7 @@ impl Carmine {
         &self,
         option_address: &str,
     ) -> Result<IOption, &str> {
-        let call = carmine_amm_call(
+        let call = self.amm_call(
             Entrypoint::GetOptionInfoFromAddress,
             vec![
                 self.call_lp_address_string.to_string(),
@@ -89,7 +104,7 @@ impl Carmine {
             ],
             BlockTag::Latest,
         );
-        let put = carmine_amm_call(
+        let put = self.amm_call(
             Entrypoint::GetOptionInfoFromAddress,
             vec![
                 self.put_lp_address_string.to_string(),

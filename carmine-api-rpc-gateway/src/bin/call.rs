@@ -10,6 +10,7 @@ async fn main() {
 
     let latest_blocks = try_join!(
         carmine_latest_block_number(),
+        infura_latest_block_number(),
         blast_api_latest_block_number(),
     );
 
