@@ -402,68 +402,70 @@ pub fn get_pool_state_block_holes(start: i64, end: i64, network: &Network) -> Ve
 }
 
 pub fn get_options_volatility(network: &Network) -> Vec<OptionWithVolatility> {
-    use crate::schema::blocks::dsl::*;
-    use crate::schema::options::dsl::*;
-    use crate::schema::options_volatility::dsl::*;
+    vec![] as Vec<OptionWithVolatility>
 
-    let connection = &mut establish_connection(network);
+    // use crate::schema::blocks::dsl::*;
+    // use crate::schema::options::dsl::*;
+    // use crate::schema::options_volatility::dsl::*;
 
-    let all_options: Vec<IOption> = options
-        .select(IOption::as_select())
-        .load(connection)
-        .expect("Failed getting all options");
+    // let connection = &mut establish_connection(network);
 
-    let volatilities: Vec<(OptionVolatility, DbBlock)> = options_volatility
-        .inner_join(blocks)
-        .select((OptionVolatility::as_select(), DbBlock::as_select()))
-        .load::<(OptionVolatility, DbBlock)>(connection)
-        .expect("Error loading option volatility");
+    // let all_options: Vec<IOption> = options
+    //     .select(IOption::as_select())
+    //     .load(connection)
+    //     .expect("Failed getting all options");
 
-    let mut options_with_volatilities: Vec<OptionWithVolatility> = vec![];
+    // let volatilities: Vec<(OptionVolatility, DbBlock)> = options_volatility
+    //     .inner_join(blocks)
+    //     .select((OptionVolatility::as_select(), DbBlock::as_select()))
+    //     .load::<(OptionVolatility, DbBlock)>(connection)
+    //     .expect("Error loading option volatility");
 
-    for opt in all_options {
-        // filter volatilities of the current option
-        let mut option_specific_volatilities: Vec<Volatility> = volatilities
-            .iter()
-            .filter(|(vol, _)| opt.option_address == vol.option_address)
-            .map(|(vol, block)| Volatility {
-                block_number: block.block_number,
-                timestamp: block.timestamp,
-                volatility: vol.volatility.clone(),
-                option_position: vol.option_position.clone(),
-            })
-            .collect();
+    // let mut options_with_volatilities: Vec<OptionWithVolatility> = vec![];
 
-        option_specific_volatilities.sort_by_key(|v| v.block_number);
+    // for opt in all_options {
+    //     // filter volatilities of the current option
+    //     let mut option_specific_volatilities: Vec<Volatility> = volatilities
+    //         .iter()
+    //         .filter(|(vol, _)| opt.option_address == vol.option_address)
+    //         .map(|(vol, block)| Volatility {
+    //             block_number: block.block_number,
+    //             timestamp: block.timestamp,
+    //             volatility: vol.volatility.clone(),
+    //             option_position: vol.option_position.clone(),
+    //         })
+    //         .collect();
 
-        let mut last_value: (Option<String>, Option<String>) = (None, None);
+    //     option_specific_volatilities.sort_by_key(|v| v.block_number);
 
-        let unique_volatilities: Vec<Volatility> =
-            option_specific_volatilities
-                .into_iter()
-                .fold(vec![], |mut acc, cur| {
-                    if &last_value.0 != &cur.volatility || &last_value.1 != &cur.option_position {
-                        last_value = (cur.volatility.clone(), cur.option_position.clone());
-                        acc.push(cur);
-                    }
-                    acc
-                });
+    //     let mut last_value: (Option<String>, Option<String>) = (None, None);
 
-        // push current option with volatility
-        options_with_volatilities.push(OptionWithVolatility {
-            option_side: opt.option_side,
-            maturity: opt.maturity,
-            strike_price: opt.strike_price,
-            quote_token_address: opt.quote_token_address,
-            base_token_address: opt.base_token_address,
-            option_type: opt.option_type,
-            option_address: opt.option_address,
-            lp_address: opt.lp_address,
-            volatilities: unique_volatilities,
-        });
-    }
+    //     let unique_volatilities: Vec<Volatility> =
+    //         option_specific_volatilities
+    //             .into_iter()
+    //             .fold(vec![], |mut acc, cur| {
+    //                 if &last_value.0 != &cur.volatility || &last_value.1 != &cur.option_position {
+    //                     last_value = (cur.volatility.clone(), cur.option_position.clone());
+    //                     acc.push(cur);
+    //                 }
+    //                 acc
+    //             });
 
-    options_with_volatilities
+    //     // push current option with volatility
+    //     options_with_volatilities.push(OptionWithVolatility {
+    //         option_side: opt.option_side,
+    //         maturity: opt.maturity,
+    //         strike_price: opt.strike_price,
+    //         quote_token_address: opt.quote_token_address,
+    //         base_token_address: opt.base_token_address,
+    //         option_type: opt.option_type,
+    //         option_address: opt.option_address,
+    //         lp_address: opt.lp_address,
+    //         volatilities: unique_volatilities,
+    //     });
+    // }
+
+    // options_with_volatilities
 }
 
 pub fn update_option_volatility(
