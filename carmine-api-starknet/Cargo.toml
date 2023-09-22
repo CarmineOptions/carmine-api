@@ -63,3 +63,7 @@ name = "events"
 [[bin]]
 path = "./src/bin/fetch.rs"
 name = "fetch"
+
+[[bin]]
+path = "./src/bin/volatility.rs"
+name = "volatility"
