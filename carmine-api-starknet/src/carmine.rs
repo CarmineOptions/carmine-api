@@ -68,7 +68,10 @@ impl Carmine {
             .await
         {
             Ok(res) => res,
-            Err(_) => return Err(()),
+            Err(e) => {
+                println!("{:#?}", e);
+                return Err(());
+            }
         };
         let mut put = match self
             .amm_call(
