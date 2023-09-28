@@ -55,7 +55,7 @@ pub async fn update_database_events() {
 
     for protocol in protocols {
         // Call the get_protocol_events function for each protocol
-        let current_events = get_protocol_events(&protocol).await;
+        let current_events = get_protocol_events(&Network::Mainnet, &protocol).await;
         println!("Fetched {} events for {}", current_events.len(), protocol);
         // Extend the combined_events vector with the events from the current protocol
         events.extend(current_events);
@@ -63,7 +63,12 @@ pub async fn update_database_events() {
         // give DNS resolver time to cooldown
         sleep(Duration::from_secs(2)).await;
     }
+
+    let testnet_carmine_events =
+        get_protocol_events(&Network::Testnet, &Protocol::CarmineOptions).await;
+
     create_batch_of_starkscan_events(&events, &Network::Mainnet);
+    create_batch_of_starkscan_events(&testnet_carmine_events, &Network::Testnet);
 }
 
 pub async fn update_database_amm_state(offset: i64) {

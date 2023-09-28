@@ -67,3 +67,7 @@ name = "fetch"
 [[bin]]
 path = "./src/bin/volatility.rs"
 name = "volatility"
+
+[[bin]]
+path = "./src/bin/telegram.rs"
+name = "telegram"

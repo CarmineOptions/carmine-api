@@ -155,7 +155,7 @@ pub fn protocol_address(network: &Network, protocol: &Protocol) -> &'static str 
                 "0x076dbabc4293db346b0a56b29b6ea9fe18e93742c73f12348c8747ecfc1050aa"
             }
             Network::Testnet => {
-                "0x042a7d485171a01b8c38b6b37e0092f0f096e9d3f945c50c77799171916f5a54"
+                "0x025df870077d869ebd7a777938d95d49f9698a7b5266a174319d967abe184d4b"
             }
         },
         Protocol::Hashstack => HASHSTACK_ADDRESS,

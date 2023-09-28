@@ -17,12 +17,18 @@ use carmine_api_starknet::carmine::Carmine;
 mod apy;
 
 // Only store Events we know and not ExpireOptionTokenForPool and Upgrade
-const ALLOWED_METHODS: &'static [&'static str; 5] = &[
+const ALLOWED_METHODS: &'static [&'static str; 10] = &[
     "TradeOpen",
     "TradeClose",
     "TradeSettle",
     "DepositLiquidity",
     "WithdrawLiquidity",
+    // Cairo1 contracts have this prefix
+    "carmine_protocol::amm_core::amm::AMM::TradeOpen",
+    "carmine_protocol::amm_core::amm::AMM::TradeClose",
+    "carmine_protocol::amm_core::amm::AMM::TradeSettle",
+    "carmine_protocol::amm_core::amm::AMM::DepositLiquidity",
+    "carmine_protocol::amm_core::amm::AMM::WithdrawLiquidity",
 ];
 
 pub struct Cache {
@@ -137,6 +143,9 @@ impl Cache {
             .iter()
             .filter(|event| ALLOWED_METHODS.contains(&event.key_name.as_str()))
             .map(|e| {
+                if matches!(self.network, Network::Testnet) {
+                    println!("MAPPING {:?}", e);
+                }
                 let token_address = e.data[1].to_owned();
                 let action = String::from(&e.key_name);
                 let option = match self.options.get(&token_address) {
@@ -161,7 +170,7 @@ impl Cache {
                     None
                 };
 
-                TradeHistory {
+                let th = TradeHistory {
                     timestamp: e.timestamp,
                     action,
                     caller: e.data[0].to_owned(),
@@ -169,7 +178,13 @@ impl Cache {
                     tokens_minted: e.data[4].to_owned(),
                     option,
                     liquidity_pool,
+                };
+
+                if matches!(self.network, Network::Testnet) {
+                    println!("TRADE HISTORY {:?}", th);
                 }
+
+                th
             })
             .collect::<Vec<TradeHistory>>();
         trade_history.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));

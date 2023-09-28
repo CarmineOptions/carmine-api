@@ -275,9 +275,11 @@ pub async fn get_events_from_starkscan() {
     println!("Stored {} events from Starkscan", &parsed_events.len());
 }
 
-pub async fn get_protocol_events(protocol: &Protocol) -> Vec<StarkScanEventSettled> {
-    let network = Network::Mainnet;
-    let last_timestamp = match get_last_timestamp_for_protocol_event(&network, protocol) {
+pub async fn get_protocol_events(
+    network: &Network,
+    protocol: &Protocol,
+) -> Vec<StarkScanEventSettled> {
+    let last_timestamp = match get_last_timestamp_for_protocol_event(network, protocol) {
         Some(t) => t,
         None => 0,
     };

@@ -2,10 +2,7 @@ use std::env;
 
 use actix_web::{get, App, HttpResponse, HttpServer, Responder};
 use carmine_api_rpc_gateway::{blast_api_latest_block_number, carmine_latest_block_number};
-use tokio::{
-    time::{sleep, Duration},
-    try_join,
-};
+use tokio::time::{sleep, Duration};
 
 use carmine_api_core::telegram_bot;
 use carmine_api_starknet::{
@@ -30,13 +27,18 @@ fn ip_address() -> &'static str {
 }
 
 async fn report_block_discrepency() {
-    let latest_blocks = try_join!(
-        carmine_latest_block_number(),
-        blast_api_latest_block_number(),
-    );
-
-    let (carm_block_number, blast_block_number) = match latest_blocks {
-        Ok((carm, blast)) => (carm, blast),
+    let (carm_block_number, blast_block_number) = match (
+        carmine_latest_block_number().await,
+        blast_api_latest_block_number().await,
+    ) {
+        (Ok(carm), Ok(blast)) => (carm, blast),
+        (Err(e), _) => {
+            // carmine failed, report it
+            let msg = format!("Failed getting latest block number from Carmine Juno node with the following error: {:?}", e);
+            telegram_bot::send_message(msg.as_str()).await;
+            return;
+        }
+        // blast failed, but carmine ok - do not report
         _ => return,
     };
 
