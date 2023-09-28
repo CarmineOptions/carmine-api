@@ -143,11 +143,12 @@ impl Cache {
             .iter()
             .filter(|event| ALLOWED_METHODS.contains(&event.key_name.as_str()))
             .map(|e| {
-                if matches!(self.network, Network::Testnet) {
-                    println!("MAPPING {:?}", e);
-                }
                 let token_address = e.data[1].to_owned();
-                let action = String::from(&e.key_name);
+                let action = String::from(
+                    &e.key_name
+                        // remove prefix in C1 contracts
+                        .replace("carmine_protocol::amm_core::amm::AMM::", ""),
+                );
                 let option = match self.options.get(&token_address) {
                     Some(v) => Some(v.clone()),
                     None => None,
@@ -158,19 +159,16 @@ impl Cache {
                 let liquidity_pool: Option<String> = if action.as_str() == "DepositLiquidity"
                     || action.as_str() == "WithdrawLiquidity"
                 {
-                    let res = if token_address.as_str() == put_pool_address {
-                        Some("Put".to_string())
-                    } else if token_address.as_str() == call_pool_address {
-                        Some("Call".to_string())
-                    } else {
-                        None
-                    };
-                    res
+                    match token_address.as_str() {
+                        v if v == put_pool_address => Some("Put".to_string()),
+                        v if v == call_pool_address => Some("Call".to_string()),
+                        _ => None,
+                    }
                 } else {
                     None
                 };
 
-                let th = TradeHistory {
+                TradeHistory {
                     timestamp: e.timestamp,
                     action,
                     caller: e.data[0].to_owned(),
@@ -178,15 +176,10 @@ impl Cache {
                     tokens_minted: e.data[4].to_owned(),
                     option,
                     liquidity_pool,
-                };
-
-                if matches!(self.network, Network::Testnet) {
-                    println!("TRADE HISTORY {:?}", th);
                 }
-
-                th
             })
             .collect::<Vec<TradeHistory>>();
+
         trade_history.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
         trade_history
     }

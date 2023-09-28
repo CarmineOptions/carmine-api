@@ -157,17 +157,25 @@ impl Carmine {
         maturity: String,
         strike_price: String,
     ) -> Result<String, &str> {
-        match carmine_amm_call(
-            Entrypoint::GetOptionTokenAddress,
-            vec![
-                lptoken_address.to_owned(),
-                option_side,
-                maturity,
-                strike_price,
-            ],
-            BlockTag::Latest,
-        )
-        .await
+        let mut calldata = vec![
+            lptoken_address.to_owned(),
+            option_side,
+            maturity,
+            strike_price,
+        ];
+
+        // TODO: add sign for strike_price if C1
+        if matches!(self.network, Network::Testnet) {
+            calldata.push("0x0".to_string());
+        }
+
+        match self
+            .amm_call(
+                Entrypoint::GetOptionTokenAddress,
+                calldata,
+                BlockTag::Latest,
+            )
+            .await
         {
             Ok(data) => Ok(data[0].to_owned()),
             Err(e) => {
@@ -178,12 +186,13 @@ impl Carmine {
     }
 
     async fn get_options_with_addresses_from_single_pool(&self, pool_address: &String) {
-        let contract_result = carmine_amm_call(
-            Entrypoint::GetAllOptions,
-            vec![pool_address.to_owned()],
-            BlockTag::Latest,
-        )
-        .await;
+        let contract_result = self
+            .amm_call(
+                Entrypoint::GetAllOptions,
+                vec![pool_address.to_owned()],
+                BlockTag::Latest,
+            )
+            .await;
 
         let data: Vec<String> = match contract_result {
             Err(provider_error) => {
@@ -191,6 +200,7 @@ impl Carmine {
                 return;
             }
             Ok(v) => {
+                println!("GET_ALL_OPTIONS RESULT {:#?}", v);
                 let mut res = v;
                 // first element is length of result array - remove it
                 res.remove(0);
@@ -199,8 +209,14 @@ impl Carmine {
             }
         };
 
+        let option_length = match self.network {
+            Network::Mainnet => 6,
+            // TODO: C1 has longer options - change when mainnet is also C1
+            Network::Testnet => 7,
+        };
+
         // each option has 6 fields
-        let chunks = data.chunks(6);
+        let chunks = data.chunks(option_length);
 
         let mut options: Vec<IOption> = vec![];
 
@@ -208,7 +224,9 @@ impl Carmine {
         let mut fetched = 0;
 
         for option_vec in chunks {
-            if option_vec.len() != 6 {
+            println!("CHUNK {:#?}", option_vec);
+
+            if option_vec.len() != option_length {
                 println!("Wrong option_vec size!");
                 continue;
             }
@@ -234,11 +252,17 @@ impl Carmine {
                 continue;
             }
 
+            let (type_index, base_index, quote_index) = match self.network {
+                Network::Mainnet => (5, 4, 3),
+                // TODO: C1 has longer options - change when mainnet is also C1
+                Network::Testnet => (6, 5, 4),
+            };
+
             // this part only runs if option not already in the DB
-            let option_type =
-                i16::from_str_radix(&option_vec[5][2..], 16).expect("Failed to parse type");
-            let quote_token_address = option_vec[3].to_owned();
-            let base_token_address = option_vec[4].to_owned();
+            let option_type = i16::from_str_radix(&option_vec[type_index][2..], 16)
+                .expect("Failed to parse type");
+            let quote_token_address = option_vec[quote_index].to_owned();
+            let base_token_address = option_vec[base_index].to_owned();
 
             // avoid running into rate limit starknet error
             sleep(Duration::from_secs(2)).await;

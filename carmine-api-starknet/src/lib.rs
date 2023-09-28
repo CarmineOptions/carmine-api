@@ -72,7 +72,7 @@ pub async fn update_database_events() {
 }
 
 pub async fn update_database_amm_state(offset: i64) {
-    let networks = vec![Network::Mainnet];
+    let networks = vec![Network::Mainnet, Network::Testnet];
     for network in networks {
         let carmine = Carmine::new(network);
         carmine.get_options_with_addresses().await;

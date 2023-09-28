@@ -66,7 +66,7 @@ pub enum Entrypoint {
     GetOptionInfoFromAddress,
     #[serde(rename = "0x14e79ebec158e1f661acf7d89ad12cd6cc4a47a712c3fbd62bc96bf65ca52f0")]
     GetOptionTokenAddress,
-    #[serde(rename = "0x230b3b6ebadc35ebd0b91e93d39824daff6574cbe99bb7882037547cbb75197")]
+    #[serde(rename = "0x0230b3b6ebadc35ebd0b91e93d39824daff6574cbe99bb7882037547cbb75197")]
     GetAllOptions,
     #[serde(rename = "0x3a59b17481476f4a9926cf55852dcc59e941e04e7c7afc16d1c887637e6b349")]
     GetAllLPTokenAddresses,
