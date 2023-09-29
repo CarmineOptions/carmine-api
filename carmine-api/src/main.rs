@@ -95,6 +95,7 @@ async fn main() -> std::io::Result<()> {
 
     // updates app state
     actix_web::rt::spawn(async move {
+        sleep(Duration::from_secs(600)).await;
         let mut startup = true;
         loop {
             if startup {
