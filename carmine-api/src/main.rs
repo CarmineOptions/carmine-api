@@ -25,6 +25,8 @@ impl Origins {
     const LOCAL: &str = "http://localhost:3000";
     const DEVELOPMENT: &str = "https://app.carmine-dev.eu";
     const PRODUCTION: &str = "https://app.carmine.finance";
+    const PRODUCTION_MAINNET: &str = "https://mainnet.app.carmine.finance";
+    const PRODUCTION_TESTNET: &str = "https://testnet.app.carmine.finance";
 }
 
 fn ip_address() -> &'static str {
@@ -121,6 +123,8 @@ async fn main() -> std::io::Result<()> {
             .allowed_origin(Origins::LOCAL)
             .allowed_origin(Origins::DEVELOPMENT)
             .allowed_origin(Origins::PRODUCTION)
+            .allowed_origin(Origins::PRODUCTION_MAINNET)
+            .allowed_origin(Origins::PRODUCTION_TESTNET)
             .allowed_methods(vec!["GET"])
             .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
             .allowed_header(header::CONTENT_TYPE)
