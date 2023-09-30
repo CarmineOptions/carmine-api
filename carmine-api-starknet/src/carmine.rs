@@ -1,4 +1,5 @@
 use carmine_api_core::network::{call_lp_address, put_lp_address, Network};
+use carmine_api_core::pool::get_all_pool_addresses;
 use carmine_api_core::types::{DbBlock, IOption, OptionVolatility, PoolState};
 use carmine_api_db::{create_batch_of_options, get_option_with_address, get_options, get_pools};
 use carmine_api_rpc_gateway::{
@@ -58,41 +59,34 @@ impl Carmine {
         }
     }
 
-    pub async fn get_all_non_expired_options_with_premia(&self) -> Result<Vec<String>, ()> {
-        let mut call = match self
-            .amm_call(
+    pub async fn get_all_non_expired_options_with_premia(&self) -> Result<Vec<String>, RpcError> {
+        let pool_addresses = get_all_pool_addresses(&self.network);
+
+        let mut futures = vec![];
+
+        for address in pool_addresses {
+            futures.push(self.amm_call(
                 Entrypoint::GetAllNonExpiredOptionsWithPremia,
-                vec![self.call_lp_address_string.to_string()],
+                vec![address.to_string()], // TODO: should be &str
                 BlockTag::Latest,
-            )
-            .await
-        {
-            Ok(res) => res,
-            Err(e) => {
-                println!("{:#?}", e);
-                return Err(());
+            ))
+        }
+
+        let call_results = join_all(futures).await;
+
+        let mut option_data = vec![];
+
+        for result in call_results {
+            match result {
+                Err(e) => return Err(e),
+                Ok(mut v) => {
+                    v.remove(0); // first element specifies length - remove it
+                    option_data.extend(v);
+                }
             }
-        };
-        let mut put = match self
-            .amm_call(
-                Entrypoint::GetAllNonExpiredOptionsWithPremia,
-                vec![self.put_lp_address_string.to_string()],
-                BlockTag::Latest,
-            )
-            .await
-        {
-            Ok(res) => res,
-            Err(_) => return Err(()),
-        };
+        }
 
-        // remove arr length
-        call.remove(0);
-        put.remove(0);
-
-        // combine both
-        call.extend(put);
-
-        Ok(call)
+        Ok(option_data)
     }
 
     pub async fn get_option_info_from_addresses(
