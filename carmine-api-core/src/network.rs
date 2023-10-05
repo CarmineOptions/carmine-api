@@ -6,7 +6,7 @@ const TESTNET_CALL_LP_ADDRESS: &str =
 const TESTNET_PUT_LP_ADDRESS: &str =
     "0x19c7d26452843d6458eac8027e8e0a4699e072c36280c6ef842297fd246d8d1";
 const TESTNET_CONTRACT_ADDRESS: &str =
-    "0x70eb12729e80d751e999557c9c1b0754a0c7933fbde0f310b99c8b6886e139e";
+    "0x070eb12729e80d751e999557c9c1b0754a0c7933fbde0f310b99c8b6886e139e";
 const MAINNET_CALL_LP_ADDRESS: &str =
     "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024";
 const MAINNET_PUT_LP_ADDRESS: &str =
@@ -154,7 +154,7 @@ pub fn protocol_address(network: &Network, protocol: &Protocol) -> &'static str 
             Network::Mainnet => {
                 "0x076dbabc4293db346b0a56b29b6ea9fe18e93742c73f12348c8747ecfc1050aa"
             }
-            Network::Testnet => "0x70eb12729e80d751e999557c9c1b0754a0c7933fbde0f310b99c8b6886e139e",
+            Network::Testnet => TESTNET_CONTRACT_ADDRESS,
         },
         Protocol::Hashstack => HASHSTACK_ADDRESS,
         Protocol::ZkLend => ZKLEND_ADDRESS,
