@@ -32,10 +32,10 @@ async fn report_block_discrepency() {
         blast_api_latest_block_number().await,
     ) {
         (Ok(carm), Ok(blast)) => (carm, blast),
-        (Err(e), _) => {
+        (Err(_), _) => {
             // carmine failed, report it
-            let msg = format!("Failed getting latest block number from Carmine Juno node with the following error: {:?}", e);
-            telegram_bot::send_message(msg.as_str()).await;
+            telegram_bot::send_message("Failed getting latest block number from Carmine Juno node")
+                .await;
             return;
         }
         // blast failed, but carmine ok - do not report

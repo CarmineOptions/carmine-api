@@ -1,18 +1,26 @@
-use std::env;
+use carmine_api_core::network::{Network, Protocol};
+use carmine_api_db::create_batch_of_starkscan_events;
 
-use carmine_api_core::network::Network;
-
-use carmine_api_starknet::carmine::Carmine;
+use carmine_api_starknet::starkscan::get_block_range_events;
 use dotenvy::dotenv;
 
 #[tokio::main]
 async fn main() {
     dotenv().ok();
-    env::set_var("ENVIRONMENT", "docker");
-    env::set_var("DB_IP", "34.159.91.62");
 
-    let carmine = Carmine::new(Network::Testnet);
-    carmine.get_options_with_addresses().await;
+    let mut current = 284000;
+    let increment = 500;
 
-    println!("Updated Carmine Testnet events");
+    while current < 285500 {
+        let events = get_block_range_events(&Protocol::ZkLend, current, current + increment).await;
+        create_batch_of_starkscan_events(&events, &Network::Mainnet);
+        println!("fetched {} - {}", current, current + increment);
+        current = current + increment;
+    }
+
+    let events = get_block_range_events(&Protocol::ZkLend, 277000, 277000).await;
+
+    println!("fetched {} events", &events.len());
+
+    create_batch_of_starkscan_events(&events, &Network::Mainnet);
 }

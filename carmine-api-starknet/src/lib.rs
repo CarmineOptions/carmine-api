@@ -64,10 +64,11 @@ pub async fn update_database_events() {
         sleep(Duration::from_secs(2)).await;
     }
 
+    create_batch_of_starkscan_events(&events, &Network::Mainnet);
+
     let testnet_carmine_events =
         get_protocol_events(&Network::Testnet, &Protocol::CarmineOptions).await;
 
-    create_batch_of_starkscan_events(&events, &Network::Mainnet);
     create_batch_of_starkscan_events(&testnet_carmine_events, &Network::Testnet);
 }
 

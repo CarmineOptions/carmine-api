@@ -1,10 +1,10 @@
-use std::{collections::HashMap, vec};
-
 use carmine_api_core::{
-    network::{call_lp_address, put_lp_address, Network, Protocol},
+    network::{Network, Protocol},
+    pool::{get_all_pools, Pool},
+    telegram_bot,
     types::{
-        AppData, IOption, OraclePrice, OraclePriceConcise, StarkScanEventSettled, TokenPair,
-        TradeHistory,
+        AppData, IOption, OraclePrice, OraclePriceConcise, PoolStateWithTimestamp,
+        StarkScanEventSettled, TokenPair, TradeHistory,
     },
     utils::token_pair_id,
 };
@@ -13,6 +13,7 @@ use carmine_api_db::{
     get_protocol_events_from_block,
 };
 use carmine_api_starknet::carmine::Carmine;
+use std::{collections::HashMap, vec};
 
 mod apy;
 
@@ -38,8 +39,7 @@ pub struct Cache {
     options: HashMap<String, IOption>,
     all_non_expired: Vec<String>,
     trade_history: Vec<TradeHistory>,
-    call_pool_address: &'static str,
-    put_pool_address: &'static str,
+    pools: Vec<Pool>,
 }
 
 impl Cache {
@@ -50,6 +50,7 @@ impl Cache {
         let options_vec = get_options(&network);
         let options = Cache::options_vec_to_hashmap(options_vec);
         let all_non_expired = vec![];
+        let pools = get_all_pools(&network);
 
         let mut cache = Cache {
             network,
@@ -58,8 +59,7 @@ impl Cache {
             options,
             all_non_expired,
             trade_history: Vec::new(),
-            call_pool_address: call_lp_address(&network),
-            put_pool_address: put_lp_address(&network),
+            pools,
         };
 
         cache.trade_history = Cache::generate_trade_history(&mut cache);
@@ -72,19 +72,16 @@ impl Cache {
         let all_non_expired = self.get_all_non_expired();
         let trade_history = self.get_trade_history();
         let option_volatility = get_options_volatility(&self.network);
-        let state_eth_usdc_call = get_pool_state(self.call_pool_address, &self.network);
-        let state_eth_usdc_put = get_pool_state(self.put_pool_address, &self.network);
-        let apy_eth_usdc_call = self.calculate_apy_for_pool(&self.call_pool_address);
-        let apy_eth_usdc_put = self.calculate_apy_for_pool(&self.put_pool_address);
+        let state = self.generate_state_hashmap();
+        let apy = self.generate_apy_hashmap();
         let oracle_prices = self.generate_oracle_prices_hash_map();
+
         AppData {
             all_non_expired,
             trade_history,
             option_volatility,
-            state_eth_usdc_call,
-            state_eth_usdc_put,
-            apy_eth_usdc_call,
-            apy_eth_usdc_put,
+            state,
+            apy,
             oracle_prices,
         }
     }
@@ -100,6 +97,26 @@ impl Cache {
     fn options_vec_to_hashmap(vec: Vec<IOption>) -> HashMap<String, IOption> {
         vec.into_iter().fold(HashMap::new(), |mut acc, option| {
             acc.insert(option.option_address.clone(), option);
+            acc
+        })
+    }
+
+    fn generate_state_hashmap(&self) -> HashMap<String, Vec<PoolStateWithTimestamp>> {
+        self.pools.iter().fold(HashMap::new(), |mut acc, pool| {
+            acc.insert(
+                pool.id.to_string(),
+                get_pool_state(&pool.address, &self.network),
+            );
+            acc
+        })
+    }
+
+    fn generate_apy_hashmap(&self) -> HashMap<String, f64> {
+        self.pools.iter().fold(HashMap::new(), |mut acc, pool| {
+            acc.insert(
+                pool.id.to_string(),
+                self.calculate_apy_for_pool(&pool.address),
+            );
             acc
         })
     }
@@ -153,16 +170,23 @@ impl Cache {
                     Some(v) => Some(v.clone()),
                     None => None,
                 };
-                // gotta do this because of closure
-                let put_pool_address = self.put_pool_address;
-                let call_pool_address = self.call_pool_address;
                 let liquidity_pool: Option<String> = if action.as_str() == "DepositLiquidity"
                     || action.as_str() == "WithdrawLiquidity"
                 {
-                    match token_address.as_str() {
-                        v if v == put_pool_address => Some("Put".to_string()),
-                        v if v == call_pool_address => Some("Call".to_string()),
-                        _ => None,
+                    let matched_pool = self
+                        .pools
+                        .iter()
+                        .find(|&pool| pool.address == token_address.as_str());
+
+                    match matched_pool {
+                        Some(pool) => {
+                            let pool_description = format!(
+                                "{}/{} {}",
+                                pool.base.symbol, pool.quote.symbol, pool.type_
+                            );
+                            Some(pool_description)
+                        }
+                        None => None,
                     }
                 } else {
                     None
@@ -215,8 +239,25 @@ impl Cache {
 
     pub async fn update_all_non_expired(&mut self) {
         let new_non_expired_result = self.carmine.get_all_non_expired_options_with_premia().await;
-        if let Ok(new_non_expired) = new_non_expired_result {
-            self.all_non_expired = new_non_expired;
+
+        match new_non_expired_result {
+            Ok(new_non_expired) => self.all_non_expired = new_non_expired,
+            Err(e) => {
+                println!(
+                    "Failed getting non expired options: {:?}, \nNetwork {}",
+                    e, &self.network
+                );
+                match &self.network {
+                    Network::Mainnet => {
+                        telegram_bot::send_message("Failed getting non expired options MAINNET")
+                            .await
+                    }
+                    Network::Testnet => {
+                        telegram_bot::send_message("Failed getting non expired options TESTNET")
+                            .await
+                    }
+                }
+            }
         }
     }
 

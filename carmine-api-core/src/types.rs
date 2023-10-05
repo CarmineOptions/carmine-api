@@ -30,11 +30,9 @@ pub struct AppData {
     pub all_non_expired: Vec<String>,
     pub trade_history: Vec<TradeHistory>,
     pub option_volatility: Vec<OptionWithVolatility>,
-    pub state_eth_usdc_call: Vec<PoolStateWithTimestamp>,
-    pub state_eth_usdc_put: Vec<PoolStateWithTimestamp>,
+    pub state: HashMap<String, Vec<PoolStateWithTimestamp>>,
     pub oracle_prices: HashMap<String, Vec<OraclePriceConcise>>,
-    pub apy_eth_usdc_call: f64,
-    pub apy_eth_usdc_put: f64,
+    pub apy: HashMap<String, f64>,
 }
 
 pub struct AppState {

@@ -1,5 +1,5 @@
-use carmine_api_core::network::{call_lp_address, put_lp_address, Network};
-use carmine_api_core::pool::get_all_pool_addresses;
+use carmine_api_core::network::Network;
+use carmine_api_core::pool::{get_all_pool_addresses, get_all_pools, Pool};
 use carmine_api_core::types::{DbBlock, IOption, OptionVolatility, PoolState};
 use carmine_api_db::{create_batch_of_options, get_option_with_address, get_options, get_pools};
 use carmine_api_rpc_gateway::{
@@ -30,20 +30,15 @@ struct FunctionDescriptor<'a> {
 }
 
 pub struct Carmine {
-    call_lp_address_string: &'static str,
-    put_lp_address_string: &'static str,
+    pools: Vec<Pool>,
     network: Network,
 }
 
 impl Carmine {
     pub fn new(network: Network) -> Self {
-        let call_lp_address_string = call_lp_address(&network);
-        let put_lp_address_string = put_lp_address(&network);
-
         Carmine {
             network,
-            call_lp_address_string,
-            put_lp_address_string,
+            pools: get_all_pools(&network),
         }
     }
 
@@ -93,26 +88,25 @@ impl Carmine {
         &self,
         option_address: &str,
     ) -> Result<IOption, &str> {
-        let call = self.amm_call(
-            Entrypoint::GetOptionInfoFromAddress,
-            vec![
-                self.call_lp_address_string.to_string(),
-                option_address.to_string(),
-            ],
-            BlockTag::Latest,
-        );
-        let put = self.amm_call(
-            Entrypoint::GetOptionInfoFromAddress,
-            vec![
-                self.put_lp_address_string.to_string(),
-                option_address.to_string(),
-            ],
-            BlockTag::Latest,
-        );
+        let pool_addresses: Vec<String> = self
+            .pools
+            .iter()
+            .map(|pool| pool.address.to_string())
+            .collect();
 
-        let contract_results = join_all(vec![call, put]).await;
+        let mut futures = vec![];
 
-        for (i, result) in contract_results.into_iter().enumerate() {
+        for address in &pool_addresses {
+            futures.push(self.amm_call(
+                Entrypoint::GetOptionInfoFromAddress,
+                vec![address.to_string(), option_address.to_string()],
+                BlockTag::Latest,
+            ))
+        }
+
+        let contract_results = join_all(futures).await;
+
+        for (i, result) in contract_results.iter().enumerate() {
             if let Ok(data) = result {
                 assert_eq!(data.len(), 6, "Got wrong size Option result");
 
@@ -122,11 +116,7 @@ impl Carmine {
                 let strike_price = data[2].to_owned();
                 let quote_token_address = data[3].to_owned();
                 let base_token_address = data[4].to_owned();
-                let lp_address = match i {
-                    0 => self.call_lp_address_string.to_string(),
-                    1 => self.put_lp_address_string.to_string(),
-                    _ => unreachable!("Hardcoded 2 lp_pools"),
-                };
+                let lp_address = pool_addresses[i].to_owned();
 
                 return Ok(IOption {
                     option_side,
@@ -194,7 +184,6 @@ impl Carmine {
                 return;
             }
             Ok(v) => {
-                println!("GET_ALL_OPTIONS RESULT {:#?}", v);
                 let mut res = v;
                 // first element is length of result array - remove it
                 res.remove(0);
@@ -218,8 +207,6 @@ impl Carmine {
         let mut fetched = 0;
 
         for option_vec in chunks {
-            println!("CHUNK {:#?}", option_vec);
-
             if option_vec.len() != option_length {
                 println!("Wrong option_vec size!");
                 continue;
@@ -300,14 +287,13 @@ impl Carmine {
         create_batch_of_options(&options, &self.network);
     }
 
-    /// This method fetches and stores in DB all options, addresses included.
-    /// !This method is extremely slow, because it waits 2s between
-    /// Starknet calls to avoid running into "rate limit" error!
     pub async fn get_options_with_addresses(&self) {
-        self.get_options_with_addresses_from_single_pool(&self.call_lp_address_string.to_owned())
-            .await;
-        self.get_options_with_addresses_from_single_pool(&self.put_lp_address_string.to_owned())
-            .await;
+        let pool_addresses = get_all_pool_addresses(&self.network);
+
+        for address in pool_addresses {
+            self.get_options_with_addresses_from_single_pool(&address.to_string())
+                .await;
+        }
     }
 
     pub async fn get_all_lptoken_addresses(&self) -> Result<Vec<String>, ()> {

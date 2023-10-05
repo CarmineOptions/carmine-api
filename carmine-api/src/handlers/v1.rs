@@ -11,13 +11,6 @@ use std::sync::{Arc, Mutex};
 
 const TESTNET: &'static str = "testnet";
 const MAINNET: &'static str = "mainnet";
-const ETH_USDC_CALL: &'static str = "eth-usdc-call";
-const ETH_USDC_PUT: &'static str = "eth-usdc-put";
-
-enum Pools {
-    EthUsdcCall,
-    EthUsdcPut,
-}
 
 #[get("/v1/{network}/live-options")]
 pub async fn live_options(
@@ -189,16 +182,8 @@ pub async fn pool_state(
     path: web::Path<String>,
     data: web::Data<Arc<Mutex<AppState>>>,
 ) -> impl Responder {
-    let pool = match path.into_inner().as_str() {
-        ETH_USDC_CALL => Pools::EthUsdcCall,
-        ETH_USDC_PUT => Pools::EthUsdcPut,
-        _ => {
-            return HttpResponse::BadRequest().json(GenericResponse {
-                status: "bad_request".to_string(),
-                message: "Specify network in the path".to_string(),
-            });
-        }
-    };
+    let pool_id = path.into_inner();
+
     let locked = &data.lock();
     let app_state = match locked {
         Ok(app_data) => app_data,
@@ -210,15 +195,24 @@ pub async fn pool_state(
         }
     };
 
-    HttpResponse::Ok()
-        .insert_header(AcceptEncoding(vec!["gzip".parse().unwrap()]))
-        .json(DataResponse {
-            status: "success".to_string(),
-            data: match pool {
-                Pools::EthUsdcCall => &app_state.mainnet.state_eth_usdc_call,
-                Pools::EthUsdcPut => &app_state.mainnet.state_eth_usdc_put,
-            },
-        })
+    match app_state.mainnet.state.get(&pool_id) {
+        Some(state) => {
+            // found state
+            return HttpResponse::Ok()
+                .insert_header(AcceptEncoding(vec!["gzip".parse().unwrap()]))
+                .json(DataResponse {
+                    status: "success".to_string(),
+                    data: state,
+                });
+        }
+        None => {
+            // invalid pool
+            return HttpResponse::BadRequest().json(GenericResponse {
+                status: "bad_request".to_string(),
+                message: "Invalid pool".to_string(),
+            });
+        }
+    }
 }
 
 #[get("/v1/mainnet/{pool}/state")]
@@ -226,16 +220,8 @@ pub async fn pool_state_last(
     path: web::Path<String>,
     data: web::Data<Arc<Mutex<AppState>>>,
 ) -> impl Responder {
-    let pool = match path.into_inner().as_str() {
-        ETH_USDC_CALL => Pools::EthUsdcCall,
-        ETH_USDC_PUT => Pools::EthUsdcPut,
-        _ => {
-            return HttpResponse::BadRequest().json(GenericResponse {
-                status: "bad_request".to_string(),
-                message: "Specify network in the path".to_string(),
-            });
-        }
-    };
+    let pool_id = path.into_inner();
+
     let locked = &data.lock();
     let app_state = match locked {
         Ok(app_data) => app_data,
@@ -247,9 +233,15 @@ pub async fn pool_state_last(
         }
     };
 
-    let state = match pool {
-        Pools::EthUsdcCall => &app_state.mainnet.state_eth_usdc_call,
-        Pools::EthUsdcPut => &app_state.mainnet.state_eth_usdc_put,
+    let state = match app_state.mainnet.state.get(&pool_id) {
+        Some(state) => state,
+        None => {
+            // invalid pool
+            return HttpResponse::BadRequest().json(GenericResponse {
+                status: "bad_request".to_string(),
+                message: "Invalid pool".to_string(),
+            });
+        }
     };
 
     let max_element = state.iter().max_by_key(|v| v.block_number);
@@ -273,16 +265,8 @@ pub async fn pool_apy(
     path: web::Path<String>,
     data: web::Data<Arc<Mutex<AppState>>>,
 ) -> impl Responder {
-    let pool = match path.into_inner().as_str() {
-        ETH_USDC_CALL => Pools::EthUsdcCall,
-        ETH_USDC_PUT => Pools::EthUsdcPut,
-        _ => {
-            return HttpResponse::BadRequest().json(GenericResponse {
-                status: "bad_request".to_string(),
-                message: "Specify network in the path".to_string(),
-            });
-        }
-    };
+    let pool_id = path.into_inner();
+
     let locked = &data.lock();
     let app_state = match locked {
         Ok(app_data) => app_data,
@@ -294,15 +278,24 @@ pub async fn pool_apy(
         }
     };
 
-    let apy = match pool {
-        Pools::EthUsdcCall => &app_state.mainnet.apy_eth_usdc_call,
-        Pools::EthUsdcPut => &app_state.mainnet.apy_eth_usdc_put,
-    };
-
-    HttpResponse::Ok().json(DataResponse {
-        status: "success".to_string(),
-        data: apy,
-    })
+    match app_state.mainnet.apy.get(&pool_id) {
+        Some(apy) => {
+            // found state
+            return HttpResponse::Ok()
+                .insert_header(AcceptEncoding(vec!["gzip".parse().unwrap()]))
+                .json(DataResponse {
+                    status: "success".to_string(),
+                    data: apy,
+                });
+        }
+        None => {
+            // invalid pool
+            return HttpResponse::BadRequest().json(GenericResponse {
+                status: "bad_request".to_string(),
+                message: "Invalid pool".to_string(),
+            });
+        }
+    }
 }
 
 #[get("/v1/mainnet/option-volatility")]
