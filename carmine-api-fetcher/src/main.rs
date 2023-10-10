@@ -76,7 +76,6 @@ async fn main() -> std::io::Result<()> {
                         "Carmine API `update_database_events` just panicked",
                     )
                     .await;
-                    panic!("Update events panicked");
                 } else {
                     println!("Database updated with events");
                 }
@@ -102,7 +101,6 @@ async fn main() -> std::io::Result<()> {
                         "Carmine API `update_database_amm_state` just panicked",
                     )
                     .await;
-                    panic!("Update database amm state panicked");
                 } else {
                     println!("Database updated with AMM state");
                 }
@@ -122,7 +120,6 @@ async fn main() -> std::io::Result<()> {
                     println!("Plug holes panicked\n{:?}", err);
                     telegram_bot::send_message("Carmine API `plug_holes_amm_state` just panicked")
                         .await;
-                    panic!("Plug holes panicked");
                 } else {
                     println!("Holes in AMM state pluged");
                 }
