@@ -8,19 +8,20 @@ use dotenvy::dotenv;
 async fn main() {
     dotenv().ok();
 
-    let mut current = 284000;
-    let increment = 500;
+    let mut current = 348095;
+    let increment = 5;
+    let max = 380000;
 
-    while current < 285500 {
-        let events = get_block_range_events(&Protocol::ZkLend, current, current + increment).await;
+    while current < max {
+        let events = get_block_range_events(
+            &Protocol::ZkLend,
+            &Network::Mainnet,
+            current,
+            current + increment,
+        )
+        .await;
         create_batch_of_starkscan_events(&events, &Network::Mainnet);
         println!("fetched {} - {}", current, current + increment);
         current = current + increment;
     }
-
-    let events = get_block_range_events(&Protocol::ZkLend, 277000, 277000).await;
-
-    println!("fetched {} events", &events.len());
-
-    create_batch_of_starkscan_events(&events, &Network::Mainnet);
 }

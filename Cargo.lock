@@ -531,6 +531,7 @@ dependencies = [
  "carmine-api-airdrop",
  "carmine-api-cache",
  "carmine-api-core",
+ "carmine-api-rpc-gateway",
  "carmine-api-starknet",
  "dotenvy",
  "env_logger",

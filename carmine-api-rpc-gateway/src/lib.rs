@@ -84,6 +84,8 @@ pub enum Entrypoint {
     GetPoolVolatilityAuto,
     #[serde(rename = "0x2902df4b2064da30c68f1bfad76271da9c6b10a3cfc41396ae75eef960bfcb")]
     GetOptionPosition,
+    #[serde(untagged)]
+    Literal(String),
 }
 
 pub enum Contract {

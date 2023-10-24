@@ -12,6 +12,7 @@ carmine-api-airdrop = { path = "../carmine-api-airdrop" }
 carmine-api-cache = { path = "../carmine-api-cache" }
 carmine-api-core = { path = "../carmine-api-core" }
 carmine-api-starknet = { path = "../carmine-api-starknet" }
+carmine-api-rpc-gateway = { path = "../carmine-api-rpc-gateway" }
 dotenvy = "0.15.6"
 env_logger = "0.10.0"
 lazy_static = "1.4.0"

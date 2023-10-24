@@ -5,8 +5,12 @@ use crate::{
         TradeHistoryResponse,
     },
 };
-use actix_web::{get, http::header::AcceptEncoding, web, HttpResponse, Responder};
+use actix_web::{get, http::header::AcceptEncoding, post, web, HttpResponse, Responder};
 use carmine_api_core::{network::Network, types::AppState};
+use carmine_api_rpc_gateway::{
+    carmine_amm_call, carmine_testnet_amm_call, BlockTag, Entrypoint, RpcError,
+};
+use serde::Deserialize;
 use std::sync::{Arc, Mutex};
 
 const TESTNET: &'static str = "testnet";
@@ -338,4 +342,63 @@ pub async fn prices(
         status: "success".to_string(),
         data: &app_state.mainnet.oracle_prices.get(&pair_id),
     })
+}
+
+#[derive(Debug, Deserialize)]
+struct CallPayload {
+    entrypoint: String,
+    calldata: Option<Vec<String>>,
+}
+
+async fn amm_call(
+    network: &Network,
+    entry_point: Entrypoint,
+    calldata: Vec<String>,
+    block: BlockTag,
+) -> Result<Vec<String>, RpcError> {
+    match network {
+        Network::Mainnet => carmine_amm_call(entry_point, calldata, block).await,
+        Network::Testnet => carmine_testnet_amm_call(entry_point, calldata, block).await,
+    }
+}
+
+#[post("/v1/{network}/call")]
+async fn call(path: web::Path<String>, payload: web::Json<CallPayload>) -> impl Responder {
+    let network = match path.into_inner().as_str() {
+        TESTNET => Network::Testnet,
+        MAINNET => Network::Mainnet,
+        _ => {
+            return HttpResponse::BadRequest().json(GenericResponse {
+                status: "bad_request".to_string(),
+                message: "Specify network in the path".to_string(),
+            });
+        }
+    };
+
+    let payload = payload.into_inner();
+
+    let entrypoint = payload.entrypoint;
+    let calldata = match payload.calldata {
+        Some(calldata) => calldata,
+        None => vec![],
+    };
+
+    let res = amm_call(
+        &network,
+        Entrypoint::Literal(entrypoint),
+        calldata,
+        BlockTag::Latest,
+    )
+    .await;
+
+    match res {
+        Ok(data) => HttpResponse::Ok().json(DataResponse {
+            status: "success".to_string(),
+            data,
+        }),
+        Err(e) => HttpResponse::InternalServerError().json(GenericResponse {
+            status: "failed".to_string(),
+            message: format!("failed with following error {:?}", e),
+        }),
+    }
 }

@@ -54,7 +54,7 @@ impl<'a> StarkscanUrlBuilder<'a> {
         self
     }
     pub fn from_block(mut self, n: u32) -> Self {
-        self.append_num_param("from_block", n);
+        self.append_num_param("from_block", n - 1);
         self
     }
     pub fn to_block(mut self, n: u32) -> Self {
@@ -291,13 +291,13 @@ pub async fn get_protocol_events(
 
 pub async fn get_block_range_events(
     protocol: &Protocol,
+    network: &Network,
     from: u32,
     to: u32,
 ) -> Vec<StarkScanEventSettled> {
-    let network = Network::Mainnet;
     // we want to fetch till there is no "next_url"
     let last_timestamp = 0;
-    let url = StarkscanUrlBuilder::new(&network)
+    let url = StarkscanUrlBuilder::new(network)
         .protocol(protocol)
         .from_block(from)
         .to_block(to)
