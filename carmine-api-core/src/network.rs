@@ -62,6 +62,31 @@ pub enum Protocol {
     NostraWBTCInterest,
     NostraWBTCDebt,
     NostraWBTCInterestCollateral,
+    Nostra2ETH,
+    Nostra2ETHCollateral,
+    Nostra2ETHInterest,
+    Nostra2ETHDebt,
+    Nostra2ETHInterestCollateral,
+    Nostra2USDC,
+    Nostra2USDCCollateral,
+    Nostra2USDCInterest,
+    Nostra2USDCDebt,
+    Nostra2USDCInterestCollateral,
+    Nostra2USDT,
+    Nostra2USDTCollateral,
+    Nostra2USDTInterest,
+    Nostra2USDTDebt,
+    Nostra2USDTInterestCollateral,
+    Nostra2DAI,
+    Nostra2DAICollateral,
+    Nostra2DAIInterest,
+    Nostra2DAIDebt,
+    Nostra2DAIInterestCollateral,
+    Nostra2WBTC,
+    Nostra2WBTCCollateral,
+    Nostra2WBTCInterest,
+    Nostra2WBTCDebt,
+    Nostra2WBTCInterestCollateral,
 }
 
 impl fmt::Display for Protocol {
@@ -101,6 +126,31 @@ impl fmt::Display for Protocol {
             Protocol::NostraWBTCInterest => write!(f, "NostraWBTCInterest"),
             Protocol::NostraWBTCDebt => write!(f, "NostraWBTCDebt"),
             Protocol::NostraWBTCInterestCollateral => write!(f, "NostraWBTCInterestCollateral"),
+            Protocol::Nostra2ETH => write!(f, "Nostra2ETH"),
+            Protocol::Nostra2ETHCollateral => write!(f, "Nostra2ETHCollateral"),
+            Protocol::Nostra2ETHInterest => write!(f, "Nostra2ETHInterest"),
+            Protocol::Nostra2ETHDebt => write!(f, "Nostra2ETHDebt"),
+            Protocol::Nostra2ETHInterestCollateral => write!(f, "Nostra2ETHInterestCollateral"),
+            Protocol::Nostra2USDC => write!(f, "Nostra2USDC"),
+            Protocol::Nostra2USDCCollateral => write!(f, "Nostra2USDCCollateral"),
+            Protocol::Nostra2USDCInterest => write!(f, "Nostra2USDCInterest"),
+            Protocol::Nostra2USDCDebt => write!(f, "Nostra2USDCDebt"),
+            Protocol::Nostra2USDCInterestCollateral => write!(f, "Nostra2USDCInterestCollateral"),
+            Protocol::Nostra2USDT => write!(f, "Nostra2USDT"),
+            Protocol::Nostra2USDTCollateral => write!(f, "Nostra2USDTCollateral"),
+            Protocol::Nostra2USDTInterest => write!(f, "Nostra2USDTInterest"),
+            Protocol::Nostra2USDTDebt => write!(f, "Nostra2USDTDebt"),
+            Protocol::Nostra2USDTInterestCollateral => write!(f, "Nostra2USDTInterestCollateral"),
+            Protocol::Nostra2DAI => write!(f, "Nostra2DAI"),
+            Protocol::Nostra2DAICollateral => write!(f, "Nostra2DAICollateral"),
+            Protocol::Nostra2DAIInterest => write!(f, "Nostra2DAIInterest"),
+            Protocol::Nostra2DAIDebt => write!(f, "Nostra2DAIDebt"),
+            Protocol::Nostra2DAIInterestCollateral => write!(f, "Nostra2DAIInterestCollateral"),
+            Protocol::Nostra2WBTC => write!(f, "Nostra2WBTC"),
+            Protocol::Nostra2WBTCCollateral => write!(f, "Nostra2WBTCCollateral"),
+            Protocol::Nostra2WBTCInterest => write!(f, "Nostra2WBTCInterest"),
+            Protocol::Nostra2WBTCDebt => write!(f, "Nostra2WBTCDebt"),
+            Protocol::Nostra2WBTCInterestCollateral => write!(f, "Nostra2WBTCInterestCollateral"),
         }
     }
 }
@@ -236,6 +286,82 @@ pub fn protocol_address(network: &Network, protocol: &Protocol) -> &'static str 
         }
         Protocol::NostraWBTCInterestCollateral => {
             "0x00687b5d9e591844169bc6ad7d7256c4867a10cee6599625b9d78ea17a7caef9"
+        }
+
+        Protocol::Nostra2ETH => {
+            "0x07170f54dd61ae85377f75131359e3f4a12677589bb7ec5d61f362915a5c0982"
+        }
+        Protocol::Nostra2ETHCollateral => {
+            "0x044debfe17e4d9a5a1e226dabaf286e72c9cc36abbe71c5b847e669da4503893"
+        }
+        Protocol::Nostra2ETHInterest => {
+            "0x01fecadfe7cda2487c66291f2970a629be8eecdcb006ba4e71d1428c2b7605c7"
+        }
+        Protocol::Nostra2ETHDebt => {
+            "0x00ba3037d968790ac486f70acaa9a1cab10cf5843bb85c986624b4d0e5a82e74"
+        }
+        Protocol::Nostra2ETHInterestCollateral => {
+            "0x057146f6409deb4c9fa12866915dd952aa07c1eb2752e451d7f3b042086bdeb8"
+        }
+        Protocol::Nostra2USDC => {
+            "0x06eda767a143da12f70947192cd13ee0ccc077829002412570a88cd6539c1d85"
+        }
+        Protocol::Nostra2USDCCollateral => {
+            "0x05f296e1b9f4cf1ab452c218e72e02a8713cee98921dad2d3b5706235e128ee4"
+        }
+        Protocol::Nostra2USDCInterest => {
+            "0x002fc2d4b41cc1f03d185e6681cbd40cced61915d4891517a042658d61cba3b1"
+        }
+        Protocol::Nostra2USDCDebt => {
+            "0x063d69ae657bd2f40337c39bf35a870ac27ddf91e6623c2f52529db4c1619a51"
+        }
+        Protocol::Nostra2USDCInterestCollateral => {
+            "0x05dcd26c25d9d8fd9fc860038dcb6e4d835e524eb8a85213a8cda5b7fff845f6"
+        }
+        Protocol::Nostra2USDT => {
+            "0x06669cb476aa7e6a29c18b59b54f30b8bfcfbb8444f09e7bbb06c10895bf5d7b"
+        }
+        Protocol::Nostra2USDTCollateral => {
+            "0x057717edc5b1e56743e8153be626729eb0690b882466ef0cbedc8a28bb4973b1"
+        }
+        Protocol::Nostra2USDTInterest => {
+            "0x0360f9786a6595137f84f2d6931aaec09ceec476a94a98dcad2bb092c6c06701"
+        }
+        Protocol::Nostra2USDTDebt => {
+            "0x024e9b0d6bc79e111e6872bb1ada2a874c25712cf08dfc5bcf0de008a7cca55f"
+        }
+        Protocol::Nostra2USDTInterestCollateral => {
+            "0x0453c4c996f1047d9370f824d68145bd5e7ce12d00437140ad02181e1d11dc83"
+        }
+        Protocol::Nostra2DAI => {
+            "0x02b5fd690bb9b126e3517f7abfb9db038e6a69a068303d06cf500c49c1388e20"
+        }
+        Protocol::Nostra2DAICollateral => {
+            "0x005c4676bcb21454659479b3cd0129884d914df9c9b922c1c649696d2e058d70"
+        }
+        Protocol::Nostra2DAIInterest => {
+            "0x022ccca3a16c9ef0df7d56cbdccd8c4a6f98356dfd11abc61a112483b242db90"
+        }
+        Protocol::Nostra2DAIDebt => {
+            "0x066037c083c33330a8460a65e4748ceec275bbf5f28aa71b686cbc0010e12597"
+        }
+        Protocol::Nostra2DAIInterestCollateral => {
+            "0x04f18ffc850cdfa223a530d7246d3c6fc12a5969e0aa5d4a88f470f5fe6c46e9"
+        }
+        Protocol::Nostra2WBTC => {
+            "0x073132577e25b06937c64787089600886ede6202d085e6340242a5a32902e23e"
+        }
+        Protocol::Nostra2WBTCCollateral => {
+            "0x036b68238f3a90639d062669fdec08c4d0bdd09826b1b6d24ef49de6d8141eaa"
+        }
+        Protocol::Nostra2WBTCInterest => {
+            "0x0735d0f09a4e8bf8a17005fa35061b5957dcaa56889fc75df9e94530ff6991ea"
+        }
+        Protocol::Nostra2WBTCDebt => {
+            "0x0491480f21299223b9ce770f23a2c383437f9fbf57abc2ac952e9af8cdb12c97"
+        }
+        Protocol::Nostra2WBTCInterestCollateral => {
+            "0x05b7d301fa769274f20e89222169c0fad4d846c366440afc160aafadd6f88f0c"
         }
     }
 }
