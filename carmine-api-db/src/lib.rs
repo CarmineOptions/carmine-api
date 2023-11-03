@@ -152,6 +152,18 @@ pub fn create_oracle_price(data: &OraclePrice, network: &Network) {
         .expect("Error saving oracle price");
 }
 
+pub fn get_last_block_for_protocol_event(network: &Network, protocol: &Protocol) -> Option<i64> {
+    use crate::schema::starkscan_events::dsl::*;
+
+    let connection = &mut establish_connection(network);
+
+    starkscan_events
+        .filter(from_address.eq(protocol_address(network, protocol)))
+        .select(max(block_number))
+        .first(connection)
+        .expect("Error getting last block_number for protocol events")
+}
+
 pub fn get_last_timestamp_for_protocol_event(
     network: &Network,
     protocol: &Protocol,

@@ -7,7 +7,7 @@ use carmine_api_core::{
     types::{Event, StarkScanEvent, StarkScanEventResult, StarkScanEventSettled},
 };
 use carmine_api_db::{
-    create_batch_of_events, get_last_timestamp_carmine_event, get_last_timestamp_for_protocol_event,
+    create_batch_of_events, get_last_block_for_protocol_event, get_last_timestamp_carmine_event,
 };
 use reqwest::{Client, Error, Response};
 use serde::de::DeserializeOwned;
@@ -250,6 +250,7 @@ pub async fn fetch_events(
 ) -> Vec<StarkScanEventSettled> {
     let mut data: Vec<StarkScanEventSettled> = vec![];
     _fetch_events(&initial_url, &mut data, cutoff_timestamp).await;
+    println!("Fetching event, URL: {}, data: {}", initial_url, data.len());
     data
 }
 
@@ -279,14 +280,16 @@ pub async fn get_protocol_events(
     network: &Network,
     protocol: &Protocol,
 ) -> Vec<StarkScanEventSettled> {
-    let last_timestamp = match get_last_timestamp_for_protocol_event(network, protocol) {
-        Some(t) => t,
+    let last_block_number: u32 = match get_last_block_for_protocol_event(network, protocol) {
+        Some(t) => t.try_into().expect("Failed parsing block_number -> u32"),
         None => 0,
     };
+    println!("Protocol: {}, last block: {}", protocol, last_block_number);
     let url = StarkscanUrlBuilder::new(&network)
         .protocol(protocol)
+        .from_block(last_block_number)
         .get_url();
-    fetch_events(url, last_timestamp).await
+    fetch_events(url, 0).await
 }
 
 pub async fn get_block_range_events(
