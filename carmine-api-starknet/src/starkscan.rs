@@ -54,7 +54,7 @@ impl<'a> StarkscanUrlBuilder<'a> {
         self
     }
     pub fn from_block(mut self, n: u32) -> Self {
-        self.append_num_param("from_block", n - 1);
+        self.append_num_param("from_block", n);
         self
     }
     pub fn to_block(mut self, n: u32) -> Self {

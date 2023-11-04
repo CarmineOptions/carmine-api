@@ -62,6 +62,7 @@ pub enum Protocol {
     NostraWBTCInterest,
     NostraWBTCDebt,
     NostraWBTCInterestCollateral,
+    Nostra2InterestModel,
     Nostra2ETH,
     Nostra2ETHCollateral,
     Nostra2ETHInterest,
@@ -126,6 +127,7 @@ impl fmt::Display for Protocol {
             Protocol::NostraWBTCInterest => write!(f, "NostraWBTCInterest"),
             Protocol::NostraWBTCDebt => write!(f, "NostraWBTCDebt"),
             Protocol::NostraWBTCInterestCollateral => write!(f, "NostraWBTCInterestCollateral"),
+            Protocol::Nostra2InterestModel => write!(f, "Nostra2InterestModel"),
             Protocol::Nostra2ETH => write!(f, "Nostra2ETH"),
             Protocol::Nostra2ETHCollateral => write!(f, "Nostra2ETHCollateral"),
             Protocol::Nostra2ETHInterest => write!(f, "Nostra2ETHInterest"),
@@ -287,7 +289,9 @@ pub fn protocol_address(network: &Network, protocol: &Protocol) -> &'static str 
         Protocol::NostraWBTCInterestCollateral => {
             "0x00687b5d9e591844169bc6ad7d7256c4867a10cee6599625b9d78ea17a7caef9"
         }
-
+        Protocol::Nostra2InterestModel => {
+            "0x059a943ca214c10234b9a3b61c558ac20c005127d183b86a99a8f3c60a08b4ff"
+        }
         Protocol::Nostra2ETH => {
             "0x07170f54dd61ae85377f75131359e3f4a12677589bb7ec5d61f362915a5c0982"
         }

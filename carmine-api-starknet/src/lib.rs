@@ -51,6 +51,7 @@ pub async fn update_database_events() {
         Protocol::NostraWBTCInterest,
         Protocol::NostraWBTCDebt,
         Protocol::NostraWBTCInterestCollateral,
+        Protocol::Nostra2InterestModel,
         Protocol::Nostra2ETH,
         Protocol::Nostra2ETHCollateral,
         Protocol::Nostra2ETHInterest,
