@@ -1,11 +1,8 @@
-use carmine_api_core::network::Network;
+use carmine_api_core::network::{amm_address, Network};
 use carmine_api_core::pool::{get_all_pool_addresses, get_all_pools, Pool};
 use carmine_api_core::types::{DbBlock, IOption, OptionVolatility, PoolState};
 use carmine_api_db::{create_batch_of_options, get_option_with_address, get_options, get_pools};
-use carmine_api_rpc_gateway::{
-    carmine_amm_call, carmine_get_block_header, carmine_testnet_amm_call, BlockTag, Entrypoint,
-    RpcError,
-};
+use carmine_api_rpc_gateway::{call, carmine_get_block_header, BlockTag, Entrypoint, RpcError};
 use futures::future::join_all;
 use futures::FutureExt;
 use starknet::core::types::FieldElement;
@@ -44,14 +41,19 @@ impl Carmine {
 
     pub async fn amm_call(
         &self,
-        entry_point: Entrypoint,
+        entry_point_selector: String,
         calldata: Vec<String>,
         block: BlockTag,
     ) -> Result<Vec<String>, RpcError> {
-        match self.network {
-            Network::Mainnet => carmine_amm_call(entry_point, calldata, block).await,
-            Network::Testnet => carmine_testnet_amm_call(entry_point, calldata, block).await,
-        }
+        let contract_address = amm_address(&self.network).to_string();
+        call(
+            contract_address,
+            entry_point_selector,
+            calldata,
+            block,
+            &self.network,
+        )
+        .await
     }
 
     pub async fn get_all_non_expired_options_with_premia(&self) -> Result<Vec<String>, RpcError> {
@@ -61,8 +63,8 @@ impl Carmine {
 
         for address in pool_addresses {
             futures.push(self.amm_call(
-                Entrypoint::GetAllNonExpiredOptionsWithPremia,
-                vec![address.to_string()], // TODO: should be &str
+                format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
+                vec![address.to_string()],
                 BlockTag::Latest,
             ))
         }
@@ -98,7 +100,7 @@ impl Carmine {
 
         for address in &pool_addresses {
             futures.push(self.amm_call(
-                Entrypoint::GetOptionInfoFromAddress,
+                format!("{}", Entrypoint::GetOptionInfoFromAddress),
                 vec![address.to_string(), option_address.to_string()],
                 BlockTag::Latest,
             ))
@@ -155,7 +157,7 @@ impl Carmine {
 
         match self
             .amm_call(
-                Entrypoint::GetOptionTokenAddress,
+                format!("{}", Entrypoint::GetOptionTokenAddress),
                 calldata,
                 BlockTag::Latest,
             )
@@ -172,7 +174,7 @@ impl Carmine {
     async fn get_options_with_addresses_from_single_pool(&self, pool_address: &String) {
         let contract_result = self
             .amm_call(
-                Entrypoint::GetAllOptions,
+                format!("{}", Entrypoint::GetAllOptions),
                 vec![pool_address.to_owned()],
                 BlockTag::Latest,
             )
@@ -297,8 +299,13 @@ impl Carmine {
     }
 
     pub async fn get_all_lptoken_addresses(&self) -> Result<Vec<String>, ()> {
-        let call_result =
-            carmine_amm_call(Entrypoint::GetAllLPTokenAddresses, vec![], BlockTag::Latest).await;
+        let call_result = self
+            .amm_call(
+                format!("{}", Entrypoint::GetAllLPTokenAddresses),
+                vec![],
+                BlockTag::Latest,
+            )
+            .await;
 
         let mut data = match call_result {
             Ok(v) => v,
@@ -321,7 +328,14 @@ impl Carmine {
         pool: String,
         entry_point: Entrypoint,
     ) -> Result<String, RpcError> {
-        match carmine_amm_call(entry_point, vec![pool], BlockTag::Number(block_number)).await {
+        match self
+            .amm_call(
+                format!("{}", entry_point),
+                vec![pool],
+                BlockTag::Number(block_number),
+            )
+            .await
+        {
             Ok(v) => Ok(v[0].to_owned()),
             Err(e) => Err(e),
         }
@@ -374,12 +388,13 @@ impl Carmine {
         block_number: i64,
         pool: String,
     ) -> Result<Option<String>, RpcError> {
-        match carmine_amm_call(
-            Entrypoint::GetUnderlyingForLptoken,
-            vec![pool, TEN_POW_18.to_owned(), "0".to_owned()],
-            BlockTag::Number(block_number),
-        )
-        .await
+        match self
+            .amm_call(
+                format!("{}", Entrypoint::GetUnderlyingForLptoken),
+                vec![pool, TEN_POW_18.to_owned(), "0".to_owned()],
+                BlockTag::Number(block_number),
+            )
+            .await
         {
             Ok(v) => Ok(Some(v[0].to_owned())),
             Err(e) if matches!(e, RpcError::ContractError(_)) => Ok(None),
@@ -560,8 +575,8 @@ impl Carmine {
         let strike = opt.strike_price;
         let side = opt.option_side.to_string();
 
-        let volatility_future = Box::pin(carmine_amm_call(
-            Entrypoint::GetPoolVolatilityAuto,
+        let volatility_future = Box::pin(self.amm_call(
+            format!("{}", Entrypoint::GetPoolVolatilityAuto),
             vec![
                 lp_address.to_owned(),
                 maturity.to_owned(),
@@ -570,8 +585,8 @@ impl Carmine {
             BlockTag::Number(block_number),
         ));
 
-        let position_future = Box::pin(carmine_amm_call(
-            Entrypoint::GetOptionPosition,
+        let position_future = Box::pin(self.amm_call(
+            format!("{}", Entrypoint::GetOptionPosition),
             vec![lp_address, side, maturity, strike],
             BlockTag::Number(block_number),
         ));

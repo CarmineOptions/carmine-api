@@ -33,7 +33,7 @@ pub fn config(conf: &mut web::ServiceConfig) {
                 .service(v1::pool_state_last)
                 .service(v1::pool_apy)
                 .service(v1::prices)
-                .service(v1::call)
+                .service(v1::proxy_call)
                 .service(v0::all_non_expired_handler)
                 .service(v0::trade_history_handler)
                 .service(v0::all_trade_history_handler),

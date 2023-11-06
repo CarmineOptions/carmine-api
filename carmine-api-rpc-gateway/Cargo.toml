@@ -22,3 +22,7 @@ name = "test"
 [[bin]]
 path = "./src/bin/call.rs"
 name = "call"
+
+[[bin]]
+path = "./src/bin/foo.rs"
+name = "foo"

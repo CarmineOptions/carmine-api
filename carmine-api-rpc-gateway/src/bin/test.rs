@@ -1,60 +1,46 @@
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
-use carmine_api_core::network::{call_lp_address, Network};
-use carmine_api_rpc_gateway::{blast_api_call, infura_call, Contract, Entrypoint};
+use carmine_api_core::network::{amm_address, call_lp_address, Network};
+use carmine_api_rpc_gateway::{rpc_call, BlockTag, Entrypoint, RpcNode};
+use dotenvy::dotenv;
+use tokio::time::sleep;
 
-async fn infura_bench() {
-    let number_of_runs: usize = 20;
-    let mut failed: usize = 0;
-    let mut succeeded: usize = 0;
-    let mut cum_time: u128 = 0;
-
-    for _ in 0..number_of_runs {
-        let before = Instant::now();
-        let res = infura_call(
-            Contract::AMM,
-            Entrypoint::GetAllNonExpiredOptionsWithPremia,
-            vec![call_lp_address(&Network::Mainnet).to_owned()],
-        )
-        .await;
-        let t = before.elapsed().as_millis();
-        match res {
-            Ok(_) => {
-                succeeded += 1;
-                cum_time += t;
-            }
-            Err(_) => {
-                failed += 1;
-            }
-        };
-    }
-    println!(
-        "\nINFURA\nCumulative time: {}, succeded: {}, failed: {}\naverage: {}\n",
-        cum_time,
-        succeeded,
-        failed,
-        cum_time / succeeded as u128
-    );
+#[allow(dead_code)]
+#[derive(Debug)]
+struct BenchResult {
+    node: RpcNode,
+    cumulative_time: u128,
+    successful: usize,
+    failed: usize,
+    average: u128,
 }
 
-async fn blast_api_bench() {
-    let number_of_runs: usize = 20;
+impl BenchResult {
+    pub fn report(&self) {
+        println!("{:#?}", self);
+    }
+}
+
+async fn bench(node: RpcNode, number_of_runs: usize) -> BenchResult {
     let mut failed: usize = 0;
-    let mut succeeded: usize = 0;
+    let mut successful: usize = 0;
     let mut cum_time: u128 = 0;
 
     for _ in 0..number_of_runs {
         let before = Instant::now();
-        let res = blast_api_call(
-            Contract::AMM,
-            Entrypoint::GetAllNonExpiredOptionsWithPremia,
+
+        let res = rpc_call(
+            amm_address(&Network::Mainnet).to_string(),
+            format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
             vec![call_lp_address(&Network::Mainnet).to_owned()],
+            BlockTag::Latest,
+            node,
         )
         .await;
         let t = before.elapsed().as_millis();
         match res {
             Ok(_) => {
-                succeeded += 1;
+                successful += 1;
                 cum_time += t;
             }
             Err(_) => {
@@ -62,17 +48,23 @@ async fn blast_api_bench() {
             }
         };
     }
-    println!(
-        "\nBLAST API\nCumulative time: {}, succeded: {}, failed: {}\naverage: {}\n",
-        cum_time,
-        succeeded,
+
+    BenchResult {
+        node,
+        cumulative_time: cum_time,
+        successful,
         failed,
-        cum_time / succeeded as u128
-    );
+        average: cum_time / successful as u128,
+    }
 }
 
 #[tokio::main]
 async fn main() {
-    blast_api_bench().await;
-    infura_bench().await;
+    dotenv().ok();
+
+    bench(RpcNode::BlastAPI, 20).await.report();
+    sleep(Duration::from_secs(10)).await;
+    bench(RpcNode::Infura, 20).await.report();
+    sleep(Duration::from_secs(10)).await;
+    bench(RpcNode::CarmineJunoNode, 20).await.report();
 }

@@ -7,9 +7,7 @@ use crate::{
 };
 use actix_web::{get, http::header::AcceptEncoding, post, web, HttpResponse, Responder};
 use carmine_api_core::{network::Network, types::AppState};
-use carmine_api_rpc_gateway::{
-    carmine_amm_call, carmine_testnet_amm_call, BlockTag, Entrypoint, RpcError,
-};
+use carmine_api_rpc_gateway::{call, BlockTag};
 use serde::Deserialize;
 use std::sync::{Arc, Mutex};
 
@@ -346,24 +344,13 @@ pub async fn prices(
 
 #[derive(Debug, Deserialize)]
 struct CallPayload {
-    entrypoint: String,
+    contract_address: String,
+    entrypoint_selector: String,
     calldata: Option<Vec<String>>,
 }
 
-async fn amm_call(
-    network: &Network,
-    entry_point: Entrypoint,
-    calldata: Vec<String>,
-    block: BlockTag,
-) -> Result<Vec<String>, RpcError> {
-    match network {
-        Network::Mainnet => carmine_amm_call(entry_point, calldata, block).await,
-        Network::Testnet => carmine_testnet_amm_call(entry_point, calldata, block).await,
-    }
-}
-
 #[post("/v1/{network}/call")]
-async fn call(path: web::Path<String>, payload: web::Json<CallPayload>) -> impl Responder {
+async fn proxy_call(path: web::Path<String>, payload: web::Json<CallPayload>) -> impl Responder {
     let network = match path.into_inner().as_str() {
         TESTNET => Network::Testnet,
         MAINNET => Network::Mainnet,
@@ -377,17 +364,19 @@ async fn call(path: web::Path<String>, payload: web::Json<CallPayload>) -> impl 
 
     let payload = payload.into_inner();
 
-    let entrypoint = payload.entrypoint;
+    let contract_address = payload.contract_address;
+    let entrypoint_selector = payload.entrypoint_selector;
     let calldata = match payload.calldata {
         Some(calldata) => calldata,
         None => vec![],
     };
 
-    let res = amm_call(
-        &network,
-        Entrypoint::Literal(entrypoint),
+    let res = call(
+        contract_address,
+        entrypoint_selector,
         calldata,
         BlockTag::Latest,
+        &network,
     )
     .await;
 

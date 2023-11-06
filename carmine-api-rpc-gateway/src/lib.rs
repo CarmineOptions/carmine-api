@@ -1,3 +1,4 @@
+use core::fmt;
 use std::env;
 
 use carmine_api_core::{
@@ -22,12 +23,12 @@ lazy_static! {
 
 #[derive(Debug, Serialize)]
 pub struct RpcCallData {
-    contract_address: &'static str,
-    entry_point_selector: Entrypoint,
+    contract_address: String,
+    entry_point_selector: String,
     calldata: Vec<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Copy, Clone)]
 pub enum BlockTag {
     #[serde(rename = "latest")]
     Latest,
@@ -88,11 +89,80 @@ pub enum Entrypoint {
     Literal(String),
 }
 
+impl fmt::Display for Entrypoint {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Entrypoint::GetOptionWithPositionOfUser => write!(
+                f,
+                "0x2b20b26ede4304b68503c401a342731579b75844e5696ee13e6286cd51a9621"
+            ),
+            Entrypoint::GetAllNonExpiredOptionsWithPremia => write!(
+                f,
+                "0x28465ebd72d95a0985251c1cbd769fd70bd499003d1ed138cc4263dcd4154a8"
+            ),
+            Entrypoint::GetUserPoolInfos => write!(
+                f,
+                "0x3dbcec84ecc7488ae5f857e7a396bd0db953174c6824154aa472341d1fc6f63"
+            ),
+            Entrypoint::GetTotalPremia => write!(
+                f,
+                "0x2f38757c6884edf9bd154a4cc0f03e9532c951f013089950d0a03242ca0c266"
+            ),
+            Entrypoint::GetOptionInfoFromAddress => write!(
+                f,
+                "0x1600ab5a061ebfec75cb9a452efd442a99a0afeaa7c910b4083114f30bff2f1"
+            ),
+            Entrypoint::GetOptionTokenAddress => write!(
+                f,
+                "0x14e79ebec158e1f661acf7d89ad12cd6cc4a47a712c3fbd62bc96bf65ca52f0"
+            ),
+            Entrypoint::GetAllOptions => write!(
+                f,
+                "0x0230b3b6ebadc35ebd0b91e93d39824daff6574cbe99bb7882037547cbb75197"
+            ),
+            Entrypoint::GetAllLPTokenAddresses => write!(
+                f,
+                "0x3a59b17481476f4a9926cf55852dcc59e941e04e7c7afc16d1c887637e6b349"
+            ),
+            Entrypoint::GetPoolLockedCapital => write!(
+                f,
+                "0xf58610cee3c804f0e87861ce266e465952f846d7f11a298b4a37f548065494"
+            ),
+            Entrypoint::GetUnlockedCapital => write!(
+                f,
+                "0x27e73afcf5eeea68f07ecec320a8a6ef66a0fec2a6555c98d7906efd26bafb9"
+            ),
+            Entrypoint::GetLpoolBalance => write!(
+                f,
+                "0x2b70e1b30215b8a9fdff94bce47077d43936e89d1180300a63f6b176b7d699e"
+            ),
+            Entrypoint::GetValueOfPoolPosition => write!(
+                f,
+                "0x399adda47235e1d39043a5931bead6042f3990866c6bd3091f582014f8a4f90"
+            ),
+            Entrypoint::GetUnderlyingForLptoken => write!(
+                f,
+                "0x68bb6b599048b94cdd7832f2ebbbda4b596b150896fc09bd70f88e2c488595"
+            ),
+            Entrypoint::GetPoolVolatilityAuto => write!(
+                f,
+                "0xe8cc8c9fca554ee3ae877935823ca461ba94b34a427e3272fd465e0790e1af"
+            ),
+            Entrypoint::GetOptionPosition => write!(
+                f,
+                "0x2902df4b2064da30c68f1bfad76271da9c6b10a3cfc41396ae75eef960bfcb"
+            ),
+            Entrypoint::Literal(s) => write!(f, "{}", s.clone()),
+        }
+    }
+}
+
 pub enum Contract {
     AMM,
     AMMTestnet,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum RpcNode {
     BlastAPI,
     Infura,
@@ -132,15 +202,15 @@ pub fn map_contract_to_address(contract: Contract) -> &'static str {
 }
 
 pub fn build_call_body(
-    contract: Contract,
-    entry_point: Entrypoint,
+    contract_address: String,
+    entry_point_selector: String,
     calldata: Vec<String>,
     block: BlockTag,
 ) -> RpcCallBody {
     let params = vec![
         Params::CallData(RpcCallData {
-            contract_address: map_contract_to_address(contract),
-            entry_point_selector: entry_point,
+            contract_address,
+            entry_point_selector,
             calldata,
         }),
         Params::BlockTag(block),
@@ -239,13 +309,13 @@ pub async fn rpc_block_header(block: BlockTag, node: RpcNode) -> Result<DbBlock,
 }
 
 pub async fn rpc_call(
-    contract: Contract,
-    entry_point: Entrypoint,
+    contract_address: String,
+    entry_point_selector: String,
     calldata: Vec<String>,
     block: BlockTag,
     node: RpcNode,
 ) -> Result<Vec<String>, RpcError> {
-    let body = build_call_body(contract, entry_point, calldata, block);
+    let body = build_call_body(contract_address, entry_point_selector, calldata, block);
 
     let request = rpc_request(body, node);
 
@@ -287,17 +357,102 @@ pub async fn rpc_call(
     )))
 }
 
-pub async fn blast_api_call(
-    contract: Contract,
-    entry_point: Entrypoint,
+pub async fn call(
+    contract_address: String,
+    entry_point_selector: String,
     calldata: Vec<String>,
+    block: BlockTag,
+    network: &Network,
 ) -> Result<Vec<String>, RpcError> {
+    match network {
+        &Network::Mainnet => {
+            mainnet_call(contract_address, entry_point_selector, calldata, block).await
+        }
+        &Network::Testnet => {
+            testnet_call(contract_address, entry_point_selector, calldata, block).await
+        }
+    }
+}
+
+pub async fn testnet_call(
+    contract_address: String,
+    entry_point_selector: String,
+    calldata: Vec<String>,
+    block: BlockTag,
+) -> Result<Vec<String>, RpcError> {
+    let juno_res = rpc_call(
+        contract_address.clone(),
+        entry_point_selector.clone(),
+        calldata.to_vec(),
+        block,
+        RpcNode::CarmineTestnetJunoNode,
+    )
+    .await;
+
+    match juno_res {
+        Ok(data) => return Ok(data),
+        // if Other error, cascade to next RPC Node
+        Err(e) if matches!(e, RpcError::Other(_)) => (),
+        // if other than Other error, return error - calling other node would give same result
+        Err(e) => return Err(e),
+    };
+
     rpc_call(
-        contract,
-        entry_point,
+        contract_address,
+        entry_point_selector,
         calldata,
-        BlockTag::Latest,
+        block,
+        RpcNode::InfuraTestnet,
+    )
+    .await
+}
+
+pub async fn mainnet_call(
+    contract_address: String,
+    entry_point_selector: String,
+    calldata: Vec<String>,
+    block: BlockTag,
+) -> Result<Vec<String>, RpcError> {
+    let juno_res = rpc_call(
+        contract_address.clone(),
+        entry_point_selector.clone(),
+        calldata.to_vec(),
+        block,
+        RpcNode::CarmineJunoNode,
+    )
+    .await;
+
+    match juno_res {
+        Ok(data) => return Ok(data),
+        // if Other error, cascade to next RPC Node
+        Err(e) if matches!(e, RpcError::Other(_)) => (),
+        // if other than Other error, return error - calling other node would give same result
+        Err(e) => return Err(e),
+    };
+
+    let blast_api_res = rpc_call(
+        contract_address.clone(),
+        entry_point_selector.clone(),
+        calldata.to_vec(),
+        block,
         RpcNode::BlastAPI,
+    )
+    .await;
+
+    match blast_api_res {
+        Ok(data) => return Ok(data),
+        // if Other error, cascade to next RPC Node
+        Err(e) if matches!(e, RpcError::Other(_)) => (),
+        // if other than Other error, return error - calling other node would give same result
+        Err(e) => return Err(e),
+    };
+
+    rpc_call(
+        contract_address,
+        entry_point_selector,
+        calldata,
+        block,
+        RpcNode::Infura,
     )
     .await
 }
@@ -306,69 +461,8 @@ pub async fn blast_api_latest_block_number() -> Result<i64, RpcError> {
     rpc_latest_block_number(RpcNode::BlastAPI).await
 }
 
-pub async fn infura_call(
-    contract: Contract,
-    entry_point: Entrypoint,
-    calldata: Vec<String>,
-) -> Result<Vec<String>, RpcError> {
-    rpc_call(
-        contract,
-        entry_point,
-        calldata,
-        BlockTag::Latest,
-        RpcNode::Infura,
-    )
-    .await
-}
-
 pub async fn infura_latest_block_number() -> Result<i64, RpcError> {
     rpc_latest_block_number(RpcNode::Infura).await
-}
-
-pub async fn carmine_call(
-    contract: Contract,
-    entry_point: Entrypoint,
-    calldata: Vec<String>,
-    block: BlockTag,
-) -> Result<Vec<String>, RpcError> {
-    rpc_call(
-        contract,
-        entry_point,
-        calldata,
-        block,
-        RpcNode::CarmineJunoNode,
-    )
-    .await
-}
-
-pub async fn carmine_amm_call(
-    entry_point: Entrypoint,
-    calldata: Vec<String>,
-    block: BlockTag,
-) -> Result<Vec<String>, RpcError> {
-    rpc_call(
-        Contract::AMM,
-        entry_point,
-        calldata,
-        block,
-        RpcNode::CarmineJunoNode,
-    )
-    .await
-}
-
-pub async fn carmine_testnet_amm_call(
-    entry_point: Entrypoint,
-    calldata: Vec<String>,
-    block: BlockTag,
-) -> Result<Vec<String>, RpcError> {
-    rpc_call(
-        Contract::AMMTestnet,
-        entry_point,
-        calldata,
-        block,
-        RpcNode::CarmineTestnetJunoNode,
-    )
-    .await
 }
 
 pub async fn carmine_get_block_header(block: BlockTag) -> Result<DbBlock, RpcError> {
