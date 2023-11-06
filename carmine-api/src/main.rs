@@ -125,7 +125,7 @@ async fn main() -> std::io::Result<()> {
             .allowed_origin(Origins::PRODUCTION)
             .allowed_origin(Origins::PRODUCTION_MAINNET)
             .allowed_origin(Origins::PRODUCTION_TESTNET)
-            .allowed_methods(vec!["GET"])
+            .allowed_methods(vec!["GET", "POST", "OPTIONS"])
             .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
             .allowed_header(header::CONTENT_TYPE)
             .supports_credentials()
