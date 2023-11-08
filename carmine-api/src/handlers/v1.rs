@@ -5,11 +5,31 @@ use crate::{
         TradeHistoryResponse,
     },
 };
-use actix_web::{get, http::header::AcceptEncoding, post, web, HttpResponse, Responder};
+use actix_web::{
+    get,
+    http::header::AcceptEncoding,
+    post,
+    web::{self},
+    HttpResponse, Responder,
+};
 use carmine_api_core::{network::Network, types::AppState};
-use carmine_api_rpc_gateway::{call, BlockTag};
-use serde::Deserialize;
-use std::sync::{Arc, Mutex};
+use lazy_static::lazy_static;
+use std::{
+    env,
+    sync::{Arc, Mutex},
+};
+
+lazy_static! {
+    static ref BLAST_API_URL: String =
+        env::var("BLAST_API_URL").expect("missing env var BLAST_API_URL");
+    static ref INFURA_URL: String = env::var("INFURA_URL").expect("missing env var INFURA_URL");
+    static ref INFURA_TESTNET_URL: String =
+        env::var("INFURA_TESTNET_URL").expect("missing env var INFURA_TESTNET_URL");
+    static ref CARMINE_JUNO_NODE_URL: String =
+        env::var("CARMINE_JUNO_NODE_URL").expect("missing env var CARMINE_JUNO_NODE_URL");
+    static ref CARMINE_JUNO_TESTNET_NODE_URL: String = env::var("CARMINE_JUNO_TESTNET_NODE_URL")
+        .expect("missing env var CARMINE_JUNO_TESTNET_NODE_URL");
+}
 
 const TESTNET: &'static str = "testnet";
 const MAINNET: &'static str = "mainnet";
@@ -342,52 +362,72 @@ pub async fn prices(
     })
 }
 
-#[derive(Debug, Deserialize)]
-struct CallPayload {
-    contract_address: String,
-    entrypoint_selector: String,
-    calldata: Option<Vec<String>>,
-}
-
 #[post("/v1/{network}/call")]
-async fn proxy_call(path: web::Path<String>, payload: web::Json<CallPayload>) -> impl Responder {
+async fn proxy_call(path: web::Path<String>, payload: Option<web::Bytes>) -> impl Responder {
     let network = match path.into_inner().as_str() {
         TESTNET => Network::Testnet,
         MAINNET => Network::Mainnet,
-        _ => {
+        unknown_network => {
             return HttpResponse::BadRequest().json(GenericResponse {
                 status: "bad_request".to_string(),
-                message: "Specify network in the path".to_string(),
+                message: format!("Unknown network {}", unknown_network),
             });
         }
     };
 
-    let payload = payload.into_inner();
+    let client = reqwest::Client::new();
 
-    let contract_address = payload.contract_address;
-    let entrypoint_selector = payload.entrypoint_selector;
-    let calldata = match payload.calldata {
-        Some(calldata) => calldata,
-        None => vec![],
+    let some_payload = match payload {
+        Some(data) => data,
+        None => {
+            return HttpResponse::BadRequest().json(GenericResponse {
+                status: "bad_request".to_string(),
+                message: "No payload was provided".to_string(),
+            })
+        }
     };
 
-    let res = call(
-        contract_address,
-        entrypoint_selector,
-        calldata,
-        BlockTag::Latest,
-        &network,
-    )
-    .await;
+    let carmine_juno_url = match network {
+        Network::Mainnet => CARMINE_JUNO_NODE_URL.as_str(),
+        Network::Testnet => CARMINE_JUNO_TESTNET_NODE_URL.as_str(),
+    };
 
-    match res {
-        Ok(data) => HttpResponse::Ok().json(DataResponse {
-            status: "success".to_string(),
-            data,
-        }),
-        Err(e) => HttpResponse::InternalServerError().json(GenericResponse {
-            status: "failed".to_string(),
-            message: format!("failed with following error {:?}", e),
-        }),
+    // proxy to Carmine Juno Node
+    let juno_res = client
+        .post(carmine_juno_url)
+        .body(some_payload.to_vec())
+        .send()
+        .await;
+
+    if let Ok(ok_response) = juno_res {
+        let parsed_response = ok_response.bytes().await;
+        if let Ok(bytes) = parsed_response {
+            return HttpResponse::Ok().body(bytes);
+        }
     }
+
+    let infura_node_url = match network {
+        Network::Mainnet => INFURA_URL.as_str(),
+        Network::Testnet => INFURA_TESTNET_URL.as_str(),
+    };
+
+    // if Carmine Juno Node did not succeed proxy to Infura Node
+    let infura_res = client
+        .post(infura_node_url)
+        .body(some_payload.to_vec())
+        .send()
+        .await;
+
+    if let Ok(ok_response) = infura_res {
+        let parsed_response = ok_response.bytes().await;
+        if let Ok(bytes) = parsed_response {
+            return HttpResponse::Ok().body(bytes);
+        }
+    }
+
+    // if neither succeeded return internal server error
+    HttpResponse::InternalServerError().json(GenericResponse {
+        status: "error".to_string(),
+        message: "Failed to get response from RPC Nodes".to_string(),
+    })
 }
