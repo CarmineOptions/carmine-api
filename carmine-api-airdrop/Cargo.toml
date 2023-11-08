@@ -13,3 +13,7 @@ starknet-crypto = "0.4.2"
 [[bin]]
 path = "./src/bin/get_root.rs"
 name = "get_root"
+
+[[bin]]
+path = "./src/bin/update.rs"
+name = "update"
