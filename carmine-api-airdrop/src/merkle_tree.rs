@@ -192,7 +192,7 @@ pub fn read_airdrop() -> Vec<Airdrop> {
     let right_path_res = possible_paths.iter().find(|path| Path::new(path).exists());
     let right_path = match right_path_res {
         Some(v) => Path::new(v),
-        None => panic!("Incorect airdrop file path"),
+        None => panic!("Incorrect airdrop file path"),
     };
     let file = File::open(right_path).expect("Failed to read file");
     let reader = std::io::BufReader::new(file);
