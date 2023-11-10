@@ -492,3 +492,23 @@ pub fn update_option_volatility(
         println!("FAILED! {}", block);
     }
 }
+
+pub fn update_token_value(block: i64, pool: String, new_value: String, network: &Network) {
+    use crate::schema::pool_state::dsl::*;
+
+    let connection = &mut establish_connection(network);
+
+    let res = diesel::update(pool_state)
+        .filter(lp_address.eq(pool))
+        .filter(block_number.eq(block))
+        .set(lp_token_value.eq(new_value))
+        .execute(connection);
+
+    match res {
+        Ok(size) => println!(
+            "SUCCESS: updated block {} - returned value: {}",
+            block, size
+        ),
+        Err(e) => println!("FAIL: block {} failed: {:?}", block, e),
+    }
+}

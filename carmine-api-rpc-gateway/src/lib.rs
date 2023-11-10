@@ -257,7 +257,7 @@ pub async fn rpc_latest_block_number(node: RpcNode) -> Result<i64, RpcError> {
     let parsed_response_option = match response.json::<Option<RpcResponse<i64>>>().await {
         Ok(res) => res,
         Err(e) => {
-            println!("Request failed: {:?}", e);
+            println!("rpc_latest_block_number failed: {:?}", e);
             return Err(RpcError::Other("RPC block number failed".to_string()));
         }
     };
@@ -297,7 +297,7 @@ pub async fn rpc_block_header(block: BlockTag, node: RpcNode) -> Result<DbBlock,
     let result = match parsed_response {
         Ok(res) => res.result,
         Err(e) => {
-            println!("Request failed: {:?}", e);
+            println!("rpc_block_header failed: {:?}", e);
             return Err(RpcError::Other("RPC block header failed".to_string()));
         }
     };
@@ -332,7 +332,7 @@ pub async fn rpc_call(
     let rpc_response = match parsed_response {
         Ok(data) => data,
         Err(e) => {
-            println!("Request failed: {:?}", e);
+            println!("rpc_call failed: {:?}", e);
             return Err(RpcError::Other("RPC node request failed".to_string()));
         }
     };
