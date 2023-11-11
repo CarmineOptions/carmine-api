@@ -315,14 +315,17 @@ pub async fn rpc_call(
     block: BlockTag,
     node: RpcNode,
 ) -> Result<Vec<String>, RpcError> {
+    let err_message = format!(
+        "rpc_call failed - entry_point_selector: {} - calldata: {:?}",
+        &entry_point_selector, &calldata
+    );
     let body = build_call_body(contract_address, entry_point_selector, calldata, block);
-
     let request = rpc_request(body, node);
 
     let response = match request.send().await {
         Ok(response) => response,
         Err(e) => {
-            println!("call failed: {:#?}", e);
+            println!("request.send() error, {}, {}", err_message, e);
             return Err(RpcError::Other("call failed".to_string()));
         }
     };
@@ -332,7 +335,7 @@ pub async fn rpc_call(
     let rpc_response = match parsed_response {
         Ok(data) => data,
         Err(e) => {
-            println!("rpc_call failed: {:?}", e);
+            println!("{} - error: {}", err_message, e);
             return Err(RpcError::Other("RPC node request failed".to_string()));
         }
     };

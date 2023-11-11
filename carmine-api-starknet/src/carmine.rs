@@ -18,7 +18,7 @@ fn to_hex(v: FieldElement) -> String {
     format!("{:#x}", v)
 }
 
-const TEN_POW_18: &'static str = "1000000000000000000";
+const TEN_POW_18: &'static str = "0xde0b6b3a7640000";
 
 #[allow(dead_code)]
 struct FunctionDescriptor<'a> {
