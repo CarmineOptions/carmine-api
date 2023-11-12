@@ -53,6 +53,7 @@ impl AmmStateObserver {
         );
 
         println!("Fetched single block state in {:.2?}", t0.elapsed());
+        println!("AMM State Result: {:?}", amm_state_result);
 
         match (
             options_volatility_result,
