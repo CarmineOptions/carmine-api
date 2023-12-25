@@ -2,11 +2,11 @@ use std::fmt;
 
 // Starknet addresses
 const TESTNET_CALL_LP_ADDRESS: &str =
-    "0x5b3bafb3afa300eeea9415d049b8694c6dc3e1e0e07d04d8f17766cb49745e";
+    "0x5822f9be49b7c92402b16badc5fa30dd01689463db1081b59ec6e989c10cae5";
 const TESTNET_PUT_LP_ADDRESS: &str =
-    "0x19c7d26452843d6458eac8027e8e0a4699e072c36280c6ef842297fd246d8d1";
+    "0x5eb2ddbe4dc9cd04018e1614756f4321cce211d3a8690fd9688ae4a314e9d9";
 const TESTNET_CONTRACT_ADDRESS: &str =
-    "0x070eb12729e80d751e999557c9c1b0754a0c7933fbde0f310b99c8b6886e139e";
+    "0x282530d787351ad7a90fdf0ecd52c6fa2ba57452cc08ea0309d1141c4356387";
 const MAINNET_CALL_LP_ADDRESS: &str =
     "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024";
 const MAINNET_PUT_LP_ADDRESS: &str =
@@ -326,7 +326,7 @@ pub fn protocol_address(network: &Network, protocol: &Protocol) -> &'static str 
             "0x06669cb476aa7e6a29c18b59b54f30b8bfcfbb8444f09e7bbb06c10895bf5d7b"
         }
         Protocol::Nostra2USDTCollateral => {
-            "0x057717edc5b1e56743e8153be626729eb0690b882466ef0cbedc8a28bb4973b1"
+            "0x0514bd7ee8c97d4286bd481c54aa0793e43edbfb7e1ab9784c4b30469dcf9313"
         }
         Protocol::Nostra2USDTInterest => {
             "0x0360f9786a6595137f84f2d6931aaec09ceec476a94a98dcad2bb092c6c06701"
