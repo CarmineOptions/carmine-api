@@ -72,7 +72,7 @@ const MAINNET_BTC: Token = Token {
 };
 
 const TESTNET_ETH_USDC_CALL: Pool = Pool {
-    address: "0x73e39528d223b3bb7a27400516120f634564f14d45cddf4ba04834d083f2968",
+    address: "0x5822f9be49b7c92402b16badc5fa30dd01689463db1081b59ec6e989c10cae5",
     network: Network::Testnet,
     type_: Type::Call,
     base: TESTNET_ETH,
@@ -81,7 +81,7 @@ const TESTNET_ETH_USDC_CALL: Pool = Pool {
 };
 
 const TESTNET_ETH_USDC_PUT: Pool = Pool {
-    address: "0x519ddd4a869bc75fdfccaf40af1c8aa42ea34b703391d248b2098513ed2e98e",
+    address: "0x5eb2ddbe4dc9cd04018e1614756f4321cce211d3a8690fd9688ae4a314e9d9",
     network: Network::Testnet,
     type_: Type::Put,
     base: TESTNET_ETH,
@@ -128,12 +128,7 @@ const MAINNET_ETH_USDC_PUT: Pool = Pool {
 pub fn get_all_pools(network: &Network) -> Vec<Pool> {
     match network {
         Network::Mainnet => vec![MAINNET_ETH_USDC_CALL, MAINNET_ETH_USDC_PUT],
-        Network::Testnet => vec![
-            TESTNET_ETH_USDC_CALL,
-            TESTNET_ETH_USDC_PUT,
-            TESTNET_BTC_USDC_CALL,
-            TESTNET_BTC_USDC_PUT,
-        ],
+        Network::Testnet => vec![TESTNET_ETH_USDC_CALL, TESTNET_ETH_USDC_PUT],
     }
 }
 
