@@ -90,7 +90,7 @@ const TESTNET_ETH_USDC_PUT: Pool = Pool {
 };
 
 const TESTNET_BTC_USDC_CALL: Pool = Pool {
-    address: "0x4a6016451ec67270b2c2e6b3431343053891ef28ee01fc613923e7d3c61ee1",
+    address: "0x117cd5721ba22a6a758fbb06071a6a14137ba975f748828973e93167314dc01",
     network: Network::Testnet,
     type_: Type::Call,
     base: TESTNET_BTC,
@@ -99,7 +99,7 @@ const TESTNET_BTC_USDC_CALL: Pool = Pool {
 };
 
 const TESTNET_BTC_USDC_PUT: Pool = Pool {
-    address: "0x7a82787b8fc4a90dd5e3e573d95e32606c972747bce6600711dcfea9fb8c868",
+    address: "0x3423b6b6e166b2aa067a67e8d387e0bdee978c109b049921e8019b9c882dc86",
     network: Network::Testnet,
     type_: Type::Put,
     base: TESTNET_BTC,
