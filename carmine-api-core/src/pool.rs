@@ -128,7 +128,12 @@ const MAINNET_ETH_USDC_PUT: Pool = Pool {
 pub fn get_all_pools(network: &Network) -> Vec<Pool> {
     match network {
         Network::Mainnet => vec![MAINNET_ETH_USDC_CALL, MAINNET_ETH_USDC_PUT],
-        Network::Testnet => vec![TESTNET_ETH_USDC_CALL, TESTNET_ETH_USDC_PUT],
+        Network::Testnet => vec![
+            TESTNET_ETH_USDC_CALL,
+            TESTNET_ETH_USDC_PUT,
+            TESTNET_BTC_USDC_CALL,
+            TESTNET_BTC_USDC_PUT,
+        ],
     }
 }
 
