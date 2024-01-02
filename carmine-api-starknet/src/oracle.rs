@@ -5,11 +5,13 @@ use carmine_api_core::{
 use starknet::{
     core::types::{BlockId, FieldElement, FunctionCall},
     macros::selector,
-    providers::{Provider, SequencerGatewayProvider},
+    providers::{jsonrpc::HttpTransport, JsonRpcClient, Provider},
 };
+use std::env;
+use url::Url;
 
 pub struct Oracle {
-    provider: SequencerGatewayProvider,
+    provider: JsonRpcClient<HttpTransport>,
     name: OracleName,
     oracle_name: String,
     oracle_address: FieldElement,
@@ -17,7 +19,9 @@ pub struct Oracle {
 
 impl Oracle {
     pub fn new(oracle: OracleName) -> Self {
-        let provider = SequencerGatewayProvider::starknet_alpha_mainnet();
+        let rpc_url = env::var("CARMINE_JUNO_NODE_URL")
+            .expect("missing env var CARMINE_JUNO_NODE_URL in Oracle");
+        let provider = JsonRpcClient::new(HttpTransport::new(Url::parse(&rpc_url).unwrap()));
         let (oracle_address, oracle_name) = match &oracle {
             OracleName::Pragma => (
                 FieldElement::from_hex_be(

@@ -9,12 +9,12 @@ async fn main() {
     dotenv().ok();
 
     let network = &Network::Mainnet;
-    let protocols = vec![&Protocol::NostraETHInterest];
+    let protocols = vec![&Protocol::Nostra2USDTCollateral];
 
-    let start = 135935;
+    let start = 168000;
     let mut current;
-    let increment = 10;
-    let max = 135945;
+    let increment = 1000;
+    let max = 473000;
 
     for protocol in protocols {
         current = start;
