@@ -27,9 +27,11 @@ const ZWBTC_ADDRESS: &str = "0x02b9ea3acdb23da566cee8e8beae3125a1458e720dea68c4a
 const MAINNET_STARKSCAN_API_BASE_URL: &str = "https://api.starkscan.co/api/v0/events";
 const TESTNET_STARKSCAN_API_BASE_URL: &str = "https://api-testnet.starkscan.co/api/v0/events";
 
+#[derive(Debug)]
 pub enum Protocol {
     CarmineOptions,
     Hashstack,
+    Hashstack2,
     ZkLend,
     ZETH,
     ZUSDC,
@@ -91,69 +93,8 @@ pub enum Protocol {
 }
 
 impl fmt::Display for Protocol {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Protocol::CarmineOptions => write!(f, "CarmineOptions"),
-            Protocol::Hashstack => write!(f, "Hashstack"),
-            Protocol::ZkLend => write!(f, "ZkLend"),
-            Protocol::ZETH => write!(f, "zETH"),
-            Protocol::ZUSDC => write!(f, "zUSDC"),
-            Protocol::ZUSDT => write!(f, "zUSDT"),
-            Protocol::ZDAI => write!(f, "zDAI"),
-            Protocol::ZWBTC => write!(f, "zWBTC"),
-            Protocol::NostraInterestModel => write!(f, "NostraInterestModel"),
-            Protocol::NostraETH => write!(f, "NostraETH"),
-            Protocol::NostraETHCollateral => write!(f, "NostraETHCollateral"),
-            Protocol::NostraETHInterest => write!(f, "NostraETHInterest"),
-            Protocol::NostraETHDebt => write!(f, "NostraETHDebt"),
-            Protocol::NostraETHInterestCollateral => write!(f, "NostraETHInterestCollateral"),
-            Protocol::NostraUSDC => write!(f, "NostraUSDC"),
-            Protocol::NostraUSDCCollateral => write!(f, "NostraUSDCCollateral"),
-            Protocol::NostraUSDCInterest => write!(f, "NostraUSDCInterest"),
-            Protocol::NostraUSDCDebt => write!(f, "NostraUSDCDebt"),
-            Protocol::NostraUSDCInterestCollateral => write!(f, "NostraUSDCInterestCollateral"),
-            Protocol::NostraUSDT => write!(f, "NostraUSDT"),
-            Protocol::NostraUSDTCollateral => write!(f, "NostraUSDTCollateral"),
-            Protocol::NostraUSDTInterest => write!(f, "NostraUSDTInterest"),
-            Protocol::NostraUSDTDebt => write!(f, "NostraUSDTDebt"),
-            Protocol::NostraUSDTInterestCollateral => write!(f, "NostraUSDTInterestCollateral"),
-            Protocol::NostraDAI => write!(f, "NostraDAI"),
-            Protocol::NostraDAICollateral => write!(f, "NostraDAICollateral"),
-            Protocol::NostraDAIInterest => write!(f, "NostraDAIInterest"),
-            Protocol::NostraDAIDebt => write!(f, "NostraDAIDebt"),
-            Protocol::NostraDAIInterestCollateral => write!(f, "NostraDAIInterestCollateral"),
-            Protocol::NostraWBTC => write!(f, "NostraWBTC"),
-            Protocol::NostraWBTCCollateral => write!(f, "NostraWBTCCollateral"),
-            Protocol::NostraWBTCInterest => write!(f, "NostraWBTCInterest"),
-            Protocol::NostraWBTCDebt => write!(f, "NostraWBTCDebt"),
-            Protocol::NostraWBTCInterestCollateral => write!(f, "NostraWBTCInterestCollateral"),
-            Protocol::Nostra2InterestModel => write!(f, "Nostra2InterestModel"),
-            Protocol::Nostra2ETH => write!(f, "Nostra2ETH"),
-            Protocol::Nostra2ETHCollateral => write!(f, "Nostra2ETHCollateral"),
-            Protocol::Nostra2ETHInterest => write!(f, "Nostra2ETHInterest"),
-            Protocol::Nostra2ETHDebt => write!(f, "Nostra2ETHDebt"),
-            Protocol::Nostra2ETHInterestCollateral => write!(f, "Nostra2ETHInterestCollateral"),
-            Protocol::Nostra2USDC => write!(f, "Nostra2USDC"),
-            Protocol::Nostra2USDCCollateral => write!(f, "Nostra2USDCCollateral"),
-            Protocol::Nostra2USDCInterest => write!(f, "Nostra2USDCInterest"),
-            Protocol::Nostra2USDCDebt => write!(f, "Nostra2USDCDebt"),
-            Protocol::Nostra2USDCInterestCollateral => write!(f, "Nostra2USDCInterestCollateral"),
-            Protocol::Nostra2USDT => write!(f, "Nostra2USDT"),
-            Protocol::Nostra2USDTCollateral => write!(f, "Nostra2USDTCollateral"),
-            Protocol::Nostra2USDTInterest => write!(f, "Nostra2USDTInterest"),
-            Protocol::Nostra2USDTDebt => write!(f, "Nostra2USDTDebt"),
-            Protocol::Nostra2USDTInterestCollateral => write!(f, "Nostra2USDTInterestCollateral"),
-            Protocol::Nostra2DAI => write!(f, "Nostra2DAI"),
-            Protocol::Nostra2DAICollateral => write!(f, "Nostra2DAICollateral"),
-            Protocol::Nostra2DAIInterest => write!(f, "Nostra2DAIInterest"),
-            Protocol::Nostra2DAIDebt => write!(f, "Nostra2DAIDebt"),
-            Protocol::Nostra2DAIInterestCollateral => write!(f, "Nostra2DAIInterestCollateral"),
-            Protocol::Nostra2WBTC => write!(f, "Nostra2WBTC"),
-            Protocol::Nostra2WBTCCollateral => write!(f, "Nostra2WBTCCollateral"),
-            Protocol::Nostra2WBTCInterest => write!(f, "Nostra2WBTCInterest"),
-            Protocol::Nostra2WBTCDebt => write!(f, "Nostra2WBTCDebt"),
-            Protocol::Nostra2WBTCInterestCollateral => write!(f, "Nostra2WBTCInterestCollateral"),
-        }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
     }
 }
 
@@ -209,6 +150,9 @@ pub fn protocol_address(network: &Network, protocol: &Protocol) -> &'static str 
             Network::Testnet => TESTNET_CONTRACT_ADDRESS,
         },
         Protocol::Hashstack => HASHSTACK_ADDRESS,
+        Protocol::Hashstack2 => {
+            "0x01b862c518939339b950d0d21a3d4cc8ead102d6270850ac8544636e558fab68"
+        }
         Protocol::ZkLend => ZKLEND_ADDRESS,
         Protocol::ZETH => ZETH_ADDRESS,
         Protocol::ZUSDC => ZUSDC_ADDRESS,

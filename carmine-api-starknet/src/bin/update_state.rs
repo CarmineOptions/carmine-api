@@ -7,22 +7,14 @@ async fn main() {
 
     let state_updater = AmmStateObserver::new();
 
-    let mut n = 475000;
+    let mut n = 475225;
 
     while n < 491903 {
         let res = state_updater.update_single_block(n).await;
         match res {
-            Ok(_) => println!("Updated state for block {}", n),
-            Err(_) => println!("Failed updating block"),
+            Ok(_) => println!("UPDATED {}", n),
+            Err(_) => println!("FAILED {}", n),
         }
         n += 1;
     }
-
-    // for n in 41432..=41434 {
-    //     let res = state_updater.update_single_block(n).await;
-    //     match res {
-    //         Ok(_) => println!("Updated state for block {}", n),
-    //         Err(_) => panic!("Failed updating block"),
-    //     }
-    // }
 }
