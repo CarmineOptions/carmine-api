@@ -151,7 +151,7 @@ pub fn protocol_address(network: &Network, protocol: &Protocol) -> &'static str 
         },
         Protocol::Hashstack => HASHSTACK_ADDRESS,
         Protocol::Hashstack2 => {
-            "0x01b862c518939339b950d0d21a3d4cc8ead102d6270850ac8544636e558fab68"
+            "0x01ef7f9f8bf01678dc6d27e2c26fb7e8eac3812a24752e6a1d6a49d153bec9f3"
         }
         Protocol::ZkLend => ZKLEND_ADDRESS,
         Protocol::ZETH => ZETH_ADDRESS,
