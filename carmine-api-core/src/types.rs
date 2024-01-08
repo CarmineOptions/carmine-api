@@ -209,17 +209,11 @@ pub struct OraclePriceConcise {
     pub block_number: i64,
 }
 
-#[derive(Queryable)]
+#[derive(Queryable, Insertable)]
+#[diesel(table_name = referral_codes)]
 pub struct ReferralCode {
     pub wallet_address: String,
     pub referral_code: String,
-}
-
-#[derive(Insertable)]
-#[table_name = "referral_codes"]
-pub struct NewReferralCode<'a> {
-    pub wallet_address: &'a str,
-    pub referral_code: &'a str,
 }
 
 #[derive(Queryable)]
@@ -231,7 +225,7 @@ pub struct ReferralEvent {
 }
 
 #[derive(Insertable)]
-#[table_name = "referral_events"]
+#[diesel(table_name = referral_events)]
 pub struct NewReferralEvent<'a> {
     pub referred_wallet_address: &'a str,
     pub referral_code: &'a str,

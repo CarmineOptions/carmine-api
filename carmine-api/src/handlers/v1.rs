@@ -13,6 +13,7 @@ use actix_web::{
     HttpResponse, Responder,
 };
 use carmine_api_core::{network::Network, types::AppState};
+use carmine_api_db::get_referral_code;
 use lazy_static::lazy_static;
 use std::{
     env,
@@ -429,5 +430,25 @@ async fn proxy_call(path: web::Path<String>, payload: Option<web::Bytes>) -> imp
     HttpResponse::InternalServerError().json(GenericResponse {
         status: "error".to_string(),
         message: "Failed to get response from RPC Nodes".to_string(),
+    })
+}
+
+#[get("/v1/mainnet/get_referral")]
+pub async fn get_referral(opts: web::Query<QueryOptions>) -> impl Responder {
+    let address = match &opts.address {
+        Some(address) => format_tx(address),
+        _ => {
+            return HttpResponse::BadRequest().json(GenericResponse {
+                status: "bad_request".to_string(),
+                message: "Did not receive address as a query parameter".to_string(),
+            });
+        }
+    };
+
+    let referral_code = get_referral_code(address);
+
+    HttpResponse::Ok().json(DataResponse::<String> {
+        status: "success".to_string(),
+        data: referral_code,
     })
 }
