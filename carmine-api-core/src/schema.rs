@@ -91,6 +91,22 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    referral_codes (wallet_address) {
+        wallet_address -> Text,
+        referral_code -> Text,
+    }
+}
+
+diesel::table! {
+    referral_events (id) {
+        id -> Int4,
+        referred_wallet_address -> Text,
+        referral_code -> Text,
+        timestamp -> Timestamp,
+    }
+}
+
 diesel::allow_tables_to_appear_in_same_query!(
     events,
     options,
@@ -102,6 +118,9 @@ diesel::allow_tables_to_appear_in_same_query!(
     starkscan_events,
 );
 
+diesel::allow_tables_to_appear_in_same_query!(referral_codes, referral_events,);
+
 diesel::joinable!(pool_state -> blocks (block_number));
 diesel::joinable!(options_volatility -> blocks (block_number));
 diesel::joinable!(oracle_prices -> blocks (block_number));
+diesel::joinable!(referral_events -> referral_codes (referral_code));
