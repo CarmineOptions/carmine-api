@@ -9,12 +9,25 @@ async fn main() {
     dotenv().ok();
 
     let network = &Network::Mainnet;
-    let protocols = vec![&Protocol::Hashstack2];
+    let protocols = vec![
+        &Protocol::HashstackBTCDToken,
+        &Protocol::HashstackETHRToken,
+        &Protocol::HashstackETHDToken,
+        &Protocol::HashstackUSDTRToken,
+        &Protocol::HashstackUSDTDToken,
+        &Protocol::HashstackUSDCRToken,
+        &Protocol::HashstackUSDCDToken,
+        &Protocol::HashstackDAIRToken,
+        &Protocol::HashstackDAIDToken,
+        &Protocol::HashstackStaking,
+        &Protocol::HashstackDiamond,
+        &Protocol::HashstackL3Diamond,
+    ];
 
-    let start = 468500;
+    let start = 265000;
     let mut current;
-    let increment = 500;
-    let max = 492929;
+    let increment = 2000;
+    let max = 499401;
 
     for protocol in protocols {
         current = start;

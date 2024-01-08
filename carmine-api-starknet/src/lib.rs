@@ -18,8 +18,6 @@ pub async fn update_database_events() {
 
     let protocols = [
         Protocol::CarmineOptions,
-        Protocol::Hashstack,
-        Protocol::Hashstack2,
         Protocol::ZkLend,
         Protocol::ZETH,
         Protocol::ZWBTC,
@@ -78,6 +76,18 @@ pub async fn update_database_events() {
         Protocol::Nostra2WBTCInterest,
         Protocol::Nostra2WBTCDebt,
         Protocol::Nostra2WBTCInterestCollateral,
+        Protocol::HashstackBTCDToken,
+        Protocol::HashstackETHRToken,
+        Protocol::HashstackETHDToken,
+        Protocol::HashstackUSDTRToken,
+        Protocol::HashstackUSDTDToken,
+        Protocol::HashstackUSDCRToken,
+        Protocol::HashstackUSDCDToken,
+        Protocol::HashstackDAIRToken,
+        Protocol::HashstackDAIDToken,
+        Protocol::HashstackStaking,
+        Protocol::HashstackDiamond,
+        Protocol::HashstackL3Diamond,
     ];
 
     for protocol in protocols {

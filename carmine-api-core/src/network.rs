@@ -90,6 +90,19 @@ pub enum Protocol {
     Nostra2WBTCInterest,
     Nostra2WBTCDebt,
     Nostra2WBTCInterestCollateral,
+    HashstackBTCRToken,
+    HashstackBTCDToken,
+    HashstackETHRToken,
+    HashstackETHDToken,
+    HashstackUSDTRToken,
+    HashstackUSDTDToken,
+    HashstackUSDCRToken,
+    HashstackUSDCDToken,
+    HashstackDAIRToken,
+    HashstackDAIDToken,
+    HashstackStaking,
+    HashstackDiamond,
+    HashstackL3Diamond,
 }
 
 impl fmt::Display for Protocol {
@@ -310,6 +323,45 @@ pub fn protocol_address(network: &Network, protocol: &Protocol) -> &'static str 
         }
         Protocol::Nostra2WBTCInterestCollateral => {
             "0x05b7d301fa769274f20e89222169c0fad4d846c366440afc160aafadd6f88f0c"
+        }
+        Protocol::HashstackBTCRToken => {
+            "0x01320a9910e78afc18be65e4080b51ecc0ee5c0a8b6cc7ef4e685e02b50e57ef"
+        }
+        Protocol::HashstackBTCDToken => {
+            "0x02614c784267d2026042ab98588f90efbffaade8982567e93530db4ed41201cf"
+        }
+        Protocol::HashstackETHRToken => {
+            "0x00436d8d078de345c11493bd91512eae60cd2713e05bcaa0bb9f0cba90358c6e"
+        }
+        Protocol::HashstackETHDToken => {
+            "0x01ef7f9f8bf01678dc6d27e2c26fb7e8eac3812a24752e6a1d6a49d153bec9f3"
+        }
+        Protocol::HashstackUSDTRToken => {
+            "0x05fa6cc6185eab4b0264a4134e2d4e74be11205351c7c91196cb27d5d97f8d21"
+        }
+        Protocol::HashstackUSDTDToken => {
+            "0x012b8185e237dd0340340faeb3351dbe53f8a42f5a9bf974ddf90ced56e301c7"
+        }
+        Protocol::HashstackUSDCRToken => {
+            "0x03bcecd40212e9b91d92bbe25bb3643ad93f0d230d93237c675f46fac5187e8c"
+        }
+        Protocol::HashstackUSDCDToken => {
+            "0x021d8d8519f5464ec63c6b9a80a5229c5ddeed57ecded4c8a9dfc34e31b49990"
+        }
+        Protocol::HashstackDAIRToken => {
+            "0x019c981ec23aa9cbac1cc1eb7f92cf09ea2816db9cbd932e251c86a2e8fb725f"
+        }
+        Protocol::HashstackDAIDToken => {
+            "0x07eeed99c095f83716e465e2c52a3ec8f47b323041ddc4f97778ac0393b7f358"
+        }
+        Protocol::HashstackStaking => {
+            "0x005950cbbb7dbdb2303671515bb9e41ca0bf8937dc5ba929eebd276a3db3f854"
+        }
+        Protocol::HashstackDiamond => {
+            "0x01b862c518939339b950d0d21a3d4cc8ead102d6270850ac8544636e558fab68"
+        }
+        Protocol::HashstackL3Diamond => {
+            "0x05bc2d5f739fd82c176fc420b7acdbbf856d35597bdc575338664e84379245df"
         }
     }
 }
