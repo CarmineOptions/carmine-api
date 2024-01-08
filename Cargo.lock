@@ -594,6 +594,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "carmine-api-referral"
+version = "0.1.0"
+dependencies = [
+ "rand",
+]
+
+[[package]]
 name = "carmine-api-rpc-gateway"
 version = "0.1.0"
 dependencies = [

@@ -1,0 +1,13 @@
+[package]
+name = "carmine-api-referral"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rand = "0.8.5"
+
+[[bin]]
+path = "./src/bin/referral_code.rs"
+name = "referral_code"
