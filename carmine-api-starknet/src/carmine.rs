@@ -1,4 +1,4 @@
-use carmine_api_core::network::{amm_address, Network};
+use carmine_api_core::network::{amm_address, Network, TESTNET_CONTRACT_ADDRESS};
 use carmine_api_core::pool::{get_all_pool_addresses, get_all_pools, Pool};
 use carmine_api_core::types::{DbBlock, IOption, OptionVolatility, PoolState};
 use carmine_api_db::{create_batch_of_options, get_option_with_address, get_options, get_pools};
@@ -61,27 +61,30 @@ impl Carmine {
 
         let mut futures = vec![];
 
-        // TODO: temporal workaround while Mainnet BTC options are not working
         match self.network {
             Network::Mainnet => {
-                for address in vec![
-                    "0x470999ab32712fd22748da002ae48918466f39b796ff8ebaa030d55946b1b3b",
-                    "0x39fd18a582bf25820674138c9f56e07d516e4ac7c4f2d5b97e420c1e1bb8bb4",
-                ] {
-                    futures.push(self.amm_call(
-                        format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
+                for address in pool_addresses {
+                    futures.push(call(
+                        "0x01569044e6ce80e6c9f777ee24aa8dafd77d5b671ab623c92667bf8ca488bc4f"
+                            .to_string(), // aux contract to bypass BTC option problem
+                        "0x28465ebd72d95a0985251c1cbd769fd70bd499003d1ed138cc4263dcd4154a8"
+                            .to_string(),
                         vec![address.to_string()],
                         BlockTag::Latest,
-                    ))
+                        &self.network,
+                    ));
                 }
             }
             Network::Testnet => {
                 for address in pool_addresses {
-                    futures.push(self.amm_call(
-                        format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
+                    futures.push(call(
+                        TESTNET_CONTRACT_ADDRESS.to_string(), // AMM for testnet
+                        "0x28465ebd72d95a0985251c1cbd769fd70bd499003d1ed138cc4263dcd4154a8"
+                            .to_string(),
                         vec![address.to_string()],
                         BlockTag::Latest,
-                    ))
+                        &self.network,
+                    ));
                 }
             }
         }
