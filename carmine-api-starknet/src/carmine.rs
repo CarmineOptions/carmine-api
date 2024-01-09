@@ -165,12 +165,8 @@ impl Carmine {
             option_side,
             maturity,
             strike_price,
+            "0".to_string(), // zero for strike_price: cubit::f128::types::fixed::Fixed
         ];
-
-        // TODO: add sign for strike_price if C1
-        if matches!(self.network, Network::Testnet) {
-            calldata.push("0x0".to_string());
-        }
 
         match self
             .amm_call(
@@ -598,13 +594,14 @@ impl Carmine {
                 lp_address.to_owned(),
                 maturity.to_owned(),
                 strike.to_owned(),
+                "0".to_string(), // zero for strike_price: cubit::f128::types::fixed::Fixed
             ],
             BlockTag::Number(block_number),
         ));
 
         let position_future = Box::pin(self.amm_call(
             format!("{}", Entrypoint::GetOptionPosition),
-            vec![lp_address, side, maturity, strike],
+            vec![lp_address, side, maturity, strike, "0".to_string()], // zero for strike_price: cubit::f128::types::fixed::Fixed
             BlockTag::Number(block_number),
         ));
 

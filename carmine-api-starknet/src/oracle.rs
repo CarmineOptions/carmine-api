@@ -1,7 +1,4 @@
-use carmine_api_core::{
-    types::{DbBlock, OracleName, OraclePrice, TokenPair},
-    utils::token_pair_id,
-};
+use carmine_api_core::types::{DbBlock, OracleName, OraclePrice, TokenPair};
 use starknet::{
     core::types::{BlockId, FieldElement, FunctionCall},
     macros::selector,
@@ -90,7 +87,7 @@ impl Oracle {
             let id = format!("{}-{}", block_number, self.oracle_name);
 
             return Ok(OraclePrice {
-                token_pair: token_pair_id(&token_pair),
+                token_pair: token_pair.id(),
                 id,
                 price,
                 decimals,

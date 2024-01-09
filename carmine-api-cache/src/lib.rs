@@ -1,12 +1,11 @@
 use carmine_api_core::{
     network::{Network, Protocol},
-    pool::{get_all_pools, Pool},
+    pool::{get_all_pools, Pool, LEGACY_MAINNET_ETH_USDC_CALL, LEGACY_MAINNET_ETH_USDC_PUT},
     telegram_bot,
     types::{
         AppData, IOption, OraclePrice, OraclePriceConcise, PoolStateWithTimestamp,
         StarkScanEventSettled, TokenPair, TradeHistory,
     },
-    utils::token_pair_id,
 };
 use carmine_api_db::{
     get_options, get_options_volatility, get_oracle_prices, get_pool_state, get_protocol_events,
@@ -50,7 +49,11 @@ impl Cache {
         let options_vec = get_options(&network);
         let options = Cache::options_vec_to_hashmap(options_vec);
         let all_non_expired = vec![];
-        let pools = get_all_pools(&network);
+        // TODO: when there is enough data switch to new pools
+        let pools = match &network {
+            Network::Mainnet => vec![LEGACY_MAINNET_ETH_USDC_CALL, LEGACY_MAINNET_ETH_USDC_PUT],
+            Network::Testnet => get_all_pools(&network),
+        };
 
         let mut cache = Cache {
             network,
@@ -145,11 +148,7 @@ impl Cache {
         let mut map: HashMap<String, Vec<OraclePriceConcise>> = HashMap::new();
         let oracle_prices = get_oracle_prices(&self.network);
 
-        self.set_oracle_prices_pair(
-            &mut map,
-            token_pair_id(&TokenPair::EthUsdc),
-            oracle_prices.clone(),
-        );
+        self.set_oracle_prices_pair(&mut map, TokenPair::EthUsdc.id(), oracle_prices.clone());
 
         map
     }

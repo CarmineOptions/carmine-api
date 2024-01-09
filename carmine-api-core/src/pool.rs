@@ -141,6 +141,24 @@ const MAINNET_BTC_USDC_PUT: Pool = Pool {
     id: "btc-usdc-put",
 };
 
+pub const LEGACY_MAINNET_ETH_USDC_CALL: Pool = Pool {
+    address: "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024",
+    network: Network::Mainnet,
+    type_: Type::Call,
+    base: MAINNET_ETH,
+    quote: MAINNET_USDC,
+    id: "eth-usdc-call",
+};
+
+pub const LEGACY_MAINNET_ETH_USDC_PUT: Pool = Pool {
+    address: "0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a",
+    network: Network::Mainnet,
+    type_: Type::Put,
+    base: MAINNET_ETH,
+    quote: MAINNET_USDC,
+    id: "eth-usdc-put",
+};
+
 pub fn get_all_pools(network: &Network) -> Vec<Pool> {
     match network {
         Network::Mainnet => vec![

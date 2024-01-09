@@ -23,6 +23,14 @@ pub enum TokenPair {
     EthUsdc,
 }
 
+impl TokenPair {
+    pub fn id(&self) -> String {
+        match self {
+            TokenPair::EthUsdc => "eth-usdc".to_string(),
+        }
+    }
+}
+
 pub enum OracleName {
     Pragma,
 }
