@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use carmine_api_core::network::{amm_address, call_lp_address, Network};
+use carmine_api_core::network::{amm_address, Network};
 use carmine_api_rpc_gateway::{rpc_call, BlockTag, Entrypoint, RpcNode};
 use dotenvy::dotenv;
 use tokio::time::sleep;
@@ -32,7 +32,7 @@ async fn bench(node: RpcNode, number_of_runs: usize) -> BenchResult {
         let res = rpc_call(
             amm_address(&Network::Mainnet).to_string(),
             format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
-            vec![call_lp_address(&Network::Mainnet).to_owned()],
+            vec!["0x0470999ab32712fd22748da002ae48918466f39b796ff8ebaa030d55946b1b3b".to_owned()],
             BlockTag::Latest,
             node,
         )

@@ -61,12 +61,29 @@ impl Carmine {
 
         let mut futures = vec![];
 
-        for address in pool_addresses {
-            futures.push(self.amm_call(
-                format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
-                vec![address.to_string()],
-                BlockTag::Latest,
-            ))
+        // TODO: temporal workaround while Mainnet BTC options are not working
+        match self.network {
+            Network::Mainnet => {
+                for address in vec![
+                    "0x470999ab32712fd22748da002ae48918466f39b796ff8ebaa030d55946b1b3b",
+                    "0x39fd18a582bf25820674138c9f56e07d516e4ac7c4f2d5b97e420c1e1bb8bb4",
+                ] {
+                    futures.push(self.amm_call(
+                        format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
+                        vec![address.to_string()],
+                        BlockTag::Latest,
+                    ))
+                }
+            }
+            Network::Testnet => {
+                for address in pool_addresses {
+                    futures.push(self.amm_call(
+                        format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
+                        vec![address.to_string()],
+                        BlockTag::Latest,
+                    ))
+                }
+            }
         }
 
         let call_results = join_all(futures).await;

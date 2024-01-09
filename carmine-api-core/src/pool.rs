@@ -63,8 +63,6 @@ const MAINNET_USDC: Token = Token {
     symbol: "USDC",
 };
 
-#[allow(dead_code)]
-// BTC not yet implemented for the Mainnet
 const MAINNET_BTC: Token = Token {
     address: "0x3fe2b97c1fd336e750087d68b9b867997fd64a2661ff3ca5a7c771641e8e7ac",
     decimals: 8,
@@ -108,7 +106,7 @@ const TESTNET_BTC_USDC_PUT: Pool = Pool {
 };
 
 const MAINNET_ETH_USDC_CALL: Pool = Pool {
-    address: "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024",
+    address: "0x470999ab32712fd22748da002ae48918466f39b796ff8ebaa030d55946b1b3b",
     network: Network::Mainnet,
     type_: Type::Call,
     base: MAINNET_ETH,
@@ -117,7 +115,7 @@ const MAINNET_ETH_USDC_CALL: Pool = Pool {
 };
 
 const MAINNET_ETH_USDC_PUT: Pool = Pool {
-    address: "0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a",
+    address: "0x39fd18a582bf25820674138c9f56e07d516e4ac7c4f2d5b97e420c1e1bb8bb4",
     network: Network::Mainnet,
     type_: Type::Put,
     base: MAINNET_ETH,
@@ -125,9 +123,32 @@ const MAINNET_ETH_USDC_PUT: Pool = Pool {
     id: "eth-usdc-put",
 };
 
+const MAINNET_BTC_USDC_CALL: Pool = Pool {
+    address: "0x54abd7a6f04b2d983e838103e44d17a63b9f1d17418f50ec8b54b9630149dd9",
+    network: Network::Testnet,
+    type_: Type::Call,
+    base: MAINNET_BTC,
+    quote: MAINNET_USDC,
+    id: "btc-usdc-call",
+};
+
+const MAINNET_BTC_USDC_PUT: Pool = Pool {
+    address: "0xc6a714a5495b47bd3a4076ab0b32b99e0776b5bb86287cd88501f56abca389",
+    network: Network::Testnet,
+    type_: Type::Put,
+    base: MAINNET_BTC,
+    quote: MAINNET_USDC,
+    id: "btc-usdc-put",
+};
+
 pub fn get_all_pools(network: &Network) -> Vec<Pool> {
     match network {
-        Network::Mainnet => vec![MAINNET_ETH_USDC_CALL, MAINNET_ETH_USDC_PUT],
+        Network::Mainnet => vec![
+            MAINNET_ETH_USDC_CALL,
+            MAINNET_ETH_USDC_PUT,
+            MAINNET_BTC_USDC_CALL,
+            MAINNET_BTC_USDC_PUT,
+        ],
         Network::Testnet => vec![
             TESTNET_ETH_USDC_CALL,
             TESTNET_ETH_USDC_PUT,
