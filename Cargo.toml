@@ -7,6 +7,7 @@ members = [
     "carmine-api-core",
     "carmine-api-db",
     "carmine-api-fetcher",
+    "carmine-api-referral",
     "carmine-api-rpc-gateway",
     "carmine-api-starknet",
 ]

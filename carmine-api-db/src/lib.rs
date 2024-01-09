@@ -1,10 +1,11 @@
 use carmine_api_core::network::{protocol_address, Network, Protocol};
 use carmine_api_core::schema::{self};
 use carmine_api_core::types::{
-    DbBlock, Event, IOption, OptionVolatility, OptionWithVolatility, OraclePrice, Pool, PoolState,
-    PoolStateWithTimestamp, StarkScanEventSettled, Volatility,
+    DbBlock, Event, IOption, NewReferralEvent, OptionVolatility, OptionWithVolatility, OraclePrice,
+    Pool, PoolState, PoolStateWithTimestamp, ReferralCode, StarkScanEventSettled, Volatility,
 };
 
+use carmine_api_referral::referral_code::generate_referral_code;
 use diesel::dsl::max;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
@@ -511,4 +512,71 @@ pub fn update_token_value(block: i64, pool: String, new_value: String, network: 
         ),
         Err(e) => println!("FAIL: block {} failed: {:?}", block, e),
     }
+}
+
+pub fn create_referral_pair(referral_pair: ReferralCode) {
+    use crate::schema::referral_codes::dsl::*;
+
+    let connection = &mut establish_connection(&Network::Mainnet);
+
+    let _ = diesel::insert_into(referral_codes)
+        .values(&referral_pair)
+        .execute(connection)
+        .expect("Error loading pool_state");
+}
+
+fn is_referral_code_available(code: &str) -> QueryResult<bool> {
+    use crate::schema::referral_codes::dsl::*;
+
+    let connection = &mut establish_connection(&Network::Mainnet);
+
+    let count = referral_codes
+        .filter(referral_code.eq(code))
+        .count()
+        .get_result::<i64>(connection)?;
+
+    Ok(count == 0)
+}
+
+pub fn get_referral_code(referrer: String) -> String {
+    use crate::schema::referral_codes::dsl::*;
+
+    let connection = &mut establish_connection(&Network::Mainnet);
+
+    let res: QueryResult<String> = referral_codes
+        .filter(wallet_address.eq(&referrer))
+        .select(referral_code)
+        .first(connection);
+
+    if let Ok(code) = res {
+        // referral code already in DB
+        return code;
+    }
+
+    let new_referral_code = loop {
+        let temp = generate_referral_code();
+
+        if let Ok(is_available) = is_referral_code_available(&temp) {
+            if is_available {
+                break temp;
+            }
+        }
+    };
+
+    create_referral_pair(ReferralCode {
+        wallet_address: referrer,
+        referral_code: new_referral_code.clone(),
+    });
+
+    new_referral_code
+}
+
+pub fn create_referral_event(event: NewReferralEvent) -> Result<usize, diesel::result::Error> {
+    use crate::schema::referral_events::dsl::*;
+
+    let connection = &mut establish_connection(&Network::Mainnet);
+
+    diesel::insert_into(referral_events)
+        .values(&event)
+        .execute(connection)
 }

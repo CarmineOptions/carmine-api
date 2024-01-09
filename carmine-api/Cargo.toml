@@ -11,6 +11,7 @@ actix-web = "4.3.1"
 carmine-api-airdrop = { path = "../carmine-api-airdrop" }
 carmine-api-cache = { path = "../carmine-api-cache" }
 carmine-api-core = { path = "../carmine-api-core" }
+carmine-api-db = { path = "../carmine-api-db" }
 carmine-api-starknet = { path = "../carmine-api-starknet" }
 carmine-api-rpc-gateway = { path = "../carmine-api-rpc-gateway" }
 dotenvy = "0.15.6"
@@ -20,3 +21,4 @@ serde = { version = "1.0.156", features = ["derive"] }
 teloxide = "0.12.2"
 tokio = "1.26.0"
 reqwest = "0.11.22"
+serde_json = "1.0.111"

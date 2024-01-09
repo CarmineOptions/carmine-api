@@ -12,7 +12,11 @@ use actix_web::{
     web::{self},
     HttpResponse, Responder,
 };
-use carmine_api_core::{network::Network, types::AppState};
+use carmine_api_core::{
+    network::Network,
+    types::{AppState, NewReferralEvent},
+};
+use carmine_api_db::{create_referral_event, get_referral_code};
 use lazy_static::lazy_static;
 use std::{
     env,
@@ -430,4 +434,60 @@ async fn proxy_call(path: web::Path<String>, payload: Option<web::Bytes>) -> imp
         status: "error".to_string(),
         message: "Failed to get response from RPC Nodes".to_string(),
     })
+}
+
+#[get("/v1/mainnet/get_referral")]
+pub async fn get_referral(opts: web::Query<QueryOptions>) -> impl Responder {
+    let address = match &opts.address {
+        Some(address) => format_tx(address),
+        _ => {
+            return HttpResponse::BadRequest().json(GenericResponse {
+                status: "bad_request".to_string(),
+                message: "Did not receive address as a query parameter".to_string(),
+            });
+        }
+    };
+
+    let referral_code = get_referral_code(address);
+
+    HttpResponse::Ok().json(DataResponse::<String> {
+        status: "success".to_string(),
+        data: referral_code,
+    })
+}
+
+#[post("/v1/mainnet/referral_event")]
+async fn referral_event(payload: Option<web::Bytes>) -> impl Responder {
+    let bytes = match payload {
+        Some(v) => v,
+        None => {
+            return HttpResponse::BadRequest().json(GenericResponse {
+                status: "bad_request".to_string(),
+                message: "No payload was provided".to_string(),
+            })
+        }
+    };
+
+    match serde_json::from_slice::<NewReferralEvent>(&bytes) {
+        Ok(mut event) => {
+            let unsafe_address = event.referred_wallet_address;
+            let safe_address = format_tx(&unsafe_address.to_owned());
+            event.referred_wallet_address = &safe_address;
+
+            match create_referral_event(event) {
+                Ok(_) => HttpResponse::Ok().json(GenericResponse {
+                    status: "success".to_string(),
+                    message: "Event stored".to_string(),
+                }),
+                Err(_) => HttpResponse::BadRequest().json(GenericResponse {
+                    status: "bad_request".to_string(),
+                    message: "Referal does not exist".to_string(),
+                }),
+            }
+        }
+        Err(_) => HttpResponse::BadRequest().json(GenericResponse {
+            status: "bad_request".to_string(),
+            message: "Could not parse payload".to_string(),
+        }),
+    }
 }

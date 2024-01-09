@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 use crate::schema::{
-    blocks, events, options, options_volatility, oracle_prices, pool_state, pools, starkscan_events,
+    blocks, events, options, options_volatility, oracle_prices, pool_state, pools, referral_codes,
+    referral_events, starkscan_events,
 };
 use carmine_api_airdrop::merkle_tree::MerkleTree;
 use diesel::prelude::*;
@@ -206,4 +207,26 @@ pub struct OraclePriceConcise {
     pub decimals: i16,
     pub last_updated_timestamp: i64,
     pub block_number: i64,
+}
+
+#[derive(Queryable, Insertable)]
+#[diesel(table_name = referral_codes)]
+pub struct ReferralCode {
+    pub wallet_address: String,
+    pub referral_code: String,
+}
+
+#[derive(Queryable)]
+pub struct ReferralEvent {
+    pub id: i32,
+    pub referred_wallet_address: String,
+    pub referral_code: String,
+    pub timestamp: i64,
+}
+
+#[derive(Serialize, Deserialize, Insertable)]
+#[diesel(table_name = referral_events)]
+pub struct NewReferralEvent<'a> {
+    pub referred_wallet_address: &'a str,
+    pub referral_code: &'a str,
 }
