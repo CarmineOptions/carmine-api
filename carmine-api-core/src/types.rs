@@ -224,7 +224,7 @@ pub struct ReferralEvent {
     pub timestamp: i64,
 }
 
-#[derive(Insertable)]
+#[derive(Serialize, Deserialize, Insertable)]
 #[diesel(table_name = referral_events)]
 pub struct NewReferralEvent<'a> {
     pub referred_wallet_address: &'a str,

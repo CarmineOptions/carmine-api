@@ -1,8 +1,8 @@
 use carmine_api_core::network::{protocol_address, Network, Protocol};
 use carmine_api_core::schema::{self};
 use carmine_api_core::types::{
-    DbBlock, Event, IOption, OptionVolatility, OptionWithVolatility, OraclePrice, Pool, PoolState,
-    PoolStateWithTimestamp, ReferralCode, StarkScanEventSettled, Volatility,
+    DbBlock, Event, IOption, NewReferralEvent, OptionVolatility, OptionWithVolatility, OraclePrice,
+    Pool, PoolState, PoolStateWithTimestamp, ReferralCode, StarkScanEventSettled, Volatility,
 };
 
 use carmine_api_referral::referral_code::generate_referral_code;
@@ -569,4 +569,14 @@ pub fn get_referral_code(referrer: String) -> String {
     });
 
     new_referral_code
+}
+
+pub fn create_referral_event(event: NewReferralEvent) -> Result<usize, diesel::result::Error> {
+    use crate::schema::referral_events::dsl::*;
+
+    let connection = &mut establish_connection(&Network::Mainnet);
+
+    diesel::insert_into(referral_events)
+        .values(&event)
+        .execute(connection)
 }
