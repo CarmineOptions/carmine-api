@@ -160,7 +160,7 @@ impl Carmine {
         maturity: String,
         strike_price: String,
     ) -> Result<String, &str> {
-        let mut calldata = vec![
+        let calldata = vec![
             lptoken_address.to_owned(),
             option_side,
             maturity,

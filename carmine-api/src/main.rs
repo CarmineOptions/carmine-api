@@ -24,7 +24,7 @@ struct Origins {}
 impl Origins {
     const LOCAL: &str = "http://localhost:3000";
     const DEVELOPMENT: &str = "https://app.carmine-dev.eu";
-    const PRODUCTION: &str = "https://app.carmine.finance";
+    const LEGACY: &str = "https://legacy.app.carmine.finance";
     const PRODUCTION_MAINNET: &str = "https://mainnet.app.carmine.finance";
     const PRODUCTION_TESTNET: &str = "https://testnet.app.carmine.finance";
 }
@@ -122,7 +122,7 @@ async fn main() -> std::io::Result<()> {
         let cors = Cors::default()
             .allowed_origin(Origins::LOCAL)
             .allowed_origin(Origins::DEVELOPMENT)
-            .allowed_origin(Origins::PRODUCTION)
+            .allowed_origin(Origins::LEGACY)
             .allowed_origin(Origins::PRODUCTION_MAINNET)
             .allowed_origin(Origins::PRODUCTION_TESTNET)
             .allowed_methods(vec!["GET", "POST", "OPTIONS"])
