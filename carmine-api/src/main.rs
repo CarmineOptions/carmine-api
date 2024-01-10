@@ -22,11 +22,11 @@ const DOCKER_IP: &str = "0.0.0.0";
 struct Origins {}
 
 impl Origins {
-    const LOCAL: &str = "http://localhost:3000";
-    const DEVELOPMENT: &str = "https://app.carmine-dev.eu";
-    const LEGACY: &str = "https://legacy.app.carmine.finance";
-    const PRODUCTION_MAINNET: &str = "https://mainnet.app.carmine.finance";
-    const PRODUCTION_TESTNET: &str = "https://testnet.app.carmine.finance";
+    const LOCAL: &'static str = "http://localhost:3000";
+    const DEVELOPMENT: &'static str = "https://app.carmine-dev.eu";
+    const LEGACY: &'static str = "https://legacy.app.carmine.finance";
+    const PRODUCTION_MAINNET: &'static str = "https://mainnet.app.carmine.finance";
+    const PRODUCTION_TESTNET: &'static str = "https://testnet.app.carmine.finance";
 }
 
 fn ip_address() -> &'static str {

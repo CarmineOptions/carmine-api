@@ -1,5 +1,6 @@
 use carmine_api_core::network::{
-    amm_address, Network, MAINNET_AUXILIARY_CONTRACT, TESTNET_CONTRACT_ADDRESS,
+    amm_address, Network, MAINNET_AUXILIARY_CONTRACT, MAINNET_CONTRACT_ADDRESS,
+    TESTNET_CONTRACT_ADDRESS,
 };
 use carmine_api_core::pool::{get_all_pool_addresses, get_all_pools, Pool};
 use carmine_api_core::types::{DbBlock, IOption, OptionVolatility, PoolState};
@@ -65,23 +66,53 @@ impl Carmine {
 
         match self.network {
             Network::Mainnet => {
-                for address in pool_addresses {
-                    futures.push(call(
-                        MAINNET_AUXILIARY_CONTRACT.to_string(), // aux contract to bypass BTC option problem
-                        "0x28465ebd72d95a0985251c1cbd769fd70bd499003d1ed138cc4263dcd4154a8"
+                // BTC with auxiliary contract, ETH with AMM
+                futures.push(call(
+                    MAINNET_CONTRACT_ADDRESS.to_string(), // aux contract to bypass BTC option problem
+                    format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
+                    vec![
+                        "0x324013ccd180fbb8bee30d38f52a6e560889cfe2194b5b73fcd8657971670bf" // ETH CALL
                             .to_string(),
-                        vec![address.to_string()],
-                        BlockTag::Latest,
-                        &self.network,
-                    ));
-                }
+                    ],
+                    BlockTag::Latest,
+                    &self.network,
+                ));
+                futures.push(call(
+                    MAINNET_CONTRACT_ADDRESS.to_string(), // aux contract to bypass BTC option problem
+                    format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
+                    vec![
+                        "0x5a0832cd63313ecb831dc1d2fc994890e8e29bc848ec8a8202dbd0b0d7d3d57" // ETH PUT
+                            .to_string(),
+                    ],
+                    BlockTag::Latest,
+                    &self.network,
+                ));
+                futures.push(call(
+                    MAINNET_AUXILIARY_CONTRACT.to_string(), // aux contract to bypass BTC option problem
+                    format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
+                    vec![
+                        "0x3ab765ddde58173560d3fe4825cf29e9da487d7792752fbfed65281b6c271cf" // BTC CALL
+                            .to_string(),
+                    ],
+                    BlockTag::Latest,
+                    &self.network,
+                ));
+                futures.push(call(
+                    MAINNET_AUXILIARY_CONTRACT.to_string(), // aux contract to bypass BTC option problem
+                    format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
+                    vec![
+                        "0x109ed0dcd5593bfb51948781d0589e82eec167a69dbb4ce9ef83794a4ecc5d2" // BTC PUT
+                            .to_string(),
+                    ],
+                    BlockTag::Latest,
+                    &self.network,
+                ));
             }
             Network::Testnet => {
                 for address in pool_addresses {
                     futures.push(call(
                         TESTNET_CONTRACT_ADDRESS.to_string(), // AMM for testnet
-                        "0x28465ebd72d95a0985251c1cbd769fd70bd499003d1ed138cc4263dcd4154a8"
-                            .to_string(),
+                        format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
                         vec![address.to_string()],
                         BlockTag::Latest,
                         &self.network,
