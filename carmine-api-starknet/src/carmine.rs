@@ -1,4 +1,6 @@
-use carmine_api_core::network::{amm_address, Network, TESTNET_CONTRACT_ADDRESS};
+use carmine_api_core::network::{
+    amm_address, Network, MAINNET_AUXILIARY_CONTRACT, TESTNET_CONTRACT_ADDRESS,
+};
 use carmine_api_core::pool::{get_all_pool_addresses, get_all_pools, Pool};
 use carmine_api_core::types::{DbBlock, IOption, OptionVolatility, PoolState};
 use carmine_api_db::{create_batch_of_options, get_option_with_address, get_options, get_pools};
@@ -65,8 +67,7 @@ impl Carmine {
             Network::Mainnet => {
                 for address in pool_addresses {
                     futures.push(call(
-                        "0x01569044e6ce80e6c9f777ee24aa8dafd77d5b671ab623c92667bf8ca488bc4f"
-                            .to_string(), // aux contract to bypass BTC option problem
+                        MAINNET_AUXILIARY_CONTRACT.to_string(), // aux contract to bypass BTC option problem
                         "0x28465ebd72d95a0985251c1cbd769fd70bd499003d1ed138cc4263dcd4154a8"
                             .to_string(),
                         vec![address.to_string()],
