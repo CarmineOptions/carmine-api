@@ -25,7 +25,7 @@ impl Origins {
     const LOCAL: &'static str = "http://localhost:3000";
     const DEVELOPMENT: &'static str = "https://app.carmine-dev.eu";
     const LEGACY: &'static str = "https://legacy.app.carmine.finance";
-    const PRODUCTION_MAINNET: &'static str = "https://mainnet.app.carmine.finance";
+    const PRODUCTION_MAINNET: &'static str = "https://app.carmine.finance";
     const PRODUCTION_TESTNET: &'static str = "https://testnet.app.carmine.finance";
 }
 
