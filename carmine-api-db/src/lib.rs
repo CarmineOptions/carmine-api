@@ -353,13 +353,15 @@ pub fn create_batch_of_pool_states(states: &Vec<PoolState>, network: &Network) {
 }
 
 pub fn get_pool_state(pool_address: &str, network: &Network) -> Vec<PoolStateWithTimestamp> {
-    use crate::schema::blocks::dsl::*;
+    use crate::schema::blocks::dsl::blocks;
     use crate::schema::pool_state::dsl::*;
 
     let connection = &mut establish_connection(network);
     let mut data: Vec<PoolStateWithTimestamp> = pool_state
         .inner_join(blocks)
         .filter(lp_address.eq(pool_address))
+        // endstate of old AMM
+        .filter(block_number.lt(495000))
         .select((PoolState::as_select(), DbBlock::as_select()))
         .load::<(PoolState, DbBlock)>(connection)
         .expect("Error loading pool state")
