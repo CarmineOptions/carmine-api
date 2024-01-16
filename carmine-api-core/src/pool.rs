@@ -105,8 +105,8 @@ const TESTNET_BTC_USDC_PUT: Pool = Pool {
     id: "btc-usdc-put",
 };
 
-const MAINNET_ETH_USDC_CALL: Pool = Pool {
-    address: "0x324013ccd180fbb8bee30d38f52a6e560889cfe2194b5b73fcd8657971670bf",
+pub const MAINNET_ETH_USDC_CALL: Pool = Pool {
+    address: "0x70cad6be2c3fc48c745e4a4b70ef578d9c79b46ffac4cd93ec7b61f951c7c5c",
     network: Network::Mainnet,
     type_: Type::Call,
     base: MAINNET_ETH,
@@ -114,8 +114,8 @@ const MAINNET_ETH_USDC_CALL: Pool = Pool {
     id: "eth-usdc-call",
 };
 
-const MAINNET_ETH_USDC_PUT: Pool = Pool {
-    address: "0x5a0832cd63313ecb831dc1d2fc994890e8e29bc848ec8a8202dbd0b0d7d3d57",
+pub const MAINNET_ETH_USDC_PUT: Pool = Pool {
+    address: "0x466e3a6731571cf5d74c5b0d9c508bfb71438de10f9a13269177b01d6f07159",
     network: Network::Mainnet,
     type_: Type::Put,
     base: MAINNET_ETH,
@@ -123,8 +123,8 @@ const MAINNET_ETH_USDC_PUT: Pool = Pool {
     id: "eth-usdc-put",
 };
 
-const MAINNET_BTC_USDC_CALL: Pool = Pool {
-    address: "0x3ab765ddde58173560d3fe4825cf29e9da487d7792752fbfed65281b6c271cf",
+pub const MAINNET_BTC_USDC_CALL: Pool = Pool {
+    address: "0x35db72a814c9b30301f646a8fa8c192ff63a0dc82beb390a36e6e9eba55b6db",
     network: Network::Testnet,
     type_: Type::Call,
     base: MAINNET_BTC,
@@ -132,8 +132,8 @@ const MAINNET_BTC_USDC_CALL: Pool = Pool {
     id: "btc-usdc-call",
 };
 
-const MAINNET_BTC_USDC_PUT: Pool = Pool {
-    address: "0x109ed0dcd5593bfb51948781d0589e82eec167a69dbb4ce9ef83794a4ecc5d2",
+pub const MAINNET_BTC_USDC_PUT: Pool = Pool {
+    address: "0x1bf27366077765c922f342c8de257591d1119ebbcbae7a6c4ff2f50ede4c54c",
     network: Network::Testnet,
     type_: Type::Put,
     base: MAINNET_BTC,
