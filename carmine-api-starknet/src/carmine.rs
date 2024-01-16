@@ -2,7 +2,10 @@ use carmine_api_core::network::{
     amm_address, Network, MAINNET_AUXILIARY_CONTRACT, MAINNET_CONTRACT_ADDRESS,
     TESTNET_CONTRACT_ADDRESS,
 };
-use carmine_api_core::pool::{get_all_pool_addresses, get_all_pools, Pool};
+use carmine_api_core::pool::{
+    get_all_pool_addresses, get_all_pools, Pool, MAINNET_BTC_USDC_CALL, MAINNET_BTC_USDC_PUT,
+    MAINNET_ETH_USDC_CALL, MAINNET_ETH_USDC_PUT,
+};
 use carmine_api_core::types::{DbBlock, IOption, OptionVolatility, PoolState};
 use carmine_api_db::{create_batch_of_options, get_option_with_address, get_options, get_pools};
 use carmine_api_rpc_gateway::{call, carmine_get_block_header, BlockTag, Entrypoint, RpcError};
@@ -66,44 +69,34 @@ impl Carmine {
 
         match self.network {
             Network::Mainnet => {
-                // BTC with auxiliary contract, ETH with AMM
+                // ETH from AMM
                 futures.push(call(
                     MAINNET_CONTRACT_ADDRESS.to_string(), // aux contract to bypass BTC option problem
                     format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
-                    vec![
-                        "0x324013ccd180fbb8bee30d38f52a6e560889cfe2194b5b73fcd8657971670bf" // ETH CALL
-                            .to_string(),
-                    ],
+                    vec![MAINNET_ETH_USDC_CALL.address.to_string()],
                     BlockTag::Latest,
                     &self.network,
                 ));
                 futures.push(call(
                     MAINNET_CONTRACT_ADDRESS.to_string(), // aux contract to bypass BTC option problem
                     format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
-                    vec![
-                        "0x5a0832cd63313ecb831dc1d2fc994890e8e29bc848ec8a8202dbd0b0d7d3d57" // ETH PUT
-                            .to_string(),
-                    ],
+                    vec![MAINNET_ETH_USDC_PUT.address.to_string()],
+                    BlockTag::Latest,
+                    &self.network,
+                ));
+
+                // BTC from AuxContract
+                futures.push(call(
+                    MAINNET_AUXILIARY_CONTRACT.to_string(), // aux contract to bypass BTC option problem
+                    format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
+                    vec![MAINNET_BTC_USDC_CALL.address.to_string()],
                     BlockTag::Latest,
                     &self.network,
                 ));
                 futures.push(call(
                     MAINNET_AUXILIARY_CONTRACT.to_string(), // aux contract to bypass BTC option problem
                     format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
-                    vec![
-                        "0x3ab765ddde58173560d3fe4825cf29e9da487d7792752fbfed65281b6c271cf" // BTC CALL
-                            .to_string(),
-                    ],
-                    BlockTag::Latest,
-                    &self.network,
-                ));
-                futures.push(call(
-                    MAINNET_AUXILIARY_CONTRACT.to_string(), // aux contract to bypass BTC option problem
-                    format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
-                    vec![
-                        "0x109ed0dcd5593bfb51948781d0589e82eec167a69dbb4ce9ef83794a4ecc5d2" // BTC PUT
-                            .to_string(),
-                    ],
+                    vec![MAINNET_BTC_USDC_PUT.address.to_string()],
                     BlockTag::Latest,
                     &self.network,
                 ));
