@@ -235,11 +235,7 @@ impl Carmine {
             }
         };
 
-        let option_length = match self.network {
-            Network::Mainnet => 6,
-            // TODO: C1 has longer options - change when mainnet is also C1
-            Network::Testnet => 7,
-        };
+        let option_length = 7;
 
         // each option has 6 fields
         let chunks = data.chunks(option_length);
@@ -276,11 +272,9 @@ impl Carmine {
                 continue;
             }
 
-            let (type_index, base_index, quote_index) = match self.network {
-                Network::Mainnet => (5, 4, 3),
-                // TODO: C1 has longer options - change when mainnet is also C1
-                Network::Testnet => (6, 5, 4),
-            };
+            let (type_index, base_index, quote_index) = (6, 5, 4);
+
+            println!("OPTION VEC: {:#?}", option_vec);
 
             // this part only runs if option not already in the DB
             let option_type = i16::from_str_radix(&option_vec[type_index][2..], 16)
