@@ -112,7 +112,7 @@ impl AmmStateObserver {
             }
         };
 
-        let start = 190500;
+        let start = 504056; // new AMM deployed
         let finish = i64::try_from(last_block_starknet.block_number).unwrap();
 
         let holes = get_pool_state_block_holes(start, finish, &Network::Mainnet);

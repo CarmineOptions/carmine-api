@@ -205,8 +205,17 @@ pub fn get_oracle_prices(network: &Network) -> Vec<OraclePrice> {
 pub fn get_pools(network: &Network) -> Vec<Pool> {
     use crate::schema::pools::dsl::*;
 
+    // TODO: currently old AMM is still in the DB, but we no longer care
+    let legacy_lp_addresses = vec![
+        "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024",
+        "0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a",
+    ];
+
     let connection = &mut establish_connection(network);
-    pools.load::<Pool>(connection).expect("Error loading pools")
+    pools
+        .filter(lp_address.ne_all(legacy_lp_addresses))
+        .load::<Pool>(connection)
+        .expect("Error loading pools")
 }
 
 pub fn get_protocol_events(network: &Network, protocol: &Protocol) -> Vec<StarkScanEventSettled> {
@@ -284,6 +293,7 @@ pub fn get_options(network: &Network) -> Vec<IOption> {
 
     let connection = &mut establish_connection(network);
     options
+        .filter(maturity.gt(1704495600)) // only get new AMM options
         .load::<IOption>(connection)
         .expect("Error loading options")
 }
