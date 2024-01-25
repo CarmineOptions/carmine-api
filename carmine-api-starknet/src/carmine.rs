@@ -611,7 +611,7 @@ impl Carmine {
         let side = opt.option_side.to_string();
 
         let volatility_future = Box::pin(self.amm_call(
-            format!("{}", Entrypoint::GetPoolVolatilityAuto),
+            format!("{}", Entrypoint::GetOptionVolatility),
             vec![
                 lp_address.to_owned(),
                 maturity.to_owned(),

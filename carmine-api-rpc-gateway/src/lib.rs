@@ -82,9 +82,11 @@ pub enum Entrypoint {
     #[serde(rename = "0x68bb6b599048b94cdd7832f2ebbbda4b596b150896fc09bd70f88e2c488595")]
     GetUnderlyingForLptoken,
     #[serde(rename = "0xe8cc8c9fca554ee3ae877935823ca461ba94b34a427e3272fd465e0790e1af")]
-    GetPoolVolatilityAuto,
+    GetPoolVolatilityAuto, // legacy AMM only
     #[serde(rename = "0x2902df4b2064da30c68f1bfad76271da9c6b10a3cfc41396ae75eef960bfcb")]
     GetOptionPosition,
+    #[serde(rename = "0x3bceef179de4e1b5164a50dcfc0f32930c38e7d39d10cac000e9650c0cefd30")]
+    GetOptionVolatility,
     #[serde(untagged)]
     Literal(String),
 }
@@ -151,6 +153,10 @@ impl fmt::Display for Entrypoint {
             Entrypoint::GetOptionPosition => write!(
                 f,
                 "0x2902df4b2064da30c68f1bfad76271da9c6b10a3cfc41396ae75eef960bfcb"
+            ),
+            Entrypoint::GetOptionVolatility => write!(
+                f,
+                "0x3bceef179de4e1b5164a50dcfc0f32930c38e7d39d10cac000e9650c0cefd30"
             ),
             Entrypoint::Literal(s) => write!(f, "{}", s.clone()),
         }
