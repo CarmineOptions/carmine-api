@@ -1,8 +1,8 @@
 use actix_web::web;
 
 mod common;
-mod v0;
 mod v1;
+mod v2;
 
 pub fn format_tx(tx: &String) -> String {
     if tx.len() <= 3 || &tx[..2] != "0x" {
@@ -23,22 +23,25 @@ pub fn config(conf: &mut web::ServiceConfig) {
     let scope = web::scope("")
         .service(common::liveness_probe_handler)
         .service(
-            web::scope("api")
-                .service(v1::live_options)
-                .service(v1::transactions)
-                .service(v1::all_transactions)
-                .service(v1::airdrop)
-                .service(v1::option_volatility)
-                .service(v1::get_referral)
-                .service(v1::referral_event)
-                .service(v1::pool_state)
-                .service(v1::pool_state_last)
-                .service(v1::pool_apy)
-                .service(v1::prices)
-                .service(v1::proxy_call)
-                .service(v0::all_non_expired_handler)
-                .service(v0::trade_history_handler)
-                .service(v0::all_trade_history_handler),
+            web::scope("/api")
+                // v1
+                .service(
+                    web::scope("/v1")
+                        .service(v1::live_options)
+                        .service(v1::transactions)
+                        .service(v1::all_transactions)
+                        .service(v1::airdrop)
+                        .service(v1::option_volatility)
+                        .service(v1::get_referral)
+                        .service(v1::referral_event)
+                        .service(v1::pool_state)
+                        .service(v1::pool_state_last)
+                        .service(v1::pool_apy)
+                        .service(v1::prices)
+                        .service(v1::proxy_call),
+                )
+                // v2
+                .service(web::scope("/v2").service(v2::pool_apy)),
         );
 
     conf.service(scope);

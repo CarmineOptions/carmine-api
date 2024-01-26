@@ -1,13 +1,19 @@
-use carmine_api_starknet::amm_state::AmmStateObserver;
+use carmine_api_core::{network::Network, types::DbBlock};
+use carmine_api_starknet::carmine::Carmine;
 use dotenvy::dotenv;
 
 #[tokio::main]
 async fn main() {
     dotenv().ok();
 
-    let amm_state_observer = AmmStateObserver::new();
+    let b = DbBlock {
+        block_number: 518540,
+        timestamp: 123,
+    };
+    let c = Carmine::new(Network::Mainnet);
+    let state = c.get_amm_state(&b).await.unwrap();
+    let options = c.get_all_options_volatility(&b).await.unwrap();
 
-    let state_res = amm_state_observer.update_single_block(390010).await;
-
-    println!("{:?}", state_res);
+    println!("State: {:#?}", state);
+    println!("Options: {:#?}", options);
 }

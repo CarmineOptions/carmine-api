@@ -102,15 +102,16 @@ impl Carmine {
                 ));
             }
             Network::Testnet => {
-                for address in pool_addresses {
-                    futures.push(call(
-                        TESTNET_CONTRACT_ADDRESS.to_string(), // AMM for testnet
-                        format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
-                        vec![address.to_string()],
-                        BlockTag::Latest,
-                        &self.network,
-                    ));
-                }
+                // TODO: fix testnet options
+                // for address in pool_addresses {
+                //     futures.push(call(
+                //         TESTNET_CONTRACT_ADDRESS.to_string(), // AMM for testnet
+                //         format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
+                //         vec![address.to_string()],
+                //         BlockTag::Latest,
+                //         &self.network,
+                //     ));
+                // }
             }
         }
 

@@ -1,4 +1,4 @@
-use carmine_api_core::network::{protocol_address, Network, Protocol};
+use carmine_api_core::network::{protocol_address, Network, Protocol, NEW_AMM_GENESIS_TIMESTAMP};
 use carmine_api_core::schema::{self};
 use carmine_api_core::types::{
     DbBlock, Event, IOption, NewReferralEvent, OptionVolatility, OptionWithVolatility, OraclePrice,
@@ -293,7 +293,7 @@ pub fn get_options(network: &Network) -> Vec<IOption> {
 
     let connection = &mut establish_connection(network);
     options
-        .filter(maturity.gt(1704495600)) // only get new AMM options
+        .filter(maturity.gt(NEW_AMM_GENESIS_TIMESTAMP)) // only get new AMM options
         .load::<IOption>(connection)
         .expect("Error loading options")
 }
@@ -306,6 +306,16 @@ pub fn get_block_by_number(num: i64, network: &Network) -> Option<DbBlock> {
         Ok(v) => Some(v),
         _ => None,
     }
+}
+
+pub fn get_blocks_greater_than(min: i64, network: &Network) -> Vec<DbBlock> {
+    use crate::schema::blocks::dsl::*;
+
+    let connection = &mut establish_connection(network);
+    blocks
+        .filter(block_number.gt(min))
+        .load::<DbBlock>(connection)
+        .expect("Failed getting blocks")
 }
 
 pub fn get_last_block_in_db(network: &Network) -> DbBlock {
@@ -346,6 +356,31 @@ pub fn create_batch_of_volatilities(volatilities: &Vec<OptionVolatility>, networ
     }
 }
 
+pub fn update_batch_of_volatilities(new_volatilities: &Vec<OptionVolatility>, network: &Network) {
+    use crate::schema::options_volatility::dsl::*;
+
+    let mut connection = establish_connection(network);
+
+    let mut updated_sum = 0;
+
+    for new_volatility in new_volatilities {
+        let res: usize = diesel::update(
+            options_volatility.filter(
+                option_address
+                    .eq(&new_volatility.option_address)
+                    .and(block_number.eq(&new_volatility.block_number)),
+            ),
+        )
+        .set(new_volatility)
+        .execute(&mut connection)
+        .expect("Error updating volatilities");
+
+        updated_sum += res;
+    }
+
+    println!("Updated volatilities: {}", updated_sum);
+}
+
 pub fn create_batch_of_pool_states(states: &Vec<PoolState>, network: &Network) {
     use crate::schema::pool_state::dsl::*;
 
@@ -371,7 +406,7 @@ pub fn get_pool_state(pool_address: &str, network: &Network) -> Vec<PoolStateWit
         .inner_join(blocks)
         .filter(lp_address.eq(pool_address))
         // endstate of old AMM
-        .filter(block_number.lt(495000))
+        .filter(block_number.gt(495000))
         .select((PoolState::as_select(), DbBlock::as_select()))
         .load::<(PoolState, DbBlock)>(connection)
         .expect("Error loading pool state")

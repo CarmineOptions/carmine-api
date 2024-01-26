@@ -41,7 +41,7 @@ pub struct AppData {
     pub option_volatility: Vec<OptionWithVolatility>,
     pub state: HashMap<String, Vec<PoolStateWithTimestamp>>,
     pub oracle_prices: HashMap<String, Vec<OraclePriceConcise>>,
-    pub apy: HashMap<String, f64>,
+    pub apy: HashMap<String, APY>,
 }
 
 pub struct AppState {
@@ -184,7 +184,9 @@ pub struct Pool {
     pub lp_address: String,
 }
 
-#[derive(Associations, Debug, Clone, Queryable, Insertable, Serialize, PartialEq, Selectable)]
+#[derive(
+    AsChangeset, Associations, Debug, Clone, Queryable, Insertable, Serialize, PartialEq, Selectable,
+)]
 #[diesel(belongs_to(IOption, foreign_key = option_address))]
 #[diesel(belongs_to(DbBlock, foreign_key = block_number))]
 #[diesel(table_name = options_volatility)]
@@ -237,4 +239,12 @@ pub struct ReferralEvent {
 pub struct NewReferralEvent<'a> {
     pub referred_wallet_address: &'a str,
     pub referral_code: &'a str,
+}
+
+#[derive(Debug, Serialize)]
+pub struct APY {
+    pub week: f64,
+    pub week_annualized: f64,
+    pub launch: f64,
+    pub launch_annualized: f64,
 }
