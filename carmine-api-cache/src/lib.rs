@@ -1,10 +1,10 @@
 use carmine_api_core::{
     network::{Network, Protocol},
-    pool::{get_all_pools, Pool, LEGACY_MAINNET_ETH_USDC_CALL, LEGACY_MAINNET_ETH_USDC_PUT},
+    pool::{get_all_pools, Pool},
     telegram_bot,
     types::{
         AppData, IOption, OraclePrice, OraclePriceConcise, PoolStateWithTimestamp,
-        StarkScanEventSettled, TokenPair, TradeHistory,
+        StarkScanEventSettled, TokenPair, TradeHistory, APY,
     },
 };
 use carmine_api_db::{
@@ -49,11 +49,7 @@ impl Cache {
         let options_vec = get_options(&network);
         let options = Cache::options_vec_to_hashmap(options_vec);
         let all_non_expired = vec![];
-        // TODO: when there is enough data switch to new pools
-        let pools = match &network {
-            Network::Mainnet => vec![LEGACY_MAINNET_ETH_USDC_CALL, LEGACY_MAINNET_ETH_USDC_PUT],
-            Network::Testnet => get_all_pools(&network),
-        };
+        let pools = get_all_pools(&network);
 
         let mut cache = Cache {
             network,
@@ -114,7 +110,7 @@ impl Cache {
         })
     }
 
-    fn generate_apy_hashmap(&self) -> HashMap<String, f64> {
+    fn generate_apy_hashmap(&self) -> HashMap<String, APY> {
         self.pools.iter().fold(HashMap::new(), |mut acc, pool| {
             acc.insert(
                 pool.id.to_string(),
@@ -207,7 +203,7 @@ impl Cache {
         trade_history
     }
 
-    fn calculate_apy_for_pool(&self, pool_address: &str) -> f64 {
+    fn calculate_apy_for_pool(&self, pool_address: &str) -> APY {
         let state = get_pool_state(pool_address, &self.network);
         apy::calculate_apy(&state)
     }

@@ -38,7 +38,7 @@ lazy_static! {
 const TESTNET: &'static str = "testnet";
 const MAINNET: &'static str = "mainnet";
 
-#[get("/v1/{network}/live-options")]
+#[get("/{network}/live-options")]
 pub async fn live_options(
     path: web::Path<String>,
     data: web::Data<Arc<Mutex<AppState>>>,
@@ -74,7 +74,7 @@ pub async fn live_options(
     })
 }
 
-#[get("/v1/{network}/transactions")]
+#[get("/{network}/transactions")]
 pub async fn transactions(
     opts: web::Query<QueryOptions>,
     path: web::Path<String>,
@@ -122,7 +122,7 @@ pub async fn transactions(
     })
 }
 
-#[get("/v1/{network}/all-transactions")]
+#[get("/{network}/all-transactions")]
 pub async fn all_transactions(
     path: web::Path<String>,
     data: web::Data<Arc<Mutex<AppState>>>,
@@ -162,7 +162,7 @@ pub async fn all_transactions(
     })
 }
 
-#[get("/v1/mainnet/airdrop")]
+#[get("/mainnet/airdrop")]
 pub async fn airdrop(
     opts: web::Query<QueryOptions>,
     data: web::Data<Arc<Mutex<AppState>>>,
@@ -203,7 +203,7 @@ pub async fn airdrop(
     })
 }
 
-#[get("/v1/mainnet/{pool}")]
+#[get("/mainnet/{pool}")]
 pub async fn pool_state(
     path: web::Path<String>,
     data: web::Data<Arc<Mutex<AppState>>>,
@@ -241,7 +241,7 @@ pub async fn pool_state(
     }
 }
 
-#[get("/v1/mainnet/{pool}/state")]
+#[get("/mainnet/{pool}/state")]
 pub async fn pool_state_last(
     path: web::Path<String>,
     data: web::Data<Arc<Mutex<AppState>>>,
@@ -286,7 +286,7 @@ pub async fn pool_state_last(
     }
 }
 
-#[get("/v1/mainnet/{pool}/apy")]
+#[get("/mainnet/{pool}/apy")]
 pub async fn pool_apy(
     path: web::Path<String>,
     data: web::Data<Arc<Mutex<AppState>>>,
@@ -311,7 +311,7 @@ pub async fn pool_apy(
                 .insert_header(AcceptEncoding(vec!["gzip".parse().unwrap()]))
                 .json(DataResponse {
                     status: "success".to_string(),
-                    data: apy,
+                    data: apy.week_annualized,
                 });
         }
         None => {
@@ -324,7 +324,7 @@ pub async fn pool_apy(
     }
 }
 
-#[get("/v1/mainnet/option-volatility")]
+#[get("/mainnet/option-volatility")]
 pub async fn option_volatility(data: web::Data<Arc<Mutex<AppState>>>) -> impl Responder {
     let locked = &data.lock();
     let app_state = match locked {
@@ -343,7 +343,7 @@ pub async fn option_volatility(data: web::Data<Arc<Mutex<AppState>>>) -> impl Re
     })
 }
 
-#[get("/v1/mainnet/prices/{pair_id}")]
+#[get("/mainnet/prices/{pair_id}")]
 pub async fn prices(
     path: web::Path<String>,
     data: web::Data<Arc<Mutex<AppState>>>,
@@ -366,7 +366,7 @@ pub async fn prices(
     })
 }
 
-#[post("/v1/{network}/call")]
+#[post("/{network}/call")]
 async fn proxy_call(path: web::Path<String>, payload: Option<web::Bytes>) -> impl Responder {
     let network = match path.into_inner().as_str() {
         TESTNET => Network::Testnet,
@@ -436,7 +436,7 @@ async fn proxy_call(path: web::Path<String>, payload: Option<web::Bytes>) -> imp
     })
 }
 
-#[get("/v1/mainnet/get_referral")]
+#[get("/mainnet/get_referral")]
 pub async fn get_referral(opts: web::Query<QueryOptions>) -> impl Responder {
     let address = match &opts.address {
         Some(address) => format_tx(address),
@@ -456,7 +456,7 @@ pub async fn get_referral(opts: web::Query<QueryOptions>) -> impl Responder {
     })
 }
 
-#[post("/v1/mainnet/referral_event")]
+#[post("/mainnet/referral_event")]
 async fn referral_event(payload: Option<web::Bytes>) -> impl Responder {
     let bytes = match payload {
         Some(v) => v,

@@ -1,20 +1,21 @@
-use carmine_api_starknet::amm_state::AmmStateObserver;
+use carmine_api_core::network::Network;
+use carmine_api_db::{get_blocks_greater_than, update_batch_of_volatilities};
+use carmine_api_starknet::carmine::Carmine;
 use dotenvy::dotenv;
 
 #[tokio::main]
 async fn main() {
     dotenv().ok();
+    let mainnet = Network::Mainnet;
 
-    let state_updater = AmmStateObserver::new();
+    let carmine = Carmine::new(mainnet);
+    let blocks = get_blocks_greater_than(504260, &mainnet);
 
-    let mut n = 475225;
-
-    while n < 491903 {
-        let res = state_updater.update_single_block(n).await;
-        match res {
-            Ok(_) => println!("UPDATED {}", n),
-            Err(_) => println!("FAILED {}", n),
+    for block in blocks {
+        println!("BLOCK {}", block.block_number);
+        let volatilities_res = carmine.get_all_options_volatility(&block).await;
+        if let Ok(volatilities) = volatilities_res {
+            update_batch_of_volatilities(&volatilities, &mainnet);
         }
-        n += 1;
     }
 }

@@ -186,7 +186,7 @@ struct RpcErrorData {
 #[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct RpcErrorResponse {
-    code: u8,
+    code: i64,
     message: String,
     data: RpcErrorData,
 }
