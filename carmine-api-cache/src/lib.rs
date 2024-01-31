@@ -3,13 +3,13 @@ use carmine_api_core::{
     pool::{get_all_pools, Pool},
     telegram_bot,
     types::{
-        AppData, IOption, OraclePrice, OraclePriceConcise, PoolStateWithTimestamp,
+        AppData, IOption, OraclePrice, OraclePriceConcise, PoolStateWithTimestamp, ReferralEvent,
         StarkScanEventSettled, TokenPair, TradeHistory, APY,
     },
 };
 use carmine_api_db::{
     get_options, get_options_volatility, get_oracle_prices, get_pool_state, get_protocol_events,
-    get_protocol_events_from_block,
+    get_protocol_events_from_block, get_referral_events,
 };
 use carmine_api_starknet::carmine::Carmine;
 use std::{collections::HashMap, vec};
@@ -39,6 +39,7 @@ pub struct Cache {
     all_non_expired: Vec<String>,
     trade_history: Vec<TradeHistory>,
     pools: Vec<Pool>,
+    referrals: Vec<ReferralEvent>,
 }
 
 impl Cache {
@@ -50,6 +51,11 @@ impl Cache {
         let options = Cache::options_vec_to_hashmap(options_vec);
         let all_non_expired = vec![];
         let pools = get_all_pools(&network);
+        let referrals = match network {
+            Network::Mainnet => get_referral_events(),
+            // no referral events on Testnet
+            Network::Testnet => vec![],
+        };
 
         let mut cache = Cache {
             network,
@@ -59,6 +65,7 @@ impl Cache {
             all_non_expired,
             trade_history: Vec::new(),
             pools,
+            referrals,
         };
 
         cache.trade_history = Cache::generate_trade_history(&mut cache);
@@ -74,6 +81,7 @@ impl Cache {
         let state = self.generate_state_hashmap();
         let apy = self.generate_apy_hashmap();
         let oracle_prices = self.generate_oracle_prices_hash_map();
+        let referrals = self.referrals.clone();
 
         AppData {
             all_non_expired,
@@ -82,6 +90,7 @@ impl Cache {
             state,
             apy,
             oracle_prices,
+            referrals,
         }
     }
 
@@ -258,6 +267,14 @@ impl Cache {
 
     pub fn update_trade_history(&mut self) {
         self.trade_history = Cache::generate_trade_history(self);
+    }
+
+    pub fn update_referral_events(&mut self) {
+        self.referrals = match self.network {
+            Network::Mainnet => get_referral_events(),
+            // no referral events on Testnet
+            Network::Testnet => vec![],
+        };
     }
 
     pub async fn update(&mut self) {
