@@ -32,6 +32,7 @@ pub fn config(conf: &mut web::ServiceConfig) {
                         .service(v1::all_transactions)
                         .service(v1::airdrop)
                         .service(v1::option_volatility)
+                        .service(v1::get_referral_events)
                         .service(v1::get_referral)
                         .service(v1::referral_event)
                         .service(v1::pool_state)

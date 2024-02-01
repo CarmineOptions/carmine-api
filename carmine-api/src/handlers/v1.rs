@@ -203,6 +203,25 @@ pub async fn airdrop(
     })
 }
 
+#[get("/mainnet/referral_events")]
+pub async fn get_referral_events(data: web::Data<Arc<Mutex<AppState>>>) -> impl Responder {
+    let locked = &data.lock();
+    let app_state = match locked {
+        Ok(app_data) => app_data,
+        _ => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "server_error".to_string(),
+                message: "Failed to read AppState".to_string(),
+            });
+        }
+    };
+
+    HttpResponse::Ok().json(DataResponse {
+        status: "success".to_string(),
+        data: &app_state.mainnet.referrals,
+    })
+}
+
 #[get("/mainnet/{pool}")]
 pub async fn pool_state(
     path: web::Path<String>,

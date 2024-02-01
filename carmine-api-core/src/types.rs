@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, time::SystemTime};
 
 use crate::schema::{
     blocks, events, options, options_volatility, oracle_prices, pool_state, pools, referral_codes,
@@ -42,6 +42,7 @@ pub struct AppData {
     pub state: HashMap<String, Vec<PoolStateWithTimestamp>>,
     pub oracle_prices: HashMap<String, Vec<OraclePriceConcise>>,
     pub apy: HashMap<String, APY>,
+    pub referrals: Vec<ReferralEvent>,
 }
 
 pub struct AppState {
@@ -226,12 +227,13 @@ pub struct ReferralCode {
     pub referral_code: String,
 }
 
-#[derive(Queryable)]
+#[derive(Debug, Clone, Queryable, Serialize, Selectable)]
+#[diesel(table_name = referral_events)]
 pub struct ReferralEvent {
     pub id: i32,
     pub referred_wallet_address: String,
     pub referral_code: String,
-    pub timestamp: i64,
+    pub timestamp: SystemTime,
 }
 
 #[derive(Serialize, Deserialize, Insertable)]

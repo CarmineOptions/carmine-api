@@ -2,7 +2,8 @@ use carmine_api_core::network::{protocol_address, Network, Protocol, NEW_AMM_GEN
 use carmine_api_core::schema::{self};
 use carmine_api_core::types::{
     DbBlock, Event, IOption, NewReferralEvent, OptionVolatility, OptionWithVolatility, OraclePrice,
-    Pool, PoolState, PoolStateWithTimestamp, ReferralCode, StarkScanEventSettled, Volatility,
+    Pool, PoolState, PoolStateWithTimestamp, ReferralCode, ReferralEvent, StarkScanEventSettled,
+    Volatility,
 };
 
 use carmine_api_referral::referral_code::generate_referral_code;
@@ -626,4 +627,13 @@ pub fn create_referral_event(event: NewReferralEvent) -> Result<usize, diesel::r
     diesel::insert_into(referral_events)
         .values(&event)
         .execute(connection)
+}
+
+pub fn get_referral_events() -> Vec<ReferralEvent> {
+    use crate::schema::referral_events::dsl::*;
+
+    let connection = &mut establish_connection(&Network::Mainnet);
+    referral_events
+        .load::<ReferralEvent>(connection)
+        .expect("Error loading referral events")
 }
