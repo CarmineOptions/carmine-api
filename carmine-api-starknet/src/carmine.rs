@@ -86,20 +86,20 @@ impl Carmine {
                 ));
 
                 // BTC from AuxContract
-                // futures.push(call(
-                //     MAINNET_AUXILIARY_CONTRACT.to_string(), // aux contract to bypass BTC option problem
-                //     format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
-                //     vec![MAINNET_BTC_USDC_CALL.address.to_string()],
-                //     BlockTag::Latest,
-                //     &self.network,
-                // ));
-                // futures.push(call(
-                //     MAINNET_AUXILIARY_CONTRACT.to_string(), // aux contract to bypass BTC option problem
-                //     format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
-                //     vec![MAINNET_BTC_USDC_PUT.address.to_string()],
-                //     BlockTag::Latest,
-                //     &self.network,
-                // ));
+                futures.push(call(
+                    MAINNET_AUXILIARY_CONTRACT.to_string(), // aux contract to bypass BTC option problem
+                    format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
+                    vec![MAINNET_BTC_USDC_CALL.address.to_string()],
+                    BlockTag::Latest,
+                    &self.network,
+                ));
+                futures.push(call(
+                    MAINNET_AUXILIARY_CONTRACT.to_string(), // aux contract to bypass BTC option problem
+                    format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
+                    vec![MAINNET_BTC_USDC_PUT.address.to_string()],
+                    BlockTag::Latest,
+                    &self.network,
+                ));
             }
             Network::Testnet => {
                 // TODO: fix testnet options
