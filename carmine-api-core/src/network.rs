@@ -85,6 +85,21 @@ pub enum Protocol {
     Nostra2WBTCInterest,
     Nostra2WBTCDebt,
     Nostra2WBTCInterestCollateral,
+    Nostra2WSTETH,
+    Nostra2WSTETHCollateral,
+    Nostra2WSTETHInterest,
+    Nostra2WSTETHDebt,
+    Nostra2WSTETHInterestCollateral,
+    Nostra2LORDS,
+    Nostra2LORDSCollateral,
+    Nostra2LORDSInterest,
+    Nostra2LORDSDebt,
+    Nostra2LORDSInterestCollateral,
+    Nostra2STRK,
+    Nostra2STRKCollateral,
+    Nostra2STRKInterest,
+    Nostra2STRKDebt,
+    Nostra2STRKInterestCollateral,
     HashstackBTCRToken,
     HashstackBTCDToken,
     HashstackETHRToken,
@@ -302,6 +317,51 @@ pub fn protocol_address(network: &Network, protocol: &Protocol) -> &'static str 
         }
         Protocol::Nostra2WBTCInterestCollateral => {
             "0x05b7d301fa769274f20e89222169c0fad4d846c366440afc160aafadd6f88f0c"
+        }
+        Protocol::Nostra2WSTETH => {
+            "0x07e2c010c0b381f347926d5a203da0335ef17aefee75a89292ef2b0f94924864"
+        }
+        Protocol::Nostra2WSTETHCollateral => {
+            "0x05eb6de9c7461b3270d029f00046c8a10d27d4f4a4c931a4ea9769c72ef4edbb"
+        }
+        Protocol::Nostra2WSTETHInterest => {
+            "0x00ca44c79a77bcb186f8cdd1a0cd222cc258bebc3bec29a0a020ba20fdca40e9"
+        }
+        Protocol::Nostra2WSTETHDebt => {
+            "0x0348cc417fc877a7868a66510e8e0d0f3f351f5e6b0886a86b652fcb30a3d1fb"
+        }
+        Protocol::Nostra2WSTETHInterestCollateral => {
+            "0x009377fdde350e01e0397820ea83ed3b4f05df30bfb8cf8055d62cafa1b2106a"
+        }
+        Protocol::Nostra2LORDS => {
+            "0x000d294e16a8d24c32eed65ea63757adde543d72bad4af3927f4c7c8969ff43d"
+        }
+        Protocol::Nostra2LORDSCollateral => {
+            "0x02530a305dd3d92aad5cf97e373a3d07577f6c859337fb0444b9e851ee4a2dd4"
+        }
+        Protocol::Nostra2LORDSInterest => {
+            "0x0507eb06dd372cb5885d3aaf18b980c41cd3cd4691cfd3a820339a6c0cec2674"
+        }
+        Protocol::Nostra2LORDSDebt => {
+            "0x035778d24792bbebcf7651146896df5f787641af9e2a3db06480a637fbc9fff8"
+        }
+        Protocol::Nostra2LORDSInterestCollateral => {
+            "0x0739760bce37f89b6c1e6b1198bb8dc7166b8cf21509032894f912c9d5de9cbd"
+        }
+        Protocol::Nostra2STRK => {
+            "0x07c535ddb7bf3d3cb7c033bd1a4c3aac02927a4832da795606c0f3dbbc6efd17"
+        }
+        Protocol::Nostra2STRKCollateral => {
+            "0x040f5a6b7a6d3c472c12ca31ae6250b462c6d35bbdae17bd52f6c6ca065e30cf"
+        }
+        Protocol::Nostra2STRKInterest => {
+            "0x026c5994c2462770bbf940552c5824fb0e0920e2a8a5ce1180042da1b3e489db"
+        }
+        Protocol::Nostra2STRKDebt => {
+            "0x001258eae3eae5002125bebf062d611a772e8aea3a1879b64a19f363ebd00947"
+        }
+        Protocol::Nostra2STRKInterestCollateral => {
+            "0x07c2e1e733f28daa23e78be3a4f6c724c0ab06af65f6a95b5e0545215f1abc1b"
         }
         Protocol::HashstackBTCRToken => {
             "0x01320a9910e78afc18be65e4080b51ecc0ee5c0a8b6cc7ef4e685e02b50e57ef"
