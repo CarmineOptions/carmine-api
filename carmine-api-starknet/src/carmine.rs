@@ -69,37 +69,15 @@ impl Carmine {
 
         match self.network {
             Network::Mainnet => {
-                // ETH from AMM
-                futures.push(call(
-                    MAINNET_CONTRACT_ADDRESS.to_string(), // aux contract to bypass BTC option problem
-                    format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
-                    vec![MAINNET_ETH_USDC_CALL.address.to_string()],
-                    BlockTag::Latest,
-                    &self.network,
-                ));
-                futures.push(call(
-                    MAINNET_CONTRACT_ADDRESS.to_string(), // aux contract to bypass BTC option problem
-                    format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
-                    vec![MAINNET_ETH_USDC_PUT.address.to_string()],
-                    BlockTag::Latest,
-                    &self.network,
-                ));
-
-                // BTC from AuxContract
-                futures.push(call(
-                    MAINNET_AUXILIARY_CONTRACT.to_string(), // aux contract to bypass BTC option problem
-                    format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
-                    vec![MAINNET_BTC_USDC_CALL.address.to_string()],
-                    BlockTag::Latest,
-                    &self.network,
-                ));
-                futures.push(call(
-                    MAINNET_AUXILIARY_CONTRACT.to_string(), // aux contract to bypass BTC option problem
-                    format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
-                    vec![MAINNET_BTC_USDC_PUT.address.to_string()],
-                    BlockTag::Latest,
-                    &self.network,
-                ));
+                for address in pool_addresses {
+                    futures.push(call(
+                        MAINNET_AUXILIARY_CONTRACT.to_string(), // aux contract to bypass BTC option problem
+                        format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
+                        vec![address.to_string()],
+                        BlockTag::Latest,
+                        &self.network,
+                    ));
+                }
             }
             Network::Testnet => {
                 // TODO: fix testnet options
