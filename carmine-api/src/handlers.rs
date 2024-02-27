@@ -35,6 +35,7 @@ pub fn config(conf: &mut web::ServiceConfig) {
                         .service(v1::get_referral_events)
                         .service(v1::get_referral)
                         .service(v1::referral_event)
+                        .service(v1::insurance_event)
                         .service(v1::pool_state)
                         .service(v1::pool_state_last)
                         .service(v1::pool_apy)

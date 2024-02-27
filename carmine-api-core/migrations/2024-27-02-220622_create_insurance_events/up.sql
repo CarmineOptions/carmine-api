@@ -1,0 +1,6 @@
+CREATE TABLE insurance_events (
+  id SERIAL PRIMARY KEY,
+  user_address TEXT NOT NULL,
+  calldata TEXT[] NOT NULL,
+  timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

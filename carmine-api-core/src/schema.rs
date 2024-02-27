@@ -107,6 +107,15 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    insurance_events (id) {
+        id -> Int4,
+        user_address -> Text,
+        calldata -> Array<Text>,
+        timestamp -> Timestamp,
+    }
+}
+
 diesel::allow_tables_to_appear_in_same_query!(
     events,
     options,
