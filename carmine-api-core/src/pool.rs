@@ -69,6 +69,12 @@ const MAINNET_BTC: Token = Token {
     symbol: "BTC",
 };
 
+const MAINNET_STRK: Token = Token {
+    address: "0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+    decimals: 18,
+    symbol: "STRK",
+};
+
 const TESTNET_ETH_USDC_CALL: Pool = Pool {
     address: "0x5822f9be49b7c92402b16badc5fa30dd01689463db1081b59ec6e989c10cae5",
     network: Network::Testnet,
@@ -125,7 +131,7 @@ pub const MAINNET_ETH_USDC_PUT: Pool = Pool {
 
 pub const MAINNET_BTC_USDC_CALL: Pool = Pool {
     address: "0x35db72a814c9b30301f646a8fa8c192ff63a0dc82beb390a36e6e9eba55b6db",
-    network: Network::Testnet,
+    network: Network::Mainnet,
     type_: Type::Call,
     base: MAINNET_BTC,
     quote: MAINNET_USDC,
@@ -134,11 +140,29 @@ pub const MAINNET_BTC_USDC_CALL: Pool = Pool {
 
 pub const MAINNET_BTC_USDC_PUT: Pool = Pool {
     address: "0x1bf27366077765c922f342c8de257591d1119ebbcbae7a6c4ff2f50ede4c54c",
-    network: Network::Testnet,
+    network: Network::Mainnet,
     type_: Type::Put,
     base: MAINNET_BTC,
     quote: MAINNET_USDC,
     id: "btc-usdc-put",
+};
+
+pub const MAINNET_ETH_STRK_CALL: Pool = Pool {
+    address: "0x6df66db6a4b321869b3d1808fc702713b6cbb69541d583d4b38e7b1406c09aa",
+    network: Network::Mainnet,
+    type_: Type::Call,
+    base: MAINNET_ETH,
+    quote: MAINNET_STRK,
+    id: "eth-strk-call",
+};
+
+pub const MAINNET_ETH_STRK_PUT: Pool = Pool {
+    address: "0x4dcd9632353ed56e47be78f66a55a04e2c1303ebcb8ec7ea4c53f4fdf3834ec",
+    network: Network::Mainnet,
+    type_: Type::Put,
+    base: MAINNET_ETH,
+    quote: MAINNET_STRK,
+    id: "eth-strk-put",
 };
 
 pub const LEGACY_MAINNET_ETH_USDC_CALL: Pool = Pool {
@@ -166,6 +190,8 @@ pub fn get_all_pools(network: &Network) -> Vec<Pool> {
             MAINNET_ETH_USDC_PUT,
             MAINNET_BTC_USDC_CALL,
             MAINNET_BTC_USDC_PUT,
+            MAINNET_ETH_STRK_CALL,
+            MAINNET_ETH_STRK_PUT,
         ],
         Network::Testnet => vec![
             TESTNET_ETH_USDC_CALL,

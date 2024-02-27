@@ -4,7 +4,7 @@ use carmine_api_core::network::{
 };
 use carmine_api_core::pool::{
     get_all_pool_addresses, get_all_pools, Pool, MAINNET_BTC_USDC_CALL, MAINNET_BTC_USDC_PUT,
-    MAINNET_ETH_USDC_CALL, MAINNET_ETH_USDC_PUT,
+    MAINNET_ETH_STRK_CALL, MAINNET_ETH_STRK_PUT, MAINNET_ETH_USDC_CALL, MAINNET_ETH_USDC_PUT,
 };
 use carmine_api_core::types::{DbBlock, IOption, OptionVolatility, PoolState};
 use carmine_api_db::{create_batch_of_options, get_option_with_address, get_options, get_pools};
@@ -63,8 +63,6 @@ impl Carmine {
     }
 
     pub async fn get_all_non_expired_options_with_premia(&self) -> Result<Vec<String>, RpcError> {
-        let pool_addresses = get_all_pool_addresses(&self.network);
-
         let mut futures = vec![];
 
         match self.network {
@@ -81,6 +79,20 @@ impl Carmine {
                     MAINNET_CONTRACT_ADDRESS.to_string(), // aux contract to bypass BTC option problem
                     format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
                     vec![MAINNET_ETH_USDC_PUT.address.to_string()],
+                    BlockTag::Latest,
+                    &self.network,
+                ));
+                futures.push(call(
+                    MAINNET_CONTRACT_ADDRESS.to_string(), // aux contract to bypass BTC option problem
+                    format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
+                    vec![MAINNET_ETH_STRK_CALL.address.to_string()],
+                    BlockTag::Latest,
+                    &self.network,
+                ));
+                futures.push(call(
+                    MAINNET_CONTRACT_ADDRESS.to_string(), // aux contract to bypass BTC option problem
+                    format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
+                    vec![MAINNET_ETH_STRK_PUT.address.to_string()],
                     BlockTag::Latest,
                     &self.network,
                 ));
