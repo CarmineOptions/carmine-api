@@ -1,8 +1,8 @@
 use std::{collections::HashMap, time::SystemTime};
 
 use crate::schema::{
-    blocks, events, options, options_volatility, oracle_prices, pool_state, pools, referral_codes,
-    referral_events, starkscan_events,
+    blocks, events, insurance_events, options, options_volatility, oracle_prices, pool_state,
+    pools, referral_codes, referral_events, starkscan_events,
 };
 use carmine_api_airdrop::merkle_tree::MerkleTree;
 use diesel::prelude::*;
@@ -249,4 +249,11 @@ pub struct APY {
     pub week_annualized: f64,
     pub launch: f64,
     pub launch_annualized: f64,
+}
+
+#[derive(Serialize, Deserialize, Insertable)]
+#[diesel(table_name = insurance_events)]
+pub struct InsuranceEvent<'a> {
+    pub user_address: &'a str,
+    pub calldata: Vec<&'a str>,
 }

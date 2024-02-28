@@ -14,9 +14,9 @@ use actix_web::{
 };
 use carmine_api_core::{
     network::Network,
-    types::{AppState, NewReferralEvent},
+    types::{AppState, InsuranceEvent, NewReferralEvent},
 };
-use carmine_api_db::{create_referral_event, get_referral_code};
+use carmine_api_db::{create_insurance_event, create_referral_event, get_referral_code};
 use lazy_static::lazy_static;
 use std::{
     env,
@@ -501,6 +501,42 @@ async fn referral_event(payload: Option<web::Bytes>) -> impl Responder {
                 Err(_) => HttpResponse::BadRequest().json(GenericResponse {
                     status: "bad_request".to_string(),
                     message: "Referal does not exist".to_string(),
+                }),
+            }
+        }
+        Err(_) => HttpResponse::BadRequest().json(GenericResponse {
+            status: "bad_request".to_string(),
+            message: "Could not parse payload".to_string(),
+        }),
+    }
+}
+
+#[post("/mainnet/insurance-event")]
+async fn insurance_event(payload: Option<web::Bytes>) -> impl Responder {
+    let bytes = match payload {
+        Some(v) => v,
+        None => {
+            return HttpResponse::BadRequest().json(GenericResponse {
+                status: "bad_request".to_string(),
+                message: "No payload was provided".to_string(),
+            })
+        }
+    };
+
+    match serde_json::from_slice::<InsuranceEvent>(&bytes) {
+        Ok(mut event) => {
+            let unsafe_address = event.user_address;
+            let safe_address = format_tx(&unsafe_address.to_owned());
+            event.user_address = &safe_address;
+
+            match create_insurance_event(event) {
+                Ok(_) => HttpResponse::Ok().json(GenericResponse {
+                    status: "success".to_string(),
+                    message: "Event stored".to_string(),
+                }),
+                Err(_) => HttpResponse::BadRequest().json(GenericResponse {
+                    status: "bad_request".to_string(),
+                    message: "Failed storing event".to_string(),
                 }),
             }
         }
