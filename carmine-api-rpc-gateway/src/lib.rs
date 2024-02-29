@@ -437,13 +437,9 @@ pub async fn mainnet_call(
     )
     .await;
 
-    match juno_res {
-        Ok(data) => return Ok(data),
-        // if Other error, cascade to next RPC Node
-        Err(e) if matches!(e, RpcError::Other(_)) => (),
-        // if other than Other error, return error - calling other node would give same result
-        Err(e) => return Err(e),
-    };
+    if let Ok(data) = juno_res {
+        return Ok(data);
+    }
 
     let blast_api_res = rpc_call(
         contract_address.clone(),
@@ -454,13 +450,9 @@ pub async fn mainnet_call(
     )
     .await;
 
-    match blast_api_res {
-        Ok(data) => return Ok(data),
-        // if Other error, cascade to next RPC Node
-        Err(e) if matches!(e, RpcError::Other(_)) => (),
-        // if other than Other error, return error - calling other node would give same result
-        Err(e) => return Err(e),
-    };
+    if let Ok(data) = blast_api_res {
+        return Ok(data);
+    }
 
     rpc_call(
         contract_address,
