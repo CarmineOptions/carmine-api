@@ -1,48 +1,32 @@
 use carmine_api_core::types::{DbBlock, OracleName, OraclePrice, TokenPair};
-use starknet::{
-    core::types::{BlockId, FieldElement, FunctionCall},
-    macros::selector,
-    providers::{jsonrpc::HttpTransport, JsonRpcClient, Provider},
-};
-use std::env;
-use url::Url;
+use carmine_api_rpc_gateway::{mainnet_call, BlockTag};
 
 pub struct Oracle {
-    provider: JsonRpcClient<HttpTransport>,
     name: OracleName,
-    oracle_name: String,
-    oracle_address: FieldElement,
+    oracle_name: &'static str,
+    oracle_address: &'static str,
 }
 
 impl Oracle {
     pub fn new(oracle: OracleName) -> Self {
-        let rpc_url = env::var("CARMINE_JUNO_NODE_URL")
-            .expect("missing env var CARMINE_JUNO_NODE_URL in Oracle");
-        let provider = JsonRpcClient::new(HttpTransport::new(Url::parse(&rpc_url).unwrap()));
         let (oracle_address, oracle_name) = match &oracle {
             OracleName::Pragma => (
-                FieldElement::from_hex_be(
-                    "0x0346c57f094d641ad94e43468628d8e9c574dcb2803ec372576ccc60a40be2c4",
-                )
-                .unwrap(),
-                "pragma".to_owned(),
+                "0x02a85bd616f912537c50a49a4076db02c00b29b2cdc8a197ce92ed1837fa875b",
+                "pragma",
             ),
         };
         let name = oracle;
 
         Oracle {
-            provider,
             name,
             oracle_name,
             oracle_address,
         }
     }
 
-    fn oracle_specific_token_pair_id(&self, token_pair: &TokenPair) -> FieldElement {
+    fn oracle_specific_token_pair_id(&self, token_pair: &TokenPair) -> String {
         match (&self.name, token_pair) {
-            (OracleName::Pragma, TokenPair::EthUsdc) => {
-                FieldElement::from(19514442401534788 as u64)
-            }
+            (OracleName::Pragma, TokenPair::EthUsdc) => "19514442401534788".to_string(),
         }
     }
 
@@ -51,19 +35,18 @@ impl Oracle {
         token_pair: TokenPair,
         block: &DbBlock,
     ) -> Result<OraclePrice, String> {
-        let entrypoint = selector!("get_spot_median");
+        let entrypoint = "get_spot_median".to_string();
         let block_number = block.block_number;
-        let res = self
-            .provider
-            .call(
-                FunctionCall {
-                    contract_address: self.oracle_address,
-                    entry_point_selector: entrypoint,
-                    calldata: vec![self.oracle_specific_token_pair_id(&token_pair)],
-                },
-                BlockId::Number(block_number as u64),
-            )
-            .await;
+        let block_tag = BlockTag::Number(block_number);
+        let calldata = vec![self.oracle_specific_token_pair_id(&token_pair)];
+
+        let res = mainnet_call(
+            self.oracle_address.to_owned(),
+            entrypoint,
+            calldata,
+            block_tag,
+        )
+        .await;
 
         // Response format:
         // price 186825000000
@@ -94,7 +77,7 @@ impl Oracle {
                 last_updated_timestamp,
                 num_sources_aggregated,
                 block_number,
-                oracle_name: self.oracle_name.clone(),
+                oracle_name: self.oracle_name.to_string(),
             });
         }
         return Err(err_msg);

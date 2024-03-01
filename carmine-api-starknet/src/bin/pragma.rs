@@ -8,17 +8,17 @@ async fn main() {
 
     let pragma = Oracle::new(OracleName::Pragma);
 
-    let mut n = 480000;
-    while n < 491972 {
+    let mut n = 597000;
+    while n < 597020 {
         let block = DbBlock {
             block_number: 491000,
             timestamp: 1704134046,
         };
 
         match pragma.get_spot_median(TokenPair::EthUsdc, &block).await {
-            Ok(_) => println!("OK {}", n),
-            Err(_) => println!("NOK {}", n),
+            Ok(data) => println!("{} OK, data: {:#?}", n, data),
+            Err(e) => println!("{} Failed, error: {:#?}", n, e),
         }
-        n += 100;
+        n += 1;
     }
 }
