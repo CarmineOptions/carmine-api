@@ -439,6 +439,8 @@ pub async fn mainnet_call(
     )
     .await;
 
+    println!("JUNO RES {:?}", juno_res);
+
     if let Ok(data) = juno_res {
         return Ok(data);
     }
@@ -452,18 +454,24 @@ pub async fn mainnet_call(
     )
     .await;
 
+    println!("BLAST API RES {:?}", juno_res);
+
     if let Ok(data) = blast_api_res {
         return Ok(data);
     }
 
-    rpc_call(
+    let infura_res = rpc_call(
         contract_address,
         entry_point_selector,
         calldata,
         block,
         RpcNode::Infura,
     )
-    .await
+    .await;
+
+    println!("INFURA RES {:?}", juno_res);
+
+    infura_res
 }
 
 pub async fn blast_api_latest_block_number() -> Result<i64, RpcError> {

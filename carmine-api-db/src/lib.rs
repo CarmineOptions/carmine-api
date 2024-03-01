@@ -3,7 +3,7 @@ use carmine_api_core::schema::{self};
 use carmine_api_core::types::{
     DbBlock, Event, IOption, InsuranceEvent, NewReferralEvent, OptionVolatility,
     OptionWithVolatility, OraclePrice, Pool, PoolState, PoolStateWithTimestamp, ReferralCode,
-    ReferralEvent, StarkScanEventSettled, Volatility,
+    ReferralEvent, StarkScanEventSettled, UserPoints, Volatility,
 };
 
 use carmine_api_referral::referral_code::generate_referral_code;
@@ -646,4 +646,19 @@ pub fn create_insurance_event(event: InsuranceEvent) -> Result<usize, diesel::re
     diesel::insert_into(insurance_events)
         .values(&event)
         .execute(connection)
+}
+
+pub fn get_latest_user_point(address: &str) -> Option<UserPoints> {
+    use crate::schema::user_points::dsl::*;
+
+    let connection = &mut establish_connection(&Network::Mainnet);
+    let res: QueryResult<UserPoints> = user_points
+        .filter(user_address.eq(address))
+        .order(timestamp.desc())
+        .first(connection);
+
+    match res {
+        Ok(points) => Some(points),
+        Err(_) => None,
+    }
 }
