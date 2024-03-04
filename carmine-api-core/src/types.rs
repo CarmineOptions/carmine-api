@@ -21,12 +21,16 @@ pub struct TradeHistory {
 
 pub enum TokenPair {
     EthUsdc,
+    BtcUsdc,
+    StrkUsdc,
 }
 
 impl TokenPair {
     pub fn id(&self) -> String {
         match self {
             TokenPair::EthUsdc => "eth-usdc".to_string(),
+            TokenPair::BtcUsdc => "btc-usdc".to_string(),
+            TokenPair::StrkUsdc => "strk-usdc".to_string(),
         }
     }
 }
