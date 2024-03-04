@@ -428,18 +428,18 @@ pub async fn mainnet_call(
     calldata: Vec<String>,
     block: BlockTag,
 ) -> Result<Vec<String>, RpcError> {
-    // let juno_res = rpc_call(
-    //     contract_address.clone(),
-    //     entry_point_selector.clone(),
-    //     calldata.to_vec(),
-    //     block,
-    //     RpcNode::CarmineJunoNode,
-    // )
-    // .await;
+    let juno_res = rpc_call(
+        contract_address.clone(),
+        entry_point_selector.clone(),
+        calldata.to_vec(),
+        block,
+        RpcNode::CarmineJunoNode,
+    )
+    .await;
 
-    // if let Ok(data) = juno_res {
-    //     return Ok(data);
-    // }
+    if let Ok(data) = juno_res {
+        return Ok(data);
+    }
 
     let blast_api_res = rpc_call(
         contract_address.clone(),
