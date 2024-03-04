@@ -46,10 +46,18 @@ impl AmmStateObserver {
             timestamp: i64::try_from(strk_block.timestamp).unwrap(),
         };
 
-        let (options_volatility_result, amm_state_result, pragma_eth_usdc_result) = join!(
+        let (
+            options_volatility_result,
+            amm_state_result,
+            pragma_eth_usdc_result,
+            pragma_btc_usdc_result,
+            pragma_strk_usdc_result,
+        ) = join!(
             self.carmine.get_all_options_volatility(&block),
             self.carmine.get_amm_state(&block),
             self.pragma.get_spot_median(TokenPair::EthUsdc, &block),
+            self.pragma.get_spot_median(TokenPair::BtcUsdc, &block),
+            self.pragma.get_spot_median(TokenPair::StrkUsdc, &block),
         );
 
         println!("Fetched single block state in {:.2?}", t0.elapsed());
@@ -59,13 +67,23 @@ impl AmmStateObserver {
             options_volatility_result,
             amm_state_result,
             pragma_eth_usdc_result,
+            pragma_btc_usdc_result,
+            pragma_strk_usdc_result,
         ) {
-            (Ok(options_volatility), Ok(amm_state), Ok(pragma_eth_usdc)) => {
+            (
+                Ok(options_volatility),
+                Ok(amm_state),
+                Ok(pragma_eth_usdc),
+                Ok(pragma_btc_usdc),
+                Ok(pragma_strk_usdc),
+            ) => {
                 // got everything - store it to the database
                 create_block(&block, &self.network);
                 create_batch_of_volatilities(&options_volatility, &self.network);
                 create_batch_of_pool_states(&amm_state, &self.network);
                 create_oracle_price(&pragma_eth_usdc, &self.network);
+                create_oracle_price(&pragma_btc_usdc, &self.network);
+                create_oracle_price(&pragma_strk_usdc, &self.network);
                 Ok(())
             }
             _ => Err(()),

@@ -1,6 +1,5 @@
 use carmine_api_core::network::{
     amm_address, Network, MAINNET_AUXILIARY_CONTRACT, MAINNET_CONTRACT_ADDRESS,
-    TESTNET_CONTRACT_ADDRESS,
 };
 use carmine_api_core::pool::{
     get_all_pool_addresses, get_all_pools, Pool, MAINNET_BTC_USDC_CALL, MAINNET_BTC_USDC_PUT,
