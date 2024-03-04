@@ -225,6 +225,8 @@ impl Carmine {
     }
 
     async fn get_options_with_addresses_from_single_pool(&self, pool_address: &String) {
+        println!("LP_ADDRESS: {}", pool_address);
+
         let contract_result = self
             .amm_call(
                 format!("{}", Entrypoint::GetAllOptions),
@@ -286,8 +288,6 @@ impl Carmine {
 
             let (type_index, base_index, quote_index) = (6, 5, 4);
 
-            println!("OPTION VEC: {:#?}", option_vec);
-
             // this part only runs if option not already in the DB
             let option_type = i16::from_str_radix(&option_vec[type_index][2..], 16)
                 .expect("Failed to parse type");
@@ -337,11 +337,13 @@ impl Carmine {
     }
 
     pub async fn get_options_with_addresses(&self) {
-        let pool_addresses = get_all_pool_addresses(&self.network);
+        if matches!(self.network, Network::Mainnet) {
+            let pool_addresses = get_all_pool_addresses(&self.network);
 
-        for address in pool_addresses {
-            self.get_options_with_addresses_from_single_pool(&address.to_string())
-                .await;
+            for address in pool_addresses {
+                self.get_options_with_addresses_from_single_pool(&address.to_string())
+                    .await;
+            }
         }
     }
 

@@ -595,6 +595,7 @@ dependencies = [
  "carmine-api-core",
  "carmine-api-rpc-gateway",
  "carmine-api-starknet",
+ "dotenvy",
  "tokio",
 ]
 

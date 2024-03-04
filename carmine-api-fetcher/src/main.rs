@@ -42,7 +42,7 @@ async fn report_block_discrepency() {
         _ => return,
     };
 
-    let diff = blast_block_number - carm_block_number;
+    let diff = (blast_block_number - carm_block_number).abs();
     if diff > BLOCK_DISCREPENCY_THRESHOLD {
         let msg = format!(
             "BLOCK DISCREPENCY is {}: Carmine: {}, BlastApi: {}",

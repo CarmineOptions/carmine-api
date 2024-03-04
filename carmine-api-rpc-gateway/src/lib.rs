@@ -180,7 +180,7 @@ pub enum RpcNode {
 #[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct RpcErrorData {
-    revert_error: String,
+    revert_error: Option<String>,
 }
 
 #[allow(dead_code)]
@@ -356,7 +356,9 @@ pub async fn rpc_call(
         return match e.code {
             20 => Err(RpcError::ContractNotFound),
             24 => Err(RpcError::BlockNotFound),
-            40 => Err(RpcError::ContractError(e.data.revert_error)),
+            40 => Err(RpcError::ContractError(
+                e.data.revert_error.unwrap_or("".to_string()),
+            )),
             _ => Err(RpcError::Other(format!(
                 "RPC returned unexpected code {}",
                 e.code

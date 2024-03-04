@@ -10,4 +10,9 @@ actix-web = "4.3.1"
 carmine-api-core = { path = "../carmine-api-core" }
 carmine-api-starknet = { path = "../carmine-api-starknet" }
 carmine-api-rpc-gateway = { path = "../carmine-api-rpc-gateway" }
+dotenvy = "0.15.6"
 tokio = "1.26.0"
+
+[[bin]]
+path = "./src/bin/amm_state.rs"
+name = "amm_state"
