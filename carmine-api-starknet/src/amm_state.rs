@@ -55,13 +55,15 @@ impl AmmStateObserver {
         ) = join!(
             self.carmine.get_all_options_volatility(&block),
             self.carmine.get_amm_state(&block),
-            self.pragma.get_spot_median(TokenPair::EthUsdc, &block),
-            self.pragma.get_spot_median(TokenPair::BtcUsdc, &block),
-            self.pragma.get_spot_median(TokenPair::StrkUsdc, &block),
+            self.pragma.get_spot_median(&TokenPair::EthUsdc, &block),
+            self.pragma.get_spot_median(&TokenPair::BtcUsdc, &block),
+            self.pragma.get_spot_median(&TokenPair::StrkUsdc, &block),
         );
 
         println!("Fetched single block state in {:.2?}", t0.elapsed());
-        println!("AMM State Result: {:?}", amm_state_result);
+        println!("ETH-USDC {:?}", pragma_eth_usdc_result);
+        println!("BTC-USDC {:?}", pragma_btc_usdc_result);
+        println!("STRK-USDC {:?}", pragma_strk_usdc_result);
 
         match (
             options_volatility_result,

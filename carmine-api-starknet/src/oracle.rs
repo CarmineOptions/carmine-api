@@ -37,7 +37,7 @@ impl Oracle {
 
     pub async fn get_spot_median(
         &self,
-        token_pair: TokenPair,
+        token_pair: &TokenPair,
         block: &DbBlock,
     ) -> Result<OraclePrice, String> {
         let entrypoint = selector!("get_data_median").to_string();
@@ -67,7 +67,6 @@ impl Oracle {
 
         let err_msg = format!("Unexpected oracle call result {:?}", res);
         if let Ok(data) = res {
-            println!("PRAGMA RESPONSE: {:#?}", data);
             if data.len() < 4 {
                 return Err(format!(
                     "Incorrect number of fields in Oracle response: {:?}",
@@ -87,7 +86,7 @@ impl Oracle {
                 .expect("Failed parsing oracle timestamp");
             let num_sources_aggregated = i16::from_str_radix(deque.pop_front().unwrap(), 16)
                 .expect("Failed parsing oracle sources");
-            let id = format!("{}-{}", block_number, self.oracle_name);
+            let id = format!("{}_{}_{}", block_number, token_pair, self.oracle_name);
 
             return Ok(OraclePrice {
                 token_pair: token_pair.id(),

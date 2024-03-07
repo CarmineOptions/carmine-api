@@ -1,3 +1,4 @@
+use core::fmt;
 use std::{collections::HashMap, time::SystemTime};
 
 use crate::schema::{
@@ -31,6 +32,16 @@ impl TokenPair {
             TokenPair::EthUsdc => "eth-usdc".to_string(),
             TokenPair::BtcUsdc => "btc-usdc".to_string(),
             TokenPair::StrkUsdc => "strk-usdc".to_string(),
+        }
+    }
+}
+
+impl fmt::Display for TokenPair {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            TokenPair::EthUsdc => write!(f, "eth-usdc"),
+            TokenPair::BtcUsdc => write!(f, "btc-usdc"),
+            TokenPair::StrkUsdc => write!(f, "strk-usdc"),
         }
     }
 }
