@@ -6,11 +6,11 @@ use carmine_api_db::{create_oracle_price, get_block_by_number};
 use carmine_api_starknet::{amm_state::AmmStateObserver, oracle::Oracle};
 use dotenvy::dotenv;
 use futures::future::try_join_all;
-use tokio::time::sleep;
 use std::{env, time::Duration};
+use tokio::time::sleep;
 
 async fn add_price_for_block(pragma: &Oracle, block: &DbBlock) -> Result<(), ()> {
-    let pragma_eth_usdc_result = pragma.get_spot_median(TokenPair::EthUsdc, block).await;
+    let pragma_eth_usdc_result = pragma.get_spot_median(&TokenPair::EthUsdc, block).await;
     if let Ok(pragma_eth_usdc) = pragma_eth_usdc_result {
         create_oracle_price(&pragma_eth_usdc, &Network::Mainnet);
         println!("updated prices for block {}", block.block_number);
@@ -58,7 +58,7 @@ async fn main() {
                     println!("Failed updating state for block {} !!!", block_number);
                     // is still missing, add it back to the vec
                     missing_block_numbers.push(block_number);
-                },
+                }
             };
         }
 

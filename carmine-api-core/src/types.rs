@@ -227,7 +227,7 @@ pub struct OraclePrice {
     pub block_number: i64,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct OraclePriceConcise {
     pub price: i64,
     pub decimals: i16,

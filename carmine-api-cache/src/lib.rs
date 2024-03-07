@@ -153,7 +153,10 @@ impl Cache {
         let mut map: HashMap<String, Vec<OraclePriceConcise>> = HashMap::new();
         let oracle_prices = get_oracle_prices(&self.network);
 
+        // TODO: optimize this
         self.set_oracle_prices_pair(&mut map, TokenPair::EthUsdc.id(), oracle_prices.clone());
+        self.set_oracle_prices_pair(&mut map, TokenPair::BtcUsdc.id(), oracle_prices.clone());
+        self.set_oracle_prices_pair(&mut map, TokenPair::StrkUsdc.id(), oracle_prices.clone());
 
         map
     }

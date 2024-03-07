@@ -1,5 +1,4 @@
 use carmine_api_core::{network::Network, types::DbBlock};
-use carmine_api_rpc_gateway::{rpc_call, BlockTag, RpcNode};
 use carmine_api_starknet::carmine::Carmine;
 use dotenvy::dotenv;
 
