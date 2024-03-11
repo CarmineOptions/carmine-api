@@ -9,7 +9,7 @@ use dotenvy::dotenv;
 fn get_first_block_for_token_pair(token_pair: &TokenPair) -> i64 {
     match token_pair {
         // TokenPair::EthUsdc => 416490, <- first on new Pragma
-        TokenPair::EthUsdc => 430000,
+        TokenPair::EthUsdc => 535150,
         TokenPair::BtcUsdc => 416490,
         TokenPair::StrkUsdc => 557529,
     }

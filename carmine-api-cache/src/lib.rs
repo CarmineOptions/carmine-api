@@ -1,6 +1,6 @@
 use carmine_api_core::{
-    network::{Network, Protocol},
-    pool::{get_all_pools, Pool},
+    network::Network,
+    pool::{get_all_pools, Pool, LEGACY_MAINNET_ETH_USDC_CALL, LEGACY_MAINNET_ETH_USDC_PUT},
     telegram_bot,
     types::{
         AppData, IOption, OraclePrice, OraclePriceConcise, PoolStateWithTimestamp, ReferralEvent,
@@ -8,8 +8,8 @@ use carmine_api_core::{
     },
 };
 use carmine_api_db::{
-    get_options, get_options_volatility, get_oracle_prices, get_pool_state, get_protocol_events,
-    get_protocol_events_from_block, get_referral_events,
+    get_carmine_events, get_carmine_events_from_block, get_options, get_options_volatility,
+    get_oracle_prices, get_pool_state, get_referral_events,
 };
 use carmine_api_starknet::carmine::Carmine;
 use std::{collections::HashMap, vec};
@@ -46,7 +46,7 @@ impl Cache {
     pub async fn new(network: Network) -> Self {
         let network = network;
         let carmine = Carmine::new(network);
-        let events = get_protocol_events(&network, &Protocol::CarmineOptions);
+        let events = get_carmine_events(&network);
         let options_vec = get_options(&network);
         let options = Cache::options_vec_to_hashmap(options_vec);
         let all_non_expired = vec![];
@@ -162,6 +162,12 @@ impl Cache {
     }
 
     fn generate_trade_history(&self) -> Vec<TradeHistory> {
+        let mut pools = match self.network {
+            Network::Mainnet => vec![&LEGACY_MAINNET_ETH_USDC_CALL, &LEGACY_MAINNET_ETH_USDC_PUT],
+            Network::Testnet => vec![],
+        };
+        pools.extend(&self.pools);
+
         let mut trade_history: Vec<TradeHistory> = self
             .events
             .iter()
@@ -180,8 +186,7 @@ impl Cache {
                 let liquidity_pool: Option<String> = if action.as_str() == "DepositLiquidity"
                     || action.as_str() == "WithdrawLiquidity"
                 {
-                    let matched_pool = self
-                        .pools
+                    let matched_pool = pools
                         .iter()
                         .find(|&pool| pool.address == token_address.as_str());
 
@@ -227,20 +232,17 @@ impl Cache {
     }
 
     pub fn update_events(&mut self) {
-        let max_block_number_option = self.events.iter().max_by_key(|event| event.block_number);
+        let max_block_number_option: Option<&StarkScanEventSettled> =
+            self.events.iter().max_by_key(|event| event.block_number);
         let max_block_number = match max_block_number_option {
             Some(event) => event.block_number,
             // did not find max block number, get all events
             None => {
-                self.events = get_protocol_events(&self.network, &Protocol::CarmineOptions);
+                self.events = get_carmine_events(&self.network);
                 return;
             }
         };
-        let new_events = get_protocol_events_from_block(
-            &self.network,
-            &Protocol::CarmineOptions,
-            max_block_number,
-        );
+        let new_events = get_carmine_events_from_block(&self.network, max_block_number);
         self.events.extend(new_events)
     }
 

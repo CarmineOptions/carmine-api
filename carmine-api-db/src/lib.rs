@@ -1,4 +1,6 @@
-use carmine_api_core::network::{protocol_address, Network, Protocol, NEW_AMM_GENESIS_TIMESTAMP};
+use carmine_api_core::network::{
+    protocol_address, Network, Protocol, MAINNET_CONTRACT_ADDRESS, NEW_AMM_GENESIS_TIMESTAMP,
+};
 use carmine_api_core::schema::{self};
 use carmine_api_core::types::{
     DbBlock, Event, IOption, InsuranceEvent, NewReferralEvent, OptionVolatility,
@@ -231,6 +233,24 @@ pub fn get_protocol_events(network: &Network, protocol: &Protocol) -> Vec<StarkS
         .expect("Error loading starkscan events")
 }
 
+pub fn get_carmine_events(network: &Network) -> Vec<StarkScanEventSettled> {
+    use crate::schema::starkscan_events::dsl::*;
+
+    if matches!(network, Network::Testnet) {
+        // return nothing for Testnet
+        return vec![];
+    }
+
+    let legacy_address = "0x076dbabc4293db346b0a56b29b6ea9fe18e93742c73f12348c8747ecfc1050aa";
+    let address = MAINNET_CONTRACT_ADDRESS;
+
+    let connection = &mut establish_connection(network);
+    starkscan_events
+        .filter(from_address.eq_any(vec![address, legacy_address]))
+        .load::<StarkScanEventSettled>(connection)
+        .expect("Error loading starkscan events")
+}
+
 pub fn get_protocol_events_from_block(
     network: &Network,
     protocol: &Protocol,
@@ -244,6 +264,28 @@ pub fn get_protocol_events_from_block(
     starkscan_events
         .filter(block_number.gt(from_block_number))
         .filter(from_address.eq(address))
+        .load::<StarkScanEventSettled>(connection)
+        .expect("Error loading starkscan events")
+}
+
+pub fn get_carmine_events_from_block(
+    network: &Network,
+    from_block_number: i64,
+) -> Vec<StarkScanEventSettled> {
+    use crate::schema::starkscan_events::dsl::*;
+
+    if matches!(network, Network::Testnet) {
+        // return nothing for Testnet
+        return vec![];
+    }
+
+    let legacy_address = "0x076dbabc4293db346b0a56b29b6ea9fe18e93742c73f12348c8747ecfc1050aa";
+    let address = MAINNET_CONTRACT_ADDRESS;
+
+    let connection = &mut establish_connection(network);
+    starkscan_events
+        .filter(block_number.gt(from_block_number))
+        .filter(from_address.eq_any(vec![address, legacy_address]))
         .load::<StarkScanEventSettled>(connection)
         .expect("Error loading starkscan events")
 }
@@ -294,7 +336,7 @@ pub fn get_options(network: &Network) -> Vec<IOption> {
 
     let connection = &mut establish_connection(network);
     options
-        .filter(maturity.gt(NEW_AMM_GENESIS_TIMESTAMP)) // only get new AMM options
+        // .filter(maturity.gt(NEW_AMM_GENESIS_TIMESTAMP)) // only get new AMM options
         .load::<IOption>(connection)
         .expect("Error loading options")
 }
