@@ -475,6 +475,60 @@ pub async fn get_referral(opts: web::Query<QueryOptions>) -> impl Responder {
     })
 }
 
+#[get("/mainnet/user-points")]
+pub async fn get_user_points(
+    opts: web::Query<QueryOptions>,
+    data: web::Data<Arc<Mutex<AppState>>>,
+) -> impl Responder {
+    let address = match &opts.address {
+        Some(address) => format_tx(address),
+        _ => {
+            return HttpResponse::BadRequest().json(GenericResponse {
+                status: "bad_request".to_string(),
+                message: "Did not receive address as a query parameter".to_string(),
+            });
+        }
+    };
+    let locked = &data.lock();
+    let app_state = match locked {
+        Ok(app_data) => app_data,
+        _ => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "server_error".to_string(),
+                message: "Failed to read AppState".to_string(),
+            });
+        }
+    };
+
+    let user_points = app_state.mainnet.user_points.get(&address);
+
+    HttpResponse::Ok().json(DataResponse {
+        status: "success".to_string(),
+        data: user_points,
+    })
+}
+
+#[get("/mainnet/top-user-points")]
+pub async fn get_top_user_points(data: web::Data<Arc<Mutex<AppState>>>) -> impl Responder {
+    let locked = &data.lock();
+    let app_state = match locked {
+        Ok(app_data) => app_data,
+        _ => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "server_error".to_string(),
+                message: "Failed to read AppState".to_string(),
+            });
+        }
+    };
+
+    let top_user_points = &app_state.mainnet.top_user_points;
+
+    HttpResponse::Ok().json(DataResponse {
+        status: "success".to_string(),
+        data: top_user_points,
+    })
+}
+
 #[post("/mainnet/referral_event")]
 async fn referral_event(payload: Option<web::Bytes>) -> impl Responder {
     let bytes = match payload {

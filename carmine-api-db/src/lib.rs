@@ -3,7 +3,7 @@ use carmine_api_core::schema::{self};
 use carmine_api_core::types::{
     DbBlock, Event, IOption, InsuranceEvent, NewReferralEvent, OptionVolatility,
     OptionWithVolatility, OraclePrice, Pool, PoolState, PoolStateWithTimestamp, ReferralCode,
-    ReferralEvent, StarkScanEventSettled, UserPoints, Volatility,
+    ReferralEvent, StarkScanEventSettled, UserPoints, UserPointsDb, Volatility,
 };
 
 use carmine_api_referral::referral_code::generate_referral_code;
@@ -648,11 +648,11 @@ pub fn create_insurance_event(event: InsuranceEvent) -> Result<usize, diesel::re
         .execute(connection)
 }
 
-pub fn get_latest_user_point(address: &str) -> Option<UserPoints> {
+pub fn get_user_points(address: &str) -> Option<UserPointsDb> {
     use crate::schema::user_points::dsl::*;
 
     let connection = &mut establish_connection(&Network::Mainnet);
-    let res: QueryResult<UserPoints> = user_points
+    let res: QueryResult<UserPointsDb> = user_points
         .filter(user_address.eq(address))
         .order(timestamp.desc())
         .first(connection);
@@ -661,4 +661,36 @@ pub fn get_latest_user_point(address: &str) -> Option<UserPoints> {
         Ok(points) => Some(points),
         Err(_) => None,
     }
+}
+
+pub fn get_user_points_lastest_timestamp() -> Option<SystemTime> {
+    use crate::schema::user_points::dsl::*;
+
+    let connection = &mut establish_connection(&Network::Mainnet);
+
+    user_points
+        .select(max(timestamp))
+        .first(connection)
+        .expect("Failed getting user points timestamp")
+}
+
+pub fn get_all_user_points(ts: SystemTime) -> Vec<UserPoints> {
+    use crate::schema::user_points::dsl::*;
+
+    let connection = &mut establish_connection(&Network::Mainnet);
+
+    let records = user_points
+        .filter(timestamp.eq(ts))
+        .load::<UserPointsDb>(connection)
+        .expect("Failed getting user points");
+
+    records
+        .into_iter()
+        .map(|v| UserPoints {
+            address: v.user_address,
+            trading_points: v.trading_points,
+            liquidity_points: v.liquidity_points,
+            referral_points: v.referral_points,
+        })
+        .collect()
 }

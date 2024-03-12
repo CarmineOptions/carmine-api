@@ -3,7 +3,7 @@ use std::{collections::HashMap, time::SystemTime};
 
 use crate::schema::{
     blocks, events, insurance_events, options, options_volatility, oracle_prices, pool_state,
-    pools, referral_codes, referral_events, starkscan_events, user_points,
+    pools, referral_codes, referral_events, starkscan_events,
 };
 use carmine_api_airdrop::merkle_tree::MerkleTree;
 use diesel::prelude::*;
@@ -58,6 +58,8 @@ pub struct AppData {
     pub oracle_prices: HashMap<String, Vec<OraclePriceConcise>>,
     pub apy: HashMap<String, APY>,
     pub referrals: Vec<ReferralEvent>,
+    pub top_user_points: Vec<UserPoints>,
+    pub user_points: HashMap<String, UserPoints>,
 }
 
 pub struct AppState {
@@ -274,11 +276,18 @@ pub struct InsuranceEvent<'a> {
 }
 
 #[derive(Serialize, Deserialize, Queryable)]
-#[diesel(table_name = user_points)]
-pub struct UserPoints {
+pub struct UserPointsDb {
     pub id: i32,
     pub user_address: String,
     pub timestamp: SystemTime,
+    pub trading_points: i64,
+    pub liquidity_points: i64,
+    pub referral_points: i64,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct UserPoints {
+    pub address: String,
     pub trading_points: i64,
     pub liquidity_points: i64,
     pub referral_points: i64,

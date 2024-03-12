@@ -439,8 +439,6 @@ pub async fn mainnet_call(
     )
     .await;
 
-    println!("JUNO RES {:?}", juno_res);
-
     if let Ok(data) = juno_res {
         return Ok(data);
     }
@@ -454,8 +452,6 @@ pub async fn mainnet_call(
     )
     .await;
 
-    println!("BLAST API RES {:?}", juno_res);
-
     if let Ok(data) = blast_api_res {
         return Ok(data);
     }
@@ -468,8 +464,6 @@ pub async fn mainnet_call(
         RpcNode::Infura,
     )
     .await;
-
-    println!("INFURA RES {:?}", juno_res);
 
     infura_res
 }
