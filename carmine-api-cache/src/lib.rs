@@ -4,12 +4,13 @@ use carmine_api_core::{
     telegram_bot,
     types::{
         AppData, IOption, OraclePrice, OraclePriceConcise, PoolStateWithTimestamp, ReferralEvent,
-        StarkScanEventSettled, TokenPair, TradeHistory, APY,
+        StarkScanEventSettled, TokenPair, TradeHistory, UserPoints, APY,
     },
 };
 use carmine_api_db::{
-    get_options, get_options_volatility, get_oracle_prices, get_pool_state, get_protocol_events,
-    get_protocol_events_from_block, get_referral_events,
+    get_all_user_points, get_options, get_options_volatility, get_oracle_prices, get_pool_state,
+    get_protocol_events, get_protocol_events_from_block, get_referral_events,
+    get_user_points_lastest_timestamp,
 };
 use carmine_api_starknet::carmine::Carmine;
 use std::{collections::HashMap, vec};
@@ -82,6 +83,7 @@ impl Cache {
         let apy = self.generate_apy_hashmap();
         let oracle_prices = self.generate_oracle_prices_hash_map();
         let referrals = self.referrals.clone();
+        let (user_points, top_user_points) = Cache::generate_user_points();
 
         AppData {
             all_non_expired,
@@ -91,6 +93,8 @@ impl Cache {
             apy,
             oracle_prices,
             referrals,
+            user_points,
+            top_user_points,
         }
     }
 
@@ -127,6 +131,41 @@ impl Cache {
             );
             acc
         })
+    }
+
+    fn generate_user_points<'a>() -> (HashMap<String, UserPoints>, Vec<UserPoints>) {
+        let timestamp_result = get_user_points_lastest_timestamp();
+
+        let timestamp = match timestamp_result {
+            Some(v) => v,
+            _ => panic!("Failed getting UserPoints timestamp"),
+        };
+
+        let mut user_points = get_all_user_points(timestamp);
+
+        user_points.sort_by_key(|user_point| {
+            -(user_point.trading_points + user_point.liquidity_points + user_point.referral_points)
+        });
+
+        let mut map = HashMap::new();
+        let mut top = vec![];
+
+        for user in user_points.iter().take(20) {
+            let copy = UserPoints {
+                address: user.address.to_string(),
+                trading_points: user.trading_points,
+                liquidity_points: user.liquidity_points,
+                referral_points: user.referral_points,
+            };
+            top.push(copy);
+        }
+
+        for user in user_points {
+            let address = user.address.to_string();
+            map.insert(address, user);
+        }
+
+        (map, top)
     }
 
     fn set_oracle_prices_pair(

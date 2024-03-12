@@ -58,6 +58,8 @@ pub struct AppData {
     pub oracle_prices: HashMap<String, Vec<OraclePriceConcise>>,
     pub apy: HashMap<String, APY>,
     pub referrals: Vec<ReferralEvent>,
+    pub top_user_points: Vec<UserPoints>,
+    pub user_points: HashMap<String, UserPoints>,
 }
 
 pub struct AppState {
@@ -271,4 +273,22 @@ pub struct APY {
 pub struct InsuranceEvent<'a> {
     pub user_address: &'a str,
     pub calldata: Vec<&'a str>,
+}
+
+#[derive(Serialize, Deserialize, Queryable)]
+pub struct UserPointsDb {
+    pub id: i32,
+    pub user_address: String,
+    pub timestamp: SystemTime,
+    pub trading_points: i64,
+    pub liquidity_points: i64,
+    pub referral_points: i64,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct UserPoints {
+    pub address: String,
+    pub trading_points: i64,
+    pub liquidity_points: i64,
+    pub referral_points: i64,
 }

@@ -116,6 +116,17 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    user_points (id) {
+        id -> Int4,
+        user_address -> Text,
+        timestamp -> Timestamp,
+        trading_points -> Int8,
+        liquidity_points -> Int8,
+        referral_points -> Int8,
+    }
+}
+
 diesel::allow_tables_to_appear_in_same_query!(
     events,
     options,

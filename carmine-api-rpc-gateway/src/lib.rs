@@ -456,14 +456,16 @@ pub async fn mainnet_call(
         return Ok(data);
     }
 
-    rpc_call(
+    let infura_res = rpc_call(
         contract_address,
         entry_point_selector,
         calldata,
         block,
         RpcNode::Infura,
     )
-    .await
+    .await;
+
+    infura_res
 }
 
 pub async fn blast_api_latest_block_number() -> Result<i64, RpcError> {
