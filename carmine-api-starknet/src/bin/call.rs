@@ -1,4 +1,4 @@
-use carmine_api_core::{network::Network, types::DbBlock};
+use carmine_api_core::{network::Network, pool::MAINNET_STRK_USDC_CALL};
 use carmine_api_starknet::carmine::Carmine;
 use dotenvy::dotenv;
 
@@ -8,12 +8,16 @@ async fn main() {
 
     let c = Carmine::new(Network::Mainnet);
 
-    let res = c
-        .get_amm_state(&DbBlock {
-            block_number: 509916,
-            timestamp: 1705597506,
-        })
+    let block_number = 618396;
+    let pool_address = MAINNET_STRK_USDC_CALL.address;
+
+    let locked = c
+        .get_pool_locked_capital(block_number, pool_address.to_string())
+        .await;
+    let unlocked = c
+        .get_unlocked_capital(block_number, pool_address.to_string())
         .await;
 
-    println!("{:#?}", res);
+    println!("{:#?}", locked);
+    println!("{:#?}", unlocked);
 }

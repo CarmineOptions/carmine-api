@@ -2,7 +2,6 @@ use std::collections::VecDeque;
 
 use carmine_api_core::types::{DbBlock, OracleName, OraclePrice, TokenPair};
 use carmine_api_rpc_gateway::{mainnet_call, BlockTag};
-use starknet::macros::selector;
 
 pub struct Oracle {
     name: OracleName,
@@ -29,9 +28,9 @@ impl Oracle {
 
     fn oracle_specific_token_pair_id(&self, token_pair: &TokenPair) -> String {
         match (&self.name, token_pair) {
-            (OracleName::Pragma, TokenPair::EthUsdc) => "19514442401534788".to_string(),
-            (OracleName::Pragma, TokenPair::BtcUsdc) => "18669995996566340".to_string(),
-            (OracleName::Pragma, TokenPair::StrkUsdc) => "6004514686061859652".to_string(),
+            (OracleName::Pragma, TokenPair::EthUsdc) => "0x4554482f555344".to_string(),
+            (OracleName::Pragma, TokenPair::BtcUsdc) => "0x4254432f555344".to_string(),
+            (OracleName::Pragma, TokenPair::StrkUsdc) => "0x5354524b2f555344".to_string(),
         }
     }
 
@@ -40,7 +39,8 @@ impl Oracle {
         token_pair: &TokenPair,
         block: &DbBlock,
     ) -> Result<OraclePrice, String> {
-        let entrypoint = selector!("get_data_median").to_string();
+        let entrypoint =
+            "0x24b869ce68dd257b370701ca16e4aaf9c6483ff6805d04ba7661f3a0b6ce59".to_string(); // get_data_median
         let block_number = block.block_number;
         let block_tag = BlockTag::Number(block_number);
         let calldata = vec![
@@ -55,15 +55,6 @@ impl Oracle {
             block_tag,
         )
         .await;
-
-        // [
-        //     "0x36324ad8ff", price
-        //     "0x8", decimals
-        //     "0x6593058a", last updated timestamp
-        //     "0x8", sources
-        //     "0x0",
-        //     "0x0",
-        // ]
 
         let err_msg = format!("Unexpected oracle call result {:?}", res);
         if let Ok(data) = res {
