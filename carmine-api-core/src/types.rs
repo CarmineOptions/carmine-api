@@ -260,7 +260,7 @@ pub struct NewReferralEvent<'a> {
     pub referral_code: &'a str,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 pub struct APY {
     pub week: f64,
     pub week_annualized: f64,
