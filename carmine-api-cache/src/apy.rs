@@ -20,12 +20,7 @@ fn to_percentage(n: f64) -> f64 {
 pub fn calculate_apy(state: &Vec<PoolStateWithTimestamp>) -> APY {
     if state.len() < 10000 {
         // cannot calculate for less than a week of data
-        return APY {
-            week: 0.0,
-            week_annualized: 0.0,
-            launch: 0.0,
-            launch_annualized: 0.0,
-        };
+        return APY::default();
     }
     let now = state
         .iter()
@@ -45,6 +40,11 @@ pub fn calculate_apy(state: &Vec<PoolStateWithTimestamp>) -> APY {
         .filter_map(|v| v.lp_token_value.as_ref())
         .filter_map(|v| i64::from_str_radix(v.trim_start_matches("0x"), 16).ok())
         .collect();
+
+    if last_day.len() < 5 || week_ago.len() < 5 {
+        // cannot calculate for less than a week of data
+        return APY::default();
+    }
 
     let last_day_median = median(&mut last_day);
     let week_ago_median = median(&mut week_ago);

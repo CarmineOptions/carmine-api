@@ -13,7 +13,7 @@ use carmine_api_db::{
     get_user_points_lastest_timestamp,
 };
 use carmine_api_starknet::carmine::Carmine;
-use std::{collections::HashMap, vec};
+use std::{collections::HashMap, time::SystemTime, vec};
 
 mod apy;
 
@@ -41,6 +41,9 @@ pub struct Cache {
     trade_history: Vec<TradeHistory>,
     pools: Vec<Pool>,
     referrals: Vec<ReferralEvent>,
+    user_points_timestamp: SystemTime,
+    user_points: HashMap<String, UserPoints>,
+    top_user_points: Vec<UserPoints>,
 }
 
 impl Cache {
@@ -57,7 +60,6 @@ impl Cache {
             // no referral events on Testnet
             Network::Testnet => vec![],
         };
-
         let mut cache = Cache {
             network,
             carmine,
@@ -67,10 +69,14 @@ impl Cache {
             trade_history: Vec::new(),
             pools,
             referrals,
+            user_points_timestamp: SystemTime::UNIX_EPOCH,
+            user_points: HashMap::new(), // initialize empty
+            top_user_points: vec![],     // initialize empty
         };
 
         cache.trade_history = Cache::generate_trade_history(&mut cache);
         cache.update_all_non_expired().await;
+        cache.update_user_points();
 
         cache
     }
@@ -83,7 +89,8 @@ impl Cache {
         let apy = self.generate_apy_hashmap();
         let oracle_prices = self.generate_oracle_prices_hash_map();
         let referrals = self.referrals.clone();
-        let (user_points, top_user_points) = Cache::generate_user_points();
+        let user_points = self.user_points.clone();
+        let top_user_points = self.top_user_points.clone();
 
         AppData {
             all_non_expired,
@@ -133,13 +140,26 @@ impl Cache {
         })
     }
 
-    fn generate_user_points<'a>() -> (HashMap<String, UserPoints>, Vec<UserPoints>) {
+    fn update_user_points<'a>(&mut self) {
+        if !matches!(self.network, Network::Mainnet) {
+            // only do Mainnet
+            return;
+        }
+
         let timestamp_result = get_user_points_lastest_timestamp();
 
         let timestamp = match timestamp_result {
             Some(v) => v,
             _ => panic!("Failed getting UserPoints timestamp"),
         };
+
+        if self.user_points_timestamp == timestamp {
+            // no new points, keep the previous
+            return;
+        }
+
+        // update timestamp for the next update cycle
+        self.user_points_timestamp = timestamp;
 
         let mut user_points = get_all_user_points(timestamp);
 
@@ -165,7 +185,8 @@ impl Cache {
             map.insert(address, user);
         }
 
-        (map, top)
+        self.user_points = map;
+        self.top_user_points = top;
     }
 
     fn set_oracle_prices_pair(
@@ -324,5 +345,6 @@ impl Cache {
         self.update_events();
         self.update_all_non_expired().await;
         self.update_trade_history();
+        self.update_user_points();
     }
 }
