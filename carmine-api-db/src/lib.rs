@@ -3,7 +3,7 @@ use carmine_api_core::schema::{self};
 use carmine_api_core::types::{
     DbBlock, Event, IOption, InsuranceEvent, NewReferralEvent, OptionVolatility,
     OptionWithVolatility, OraclePrice, Pool, PoolState, PoolStateWithTimestamp, ReferralCode,
-    ReferralEvent, StarkScanEventSettled, UserPoints, UserPointsDb, Volatility,
+    ReferralEventDigest, StarkScanEventSettled, UserPoints, UserPointsDb, Volatility,
 };
 
 use carmine_api_referral::referral_code::generate_referral_code;
@@ -629,12 +629,42 @@ pub fn create_referral_event(event: NewReferralEvent) -> Result<usize, diesel::r
         .execute(connection)
 }
 
-pub fn get_referral_events() -> Vec<ReferralEvent> {
-    use crate::schema::referral_events::dsl::*;
+pub fn get_referral_events() -> Vec<ReferralEventDigest> {
+    use crate::schema::referral_codes;
+    use crate::schema::referral_events;
 
     let connection = &mut establish_connection(&Network::Mainnet);
-    referral_events
-        .load::<ReferralEvent>(connection)
+
+    referral_events::table
+        .inner_join(
+            referral_codes::table
+                .on(referral_events::referral_code.eq(referral_codes::referral_code)),
+        )
+        .select((
+            referral_codes::wallet_address,
+            referral_events::referred_wallet_address,
+            referral_events::referral_code,
+            referral_events::timestamp,
+        ))
+        .load::<(String, String, String, SystemTime)>(connection)
+        .map(|results| {
+            results
+                .into_iter()
+                .map(
+                    |(
+                        referee_wallet_address,
+                        referred_wallet_address,
+                        referral_code,
+                        timestamp,
+                    )| ReferralEventDigest {
+                        referred_wallet_address,
+                        referee_wallet_address,
+                        referral_code,
+                        timestamp,
+                    },
+                )
+                .collect()
+        })
         .expect("Error loading referral events")
 }
 

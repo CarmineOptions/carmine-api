@@ -57,7 +57,7 @@ pub struct AppData {
     pub state: HashMap<String, Vec<PoolStateWithTimestamp>>,
     pub oracle_prices: HashMap<String, Vec<OraclePriceConcise>>,
     pub apy: HashMap<String, APY>,
-    pub referrals: Vec<ReferralEvent>,
+    pub referrals: Vec<ReferralEventDigest>,
     pub top_user_points: Vec<UserPoints>,
     pub user_points: HashMap<String, UserPoints>,
 }
@@ -249,6 +249,14 @@ pub struct ReferralCode {
 pub struct ReferralEvent {
     pub id: i32,
     pub referred_wallet_address: String,
+    pub referral_code: String,
+    pub timestamp: SystemTime,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ReferralEventDigest {
+    pub referred_wallet_address: String,
+    pub referee_wallet_address: String,
     pub referral_code: String,
     pub timestamp: SystemTime,
 }

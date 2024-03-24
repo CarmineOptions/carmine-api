@@ -3,8 +3,8 @@ use carmine_api_core::{
     pool::{get_all_pools, Pool},
     telegram_bot,
     types::{
-        AppData, IOption, OraclePrice, OraclePriceConcise, PoolStateWithTimestamp, ReferralEvent,
-        StarkScanEventSettled, TokenPair, TradeHistory, UserPoints, APY,
+        AppData, IOption, OraclePrice, OraclePriceConcise, PoolStateWithTimestamp,
+        ReferralEventDigest, StarkScanEventSettled, TokenPair, TradeHistory, UserPoints, APY,
     },
 };
 use carmine_api_db::{
@@ -40,7 +40,7 @@ pub struct Cache {
     all_non_expired: Vec<String>,
     trade_history: Vec<TradeHistory>,
     pools: Vec<Pool>,
-    referrals: Vec<ReferralEvent>,
+    referrals: Vec<ReferralEventDigest>,
     user_points_timestamp: SystemTime,
     user_points: HashMap<String, UserPoints>,
     top_user_points: Vec<UserPoints>,
