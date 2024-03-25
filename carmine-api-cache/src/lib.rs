@@ -4,7 +4,8 @@ use carmine_api_core::{
     telegram_bot,
     types::{
         AppData, IOption, OraclePrice, OraclePriceConcise, PoolStateWithTimestamp,
-        ReferralEventDigest, StarkScanEventSettled, TokenPair, TradeHistory, UserPoints, APY,
+        ReferralEventDigest, StarkScanEventSettled, TokenPair, TradeHistory,
+        UserPointsWithPosition, APY,
     },
 };
 use carmine_api_db::{
@@ -42,8 +43,8 @@ pub struct Cache {
     pools: Vec<Pool>,
     referrals: Vec<ReferralEventDigest>,
     user_points_timestamp: SystemTime,
-    user_points: HashMap<String, UserPoints>,
-    top_user_points: Vec<UserPoints>,
+    user_points: HashMap<String, UserPointsWithPosition>,
+    top_user_points: Vec<UserPointsWithPosition>,
 }
 
 impl Cache {
@@ -161,26 +162,44 @@ impl Cache {
         // update timestamp for the next update cycle
         self.user_points_timestamp = timestamp;
 
-        let mut user_points = get_all_user_points(timestamp);
+        let user_points = get_all_user_points(timestamp);
 
-        user_points.sort_by_key(|user_point| {
-            -(user_point.trading_points + user_point.liquidity_points + user_point.referral_points)
-        });
+        let mut user_points_with_total: Vec<UserPointsWithPosition> = user_points
+            .into_iter()
+            .map(|u| UserPointsWithPosition {
+                address: u.address,
+                trading_points: u.trading_points,
+                liquidity_points: u.liquidity_points,
+                referral_points: u.referral_points,
+                total_points: u.trading_points + u.liquidity_points + u.referral_points,
+                position: 0, // temporary set to 0
+            })
+            .collect();
 
-        let mut map = HashMap::new();
-        let mut top = vec![];
+        user_points_with_total.sort_by_key(|u| -u.total_points); // negative for descending order
 
-        for user in user_points.iter().take(20) {
-            let copy = UserPoints {
-                address: user.address.to_string(),
-                trading_points: user.trading_points,
-                liquidity_points: user.liquidity_points,
-                referral_points: user.referral_points,
-            };
-            top.push(copy);
+        let mut last_points = user_points_with_total
+            .get(0)
+            .expect("Zero user points")
+            .total_points;
+        let mut current_position = 1;
+
+        let mut user_points_with_position = vec![];
+
+        for mut user in user_points_with_total.into_iter() {
+            if user.total_points < last_points {
+                last_points = user.total_points;
+                current_position += 1;
+            }
+            user.position = current_position;
+            user_points_with_position.push(user);
         }
 
-        for user in user_points {
+        let top: Vec<UserPointsWithPosition> = user_points_with_position[..20].to_vec();
+
+        let mut map = HashMap::new();
+
+        for user in user_points_with_position {
             let address = user.address.to_string();
             map.insert(address, user);
         }
