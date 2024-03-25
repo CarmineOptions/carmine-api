@@ -58,8 +58,8 @@ pub struct AppData {
     pub oracle_prices: HashMap<String, Vec<OraclePriceConcise>>,
     pub apy: HashMap<String, APY>,
     pub referrals: Vec<ReferralEventDigest>,
-    pub top_user_points: Vec<UserPoints>,
-    pub user_points: HashMap<String, UserPoints>,
+    pub top_user_points: Vec<UserPointsWithPosition>,
+    pub user_points: HashMap<String, UserPointsWithPosition>,
 }
 
 pub struct AppState {
@@ -299,4 +299,14 @@ pub struct UserPoints {
     pub trading_points: i64,
     pub liquidity_points: i64,
     pub referral_points: i64,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct UserPointsWithPosition {
+    pub address: String,
+    pub trading_points: i64,
+    pub liquidity_points: i64,
+    pub referral_points: i64,
+    pub total_points: i64,
+    pub position: i64,
 }
