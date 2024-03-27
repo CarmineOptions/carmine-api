@@ -25,6 +25,7 @@ const TESTNET_STARKSCAN_API_BASE_URL: &str = "https://api-testnet.starkscan.co/a
 #[derive(Debug)]
 pub enum Protocol {
     CarmineOptions,
+    CarmineGovernance,
     Hashstack,
     Hashstack2,
     ZkLend,
@@ -156,6 +157,9 @@ pub fn protocol_address(network: &Network, protocol: &Protocol) -> &'static str 
             Network::Mainnet => MAINNET_CONTRACT_ADDRESS,
             Network::Testnet => TESTNET_CONTRACT_ADDRESS,
         },
+        Protocol::CarmineGovernance => {
+            "0x001405ab78ab6ec90fba09e6116f373cda53b0ba557789a4578d8c1ec374ba0f"
+        }
         Protocol::Hashstack => HASHSTACK_ADDRESS,
         Protocol::Hashstack2 => {
             "0x01ef7f9f8bf01678dc6d27e2c26fb7e8eac3812a24752e6a1d6a49d153bec9f3"

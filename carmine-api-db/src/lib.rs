@@ -8,7 +8,6 @@ use carmine_api_core::types::{
 
 use carmine_api_referral::referral_code::generate_referral_code;
 use diesel::dsl::max;
-use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use std::env;
 use std::time::{SystemTime, UNIX_EPOCH};

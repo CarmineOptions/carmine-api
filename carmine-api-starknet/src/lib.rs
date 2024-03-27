@@ -18,6 +18,7 @@ pub async fn update_database_events() {
 
     let protocols = [
         Protocol::CarmineOptions,
+        Protocol::CarmineGovernance,
         Protocol::ZkLend,
         Protocol::ZETH,
         Protocol::ZWBTC,

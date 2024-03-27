@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use carmine_api_core::network::{Network, Protocol};
 use carmine_api_db::create_batch_of_starkscan_events;
 
@@ -9,35 +11,37 @@ async fn main() {
     dotenv().ok();
 
     let network = &Network::Mainnet;
-    let protocols = vec![
-        &Protocol::HashstackBTCDToken,
-        &Protocol::HashstackETHRToken,
-        &Protocol::HashstackETHDToken,
-        &Protocol::HashstackUSDTRToken,
-        &Protocol::HashstackUSDTDToken,
-        &Protocol::HashstackUSDCRToken,
-        &Protocol::HashstackUSDCDToken,
-        &Protocol::HashstackDAIRToken,
-        &Protocol::HashstackDAIDToken,
-        &Protocol::HashstackStaking,
-        &Protocol::HashstackDiamond,
-        &Protocol::HashstackL3Diamond,
-    ];
+    let protocols = vec![&Protocol::CarmineGovernance];
 
-    let start = 265000;
+    let start = 32000;
     let mut current;
-    let increment = 2000;
-    let max = 499401;
+    let increment = 4000;
+    let max = 630000;
+
+    let mut events = vec![];
 
     for protocol in protocols {
         current = start;
 
         while current < max {
-            let events =
-                get_block_range_events(protocol, network, current, current + increment).await;
+            let mut new_events =
+                get_block_range_events(protocol, network, current - 1, current + increment + 1)
+                    .await;
             println!("{} fetched {} - {}", protocol, current, current + increment);
             current = current + increment;
-            create_batch_of_starkscan_events(&events, network);
+            events.append(&mut new_events);
         }
     }
+    let mut unique = HashSet::new();
+    let mut result = vec![];
+
+    for item in events.into_iter() {
+        let key = format!("{}-{}", item.transaction_hash.clone(), item.event_index);
+        if unique.insert(key) {
+            // The hash was successfully inserted, meaning it was not present before.
+            result.push(item);
+        }
+    }
+
+    create_batch_of_starkscan_events(&result, network);
 }

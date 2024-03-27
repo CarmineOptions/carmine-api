@@ -12,7 +12,6 @@ use carmine_api_rpc_gateway::{call, carmine_get_block_header, BlockTag, Entrypoi
 use futures::future::join_all;
 use futures::FutureExt;
 use starknet::core::types::FieldElement;
-use starknet::{self};
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
 use tokio::try_join;
