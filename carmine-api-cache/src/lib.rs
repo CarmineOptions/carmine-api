@@ -4,9 +4,10 @@ use carmine_api_core::{
     telegram_bot,
     types::{
         AppData, IOption, OraclePrice, OraclePriceConcise, PoolStateWithTimestamp,
-        ReferralEventDigest, StarkScanEventSettled, TokenPair, TradeHistory,
+        ReferralEventDigest, StarkScanEventSettled, TokenPair, TradeEvent, TradeHistory,
         UserPointsWithPosition, APY,
     },
+    utils::strike_from_hex,
 };
 use carmine_api_db::{
     get_all_user_points, get_options, get_options_volatility, get_oracle_prices, get_pool_state,
@@ -92,10 +93,12 @@ impl Cache {
         let referrals = self.referrals.clone();
         let user_points = self.user_points.clone();
         let top_user_points = self.top_user_points.clone();
+        let trades = self.generate_trades_hashmap();
 
         AppData {
             all_non_expired,
             trade_history,
+            trades,
             option_volatility,
             state,
             apy,
@@ -139,6 +142,43 @@ impl Cache {
             );
             acc
         })
+    }
+
+    fn generate_trades_hashmap(&self) -> HashMap<String, Vec<TradeEvent>> {
+        let mut trades = vec![];
+        for trade in self.trade_history.iter() {
+            let option = match &trade.option {
+                Some(o) => o,
+                None => continue,
+            };
+            let strike_price = strike_from_hex(&option.strike_price);
+
+            let trade_event = TradeEvent {
+                timestamp: trade.timestamp,
+                action: trade.action.to_string(),
+                caller: trade.caller.to_string(),
+                capital_transfered: trade.capital_transfered.to_string(),
+                tokens_minted: trade.capital_transfered.to_string(),
+                option_side: option.option_side,
+                option_type: option.option_type,
+                maturity: option.maturity,
+                strike_price,
+            };
+
+            trades.push((option.lp_address.to_string(), trade_event));
+        }
+
+        let mut map = HashMap::new();
+        for (lp_address, trade_event) in trades {
+            if let Some(pool) = self.pools.iter().find(|p| p.address == lp_address) {
+                // Use the pool id as the key in the HashMap
+                map.entry(pool.id.to_string())
+                    .or_insert_with(Vec::new)
+                    .push(trade_event.clone());
+            }
+        }
+
+        map
     }
 
     fn update_user_points<'a>(&mut self) {
