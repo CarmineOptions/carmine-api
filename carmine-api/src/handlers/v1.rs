@@ -600,3 +600,41 @@ async fn insurance_event(payload: Option<web::Bytes>) -> impl Responder {
         }),
     }
 }
+
+#[get("/mainnet/{pool}/trades")]
+pub async fn trades(
+    path: web::Path<String>,
+    data: web::Data<Arc<Mutex<AppState>>>,
+) -> impl Responder {
+    let pool_id = path.into_inner();
+
+    let locked = &data.lock();
+    let app_state = match locked {
+        Ok(app_data) => app_data,
+        _ => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "server_error".to_string(),
+                message: "Failed to read AppState".to_string(),
+            });
+        }
+    };
+
+    match app_state.mainnet.trades.get(&pool_id) {
+        Some(trades) => {
+            // found state
+            return HttpResponse::Ok()
+                .insert_header(AcceptEncoding(vec!["gzip".parse().unwrap()]))
+                .json(DataResponse {
+                    status: "success".to_string(),
+                    data: trades,
+                });
+        }
+        None => {
+            // invalid pool
+            return HttpResponse::BadRequest().json(GenericResponse {
+                status: "bad_request".to_string(),
+                message: "Invalid pool".to_string(),
+            });
+        }
+    }
+}

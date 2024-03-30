@@ -20,6 +20,28 @@ pub struct TradeHistory {
     pub liquidity_pool: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct TradeEvent {
+    pub timestamp: i64,
+    pub action: String,
+    pub caller: String,
+    pub capital_transfered: String,
+    pub tokens_minted: String,
+    pub option_side: i16,
+    pub option_type: i16,
+    pub maturity: i64,
+    pub strike_price: f64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct StakeEvent {
+    pub timestamp: i64,
+    pub action: String,
+    pub caller: String,
+    pub capital_transfered: String,
+    pub tokens_minted: String,
+}
+
 pub enum TokenPair {
     EthUsdc,
     BtcUsdc,
@@ -53,6 +75,7 @@ pub enum OracleName {
 pub struct AppData {
     pub all_non_expired: Vec<String>,
     pub trade_history: Vec<TradeHistory>,
+    pub trades: HashMap<String, Vec<TradeEvent>>,
     pub option_volatility: Vec<OptionWithVolatility>,
     pub state: HashMap<String, Vec<PoolStateWithTimestamp>>,
     pub oracle_prices: HashMap<String, Vec<OraclePriceConcise>>,

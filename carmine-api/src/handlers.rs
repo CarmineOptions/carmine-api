@@ -30,6 +30,7 @@ pub fn config(conf: &mut web::ServiceConfig) {
                         .service(v1::live_options)
                         .service(v1::transactions)
                         .service(v1::all_transactions)
+                        .service(v1::trades)
                         .service(v1::airdrop)
                         .service(v1::option_volatility)
                         .service(v1::get_referral_events)
