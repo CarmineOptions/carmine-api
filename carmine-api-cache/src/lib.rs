@@ -158,7 +158,7 @@ impl Cache {
                 action: trade.action.to_string(),
                 caller: trade.caller.to_string(),
                 capital_transfered: trade.capital_transfered.to_string(),
-                tokens_minted: trade.capital_transfered.to_string(),
+                tokens_minted: trade.tokens_minted.to_string(),
                 option_side: option.option_side,
                 option_type: option.option_type,
                 maturity: option.maturity,
