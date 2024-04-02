@@ -5,14 +5,14 @@ use carmine_api_core::{
     types::{
         AppData, IOption, OraclePrice, OraclePriceConcise, PoolStateWithTimestamp,
         ReferralEventDigest, StarkScanEventSettled, TokenPair, TradeEvent, TradeHistory,
-        UserPointsWithPosition, APY,
+        UserPointsWithPosition, Vote, APY,
     },
     utils::strike_from_hex,
 };
 use carmine_api_db::{
     get_all_user_points, get_options, get_options_volatility, get_oracle_prices, get_pool_state,
     get_protocol_events, get_protocol_events_from_block, get_referral_events,
-    get_user_points_lastest_timestamp,
+    get_user_points_lastest_timestamp, get_votes,
 };
 use carmine_api_starknet::carmine::Carmine;
 use std::{collections::HashMap, time::SystemTime, vec};
@@ -94,6 +94,14 @@ impl Cache {
         let user_points = self.user_points.clone();
         let top_user_points = self.top_user_points.clone();
         let trades = self.generate_trades_hashmap();
+        let votes = get_votes();
+        let mut votes_map: HashMap<String, Vec<Vote>> = HashMap::new();
+        for vote in votes.iter() {
+            votes_map
+                .entry(vote.user_address.clone())
+                .or_insert_with(Vec::new)
+                .push(vote.clone());
+        }
 
         AppData {
             all_non_expired,
@@ -106,6 +114,8 @@ impl Cache {
             referrals,
             user_points,
             top_user_points,
+            votes,
+            votes_map,
         }
     }
 
