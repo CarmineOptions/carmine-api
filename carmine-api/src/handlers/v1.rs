@@ -14,7 +14,7 @@ use actix_web::{
 };
 use carmine_api_core::{
     network::Network,
-    types::{AppState, InsuranceEvent, NewReferralEvent},
+    types::{AppState, InsuranceEvent, NewReferralEvent, Vote},
 };
 use carmine_api_db::{create_insurance_event, create_referral_event, get_referral_code};
 use lazy_static::lazy_static;
@@ -665,8 +665,14 @@ pub async fn votes(
         }
     };
 
-    HttpResponse::Ok().json(DataResponse {
-        status: "success".to_string(),
-        data: &app_state.mainnet.votes_map.get(&address),
-    })
+    match &app_state.mainnet.votes_map.get(&address) {
+        Some(data) => HttpResponse::Ok().json(DataResponse {
+            status: "success".to_string(),
+            data,
+        }),
+        None => HttpResponse::Ok().json(DataResponse {
+            status: "success".to_string(),
+            data: vec![] as Vec<Vote>,
+        }),
+    }
 }
