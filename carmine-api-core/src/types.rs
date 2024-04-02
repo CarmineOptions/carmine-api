@@ -83,6 +83,8 @@ pub struct AppData {
     pub referrals: Vec<ReferralEventDigest>,
     pub top_user_points: Vec<UserPointsWithPosition>,
     pub user_points: HashMap<String, UserPointsWithPosition>,
+    pub votes: Vec<Vote>,
+    pub votes_map: HashMap<String, Vec<Vote>>,
 }
 
 pub struct AppState {
@@ -334,7 +336,7 @@ pub struct UserPointsWithPosition {
     pub position: i64,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Debug, Deserialize, Clone)]
 pub struct Vote {
     pub user_address: String,
     pub prop_id: usize,

@@ -730,7 +730,7 @@ pub fn get_votes() -> Vec<Vote> {
     let connection = &mut establish_connection(&Network::Mainnet);
 
     let events: Vec<StarkScanEventSettled> = starkscan_events
-        .filter(key_name.eq("Voted"))
+        .filter(key_name.eq_any(vec!["Voted", "governance::contract::Governance::Voted"]))
         .load::<StarkScanEventSettled>(connection)
         .expect("Error getting votes");
 
@@ -742,13 +742,20 @@ pub fn get_votes() -> Vec<Vote> {
                 event.data[1].to_string(),
                 event.data[2].as_str(),
             );
+
+            // historically there are multiple options for "nay"
+            // but only "0x1" for "yay"
+            let opinion = match opinion_str {
+                "0x1" => 1,
+                _ => 0,
+            };
+
             Vote {
                 timestamp: event.timestamp,
                 user_address,
                 prop_id: usize::from_str_radix(&prop_id_str[2..], 16)
                     .expect("Failed parsing prop_id"),
-                opinion: usize::from_str_radix(&opinion_str[2..], 16)
-                    .expect("Failed parsing prop_id"),
+                opinion,
             }
         })
         .collect()

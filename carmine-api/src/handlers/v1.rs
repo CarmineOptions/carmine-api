@@ -638,3 +638,35 @@ pub async fn trades(
         }
     }
 }
+
+#[get("/mainnet/votes")]
+pub async fn votes(
+    opts: web::Query<QueryOptions>,
+    data: web::Data<Arc<Mutex<AppState>>>,
+) -> impl Responder {
+    let locked = &data.lock();
+    let app_state = match locked {
+        Ok(app_data) => app_data,
+        _ => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "server_error".to_string(),
+                message: "Failed to read AppState".to_string(),
+            });
+        }
+    };
+
+    let address = match &opts.address {
+        Some(address) => format_tx(address),
+        _ => {
+            return HttpResponse::Ok().json(DataResponse {
+                status: "success".to_string(),
+                data: &app_state.mainnet.votes,
+            })
+        }
+    };
+
+    HttpResponse::Ok().json(DataResponse {
+        status: "success".to_string(),
+        data: &app_state.mainnet.votes_map.get(&address),
+    })
+}

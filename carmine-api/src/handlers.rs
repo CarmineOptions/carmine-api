@@ -1,4 +1,4 @@
-use actix_web::web;
+use actix_web::web::{self, service};
 
 mod common;
 mod v1;
@@ -30,7 +30,7 @@ pub fn config(conf: &mut web::ServiceConfig) {
                         .service(v1::live_options)
                         .service(v1::transactions)
                         .service(v1::all_transactions)
-                        .service(v1::trades)
+                        .service(v1::votes)
                         .service(v1::airdrop)
                         .service(v1::option_volatility)
                         .service(v1::get_referral_events)
@@ -39,6 +39,7 @@ pub fn config(conf: &mut web::ServiceConfig) {
                         .service(v1::insurance_event)
                         .service(v1::get_top_user_points)
                         .service(v1::get_user_points)
+                        .service(v1::trades)
                         .service(v1::pool_state)
                         .service(v1::pool_state_last)
                         .service(v1::pool_apy)
