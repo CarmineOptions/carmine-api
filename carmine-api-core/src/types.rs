@@ -333,3 +333,11 @@ pub struct UserPointsWithPosition {
     pub total_points: i64,
     pub position: i64,
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct Vote {
+    pub user_address: String,
+    pub prop_id: usize,
+    pub opinion: usize,
+    pub timestamp: i64,
+}

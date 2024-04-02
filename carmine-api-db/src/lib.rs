@@ -3,7 +3,7 @@ use carmine_api_core::schema::{self};
 use carmine_api_core::types::{
     DbBlock, Event, IOption, InsuranceEvent, NewReferralEvent, OptionVolatility,
     OptionWithVolatility, OraclePrice, Pool, PoolState, PoolStateWithTimestamp, ReferralCode,
-    ReferralEventDigest, StarkScanEventSettled, UserPoints, UserPointsDb, Volatility,
+    ReferralEventDigest, StarkScanEventSettled, UserPoints, UserPointsDb, Volatility, Vote,
 };
 
 use carmine_api_referral::referral_code::generate_referral_code;
@@ -720,6 +720,36 @@ pub fn get_all_user_points(ts: SystemTime) -> Vec<UserPoints> {
             trading_points: v.trading_points,
             liquidity_points: v.liquidity_points,
             referral_points: v.referral_points,
+        })
+        .collect()
+}
+
+pub fn get_votes() -> Vec<Vote> {
+    use crate::schema::starkscan_events::dsl::*;
+
+    let connection = &mut establish_connection(&Network::Mainnet);
+
+    let events: Vec<StarkScanEventSettled> = starkscan_events
+        .filter(key_name.eq("Voted"))
+        .load::<StarkScanEventSettled>(connection)
+        .expect("Error getting votes");
+
+    events
+        .into_iter()
+        .map(|event| {
+            let (prop_id_str, user_address, opinion_str) = (
+                event.data[0].as_str(),
+                event.data[1].to_string(),
+                event.data[2].as_str(),
+            );
+            Vote {
+                timestamp: event.timestamp,
+                user_address,
+                prop_id: usize::from_str_radix(&prop_id_str[2..], 16)
+                    .expect("Failed parsing prop_id"),
+                opinion: usize::from_str_radix(&opinion_str[2..], 16)
+                    .expect("Failed parsing prop_id"),
+            }
         })
         .collect()
 }
