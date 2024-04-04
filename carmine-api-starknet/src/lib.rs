@@ -118,19 +118,12 @@ pub async fn update_database_events() {
     }
 
     create_batch_of_starkscan_events(&events, &Network::Mainnet);
-
-    let testnet_carmine_events =
-        get_protocol_events(&Network::Testnet, &Protocol::CarmineOptions).await;
-
-    create_batch_of_starkscan_events(&testnet_carmine_events, &Network::Testnet);
 }
 
 pub async fn update_database_amm_state(offset: i64) {
-    let networks = vec![Network::Mainnet, Network::Testnet];
-    for network in networks {
-        let carmine = Carmine::new(network);
-        carmine.get_options_with_addresses().await;
-    }
+    let network = Network::Mainnet;
+    let carmine = Carmine::new(network);
+    carmine.get_options_with_addresses().await;
     AmmStateObserver::new().update_state(offset).await;
 }
 
