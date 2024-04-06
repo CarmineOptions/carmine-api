@@ -27,8 +27,6 @@ lazy_static! {
     static ref BLAST_API_URL: String =
         env::var("BLAST_API_URL").expect("missing env var BLAST_API_URL");
     static ref INFURA_URL: String = env::var("INFURA_URL").expect("missing env var INFURA_URL");
-    static ref INFURA_TESTNET_URL: String =
-        env::var("INFURA_TESTNET_URL").expect("missing env var INFURA_TESTNET_URL");
     static ref CARMINE_JUNO_NODE_URL: String =
         env::var("CARMINE_JUNO_NODE_URL").expect("missing env var CARMINE_JUNO_NODE_URL");
     static ref CARMINE_JUNO_TESTNET_NODE_URL: String = env::var("CARMINE_JUNO_TESTNET_NODE_URL")
@@ -429,10 +427,7 @@ async fn proxy_call(path: web::Path<String>, payload: Option<web::Bytes>) -> imp
         }
     }
 
-    let infura_node_url = match network {
-        Network::Mainnet => INFURA_URL.as_str(),
-        Network::Testnet => INFURA_TESTNET_URL.as_str(),
-    };
+    let infura_node_url = INFURA_URL.as_str();
 
     // if Carmine Juno Node did not succeed proxy to Infura Node
     let infura_res = client

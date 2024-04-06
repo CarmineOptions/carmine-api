@@ -13,8 +13,6 @@ lazy_static! {
     static ref BLAST_API_URL: String =
         env::var("BLAST_API_URL").expect("missing env var BLAST_API_URL");
     static ref INFURA_URL: String = env::var("INFURA_URL").expect("missing env var INFURA_URL");
-    static ref INFURA_TESTNET_URL: String =
-        env::var("INFURA_TESTNET_URL").expect("missing env var INFURA_TESTNET_URL");
     static ref CARMINE_JUNO_NODE_URL: String =
         env::var("CARMINE_JUNO_NODE_URL").expect("missing env var CARMINE_JUNO_NODE_URL");
     static ref CARMINE_JUNO_TESTNET_NODE_URL: String = env::var("CARMINE_JUNO_TESTNET_NODE_URL")
@@ -172,7 +170,6 @@ pub enum Contract {
 pub enum RpcNode {
     BlastAPI,
     Infura,
-    InfuraTestnet,
     CarmineJunoNode,
     CarmineTestnetJunoNode,
 }
@@ -239,7 +236,6 @@ fn rpc_request<T: Serialize>(body: T, node: RpcNode) -> RequestBuilder {
     let url: String = match node {
         RpcNode::BlastAPI => BLAST_API_URL.to_string(),
         RpcNode::Infura => INFURA_URL.to_string(),
-        RpcNode::InfuraTestnet => INFURA_TESTNET_URL.to_string(),
         RpcNode::CarmineJunoNode => CARMINE_JUNO_NODE_URL.to_string(),
         RpcNode::CarmineTestnetJunoNode => CARMINE_JUNO_TESTNET_NODE_URL.to_string(),
     };
@@ -397,29 +393,12 @@ pub async fn testnet_call(
     calldata: Vec<String>,
     block: BlockTag,
 ) -> Result<Vec<String>, RpcError> {
-    let juno_res = rpc_call(
+    rpc_call(
         contract_address.clone(),
         entry_point_selector.clone(),
         calldata.to_vec(),
         block,
         RpcNode::CarmineTestnetJunoNode,
-    )
-    .await;
-
-    match juno_res {
-        Ok(data) => return Ok(data),
-        // if Other error, cascade to next RPC Node
-        Err(e) if matches!(e, RpcError::Other(_)) => (),
-        // if other than Other error, return error - calling other node would give same result
-        Err(e) => return Err(e),
-    };
-
-    rpc_call(
-        contract_address,
-        entry_point_selector,
-        calldata,
-        block,
-        RpcNode::InfuraTestnet,
     )
     .await
 }
