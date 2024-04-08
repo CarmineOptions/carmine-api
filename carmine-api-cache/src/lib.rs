@@ -221,7 +221,11 @@ impl Cache {
                 trading_points: u.trading_points,
                 liquidity_points: u.liquidity_points,
                 referral_points: u.referral_points,
-                total_points: u.trading_points + u.liquidity_points + u.referral_points,
+                vote_points: u.vote_points,
+                total_points: u.trading_points
+                    + u.liquidity_points
+                    + u.referral_points
+                    + u.vote_points,
                 position: 0, // temporary set to 0
             })
             .collect();

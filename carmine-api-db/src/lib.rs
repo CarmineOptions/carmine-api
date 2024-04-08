@@ -720,6 +720,7 @@ pub fn get_all_user_points(ts: SystemTime) -> Vec<UserPoints> {
             trading_points: v.trading_points,
             liquidity_points: v.liquidity_points,
             referral_points: v.referral_points,
+            vote_points: v.vote_points,
         })
         .collect()
 }

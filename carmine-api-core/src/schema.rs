@@ -124,6 +124,7 @@ diesel::table! {
         trading_points -> Int8,
         liquidity_points -> Int8,
         referral_points -> Int8,
+        vote_points -> Int8,
     }
 }
 
