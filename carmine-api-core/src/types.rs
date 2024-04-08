@@ -316,6 +316,7 @@ pub struct UserPointsDb {
     pub trading_points: i64,
     pub liquidity_points: i64,
     pub referral_points: i64,
+    pub vote_points: i64,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -324,6 +325,7 @@ pub struct UserPoints {
     pub trading_points: i64,
     pub liquidity_points: i64,
     pub referral_points: i64,
+    pub vote_points: i64,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -332,6 +334,7 @@ pub struct UserPointsWithPosition {
     pub trading_points: i64,
     pub liquidity_points: i64,
     pub referral_points: i64,
+    pub vote_points: i64,
     pub total_points: i64,
     pub position: i64,
 }
