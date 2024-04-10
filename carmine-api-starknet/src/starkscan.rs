@@ -73,7 +73,7 @@ impl<'a> StarkscanUrlBuilder<'a> {
     }
 }
 
-const STARKSCAN_REQUESTS_DELAY_IN_MS: u64 = 1000;
+const STARKSCAN_REQUESTS_DELAY_IN_MS: u64 = 1500;
 
 // list of action names that will be stored
 const ALLOWED_ACTIONS: [&'static str; 5] = [
