@@ -32,6 +32,7 @@ pub fn config(conf: &mut web::ServiceConfig) {
                         .service(v1::all_transactions)
                         .service(v1::votes)
                         .service(v1::airdrop)
+                        .service(v1::defispring)
                         .service(v1::option_volatility)
                         .service(v1::get_referral_events)
                         .service(v1::get_referral)

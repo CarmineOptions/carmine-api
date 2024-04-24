@@ -346,3 +346,8 @@ pub struct Vote {
     pub opinion: usize,
     pub timestamp: i64,
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct DefiSpring {
+    pub apy: f32,
+}

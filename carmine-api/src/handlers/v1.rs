@@ -14,7 +14,7 @@ use actix_web::{
 };
 use carmine_api_core::{
     network::Network,
-    types::{AppState, InsuranceEvent, NewReferralEvent, Vote},
+    types::{AppState, DefiSpring, InsuranceEvent, NewReferralEvent, Vote},
 };
 use carmine_api_db::{create_insurance_event, create_referral_event, get_referral_code};
 use lazy_static::lazy_static;
@@ -670,4 +670,27 @@ pub async fn votes(
             data: vec![] as Vec<Vote>,
         }),
     }
+}
+
+#[get("/mainnet/defispring")]
+pub async fn defispring(data: web::Data<Arc<Mutex<AppState>>>) -> impl Responder {
+    let locked = &data.lock();
+    let _app_state = match locked {
+        Ok(app_data) => app_data,
+        _ => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "server_error".to_string(),
+                message: "Failed to read AppState".to_string(),
+            });
+        }
+    };
+
+    let defispring_response = DefiSpring {
+        apy: 46.210341256123,
+    };
+
+    HttpResponse::Ok().json(DataResponse {
+        status: "success".to_string(),
+        data: defispring_response,
+    })
 }
