@@ -85,6 +85,7 @@ pub struct AppData {
     pub user_points: HashMap<String, UserPointsWithPosition>,
     pub votes: Vec<Vote>,
     pub votes_map: HashMap<String, Vec<Vote>>,
+    pub defispring: DefispringInfo,
 }
 
 pub struct AppState {
@@ -347,7 +348,33 @@ pub struct Vote {
     pub timestamp: i64,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct DefiSpring {
-    pub apy: f32,
+#[derive(Queryable, Debug)]
+pub struct PoolTvlInfo {
+    pub block_number: i64,
+    pub timestamp: i64,
+    pub lp_address: String,
+    pub option_positions: Vec<String>,
+    pub unlocked_capital: String,
+    pub locked_capital: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct CoinGeckoPrice {
+    pub usd: f64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct PriceResponse {
+    pub ethereum: CoinGeckoPrice,
+    #[serde(rename = "usd-coin")]
+    pub usd_coin: CoinGeckoPrice,
+    pub starknet: CoinGeckoPrice, // Ensure the correct token ID for Starknet if different
+    pub bitcoin: CoinGeckoPrice,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+pub struct DefispringInfo {
+    pub tvl: f64,
+    pub strk_incentive: f64,
+    pub apy: f64,
 }

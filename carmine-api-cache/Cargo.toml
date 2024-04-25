@@ -16,3 +16,7 @@ tokio = { version = "1.26.0", features = ["macros"] }
 [[bin]]
 path = "./src/bin/state.rs"
 name = "state"
+
+[[bin]]
+path = "./src/bin/defi_spring.rs"
+name = "defi_spring"

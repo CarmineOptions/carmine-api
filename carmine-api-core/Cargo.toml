@@ -9,5 +9,11 @@ edition = "2021"
 carmine-api-airdrop = { path = "../carmine-api-airdrop" }
 diesel = { version = "2.0.0", features = ["postgres"] }
 lazy_static = "1.4.0"
+reqwest = { version = "0.12.4", features = ["json"] }
 serde = { version = "1.0.156", features = ["derive"] }
 teloxide = "0.12.2"
+tokio = { version = "1.26.0", features = ["macros", "rt-multi-thread"] }
+
+[[bin]]
+path = "./src/bin/prices.rs"
+name = "prices"

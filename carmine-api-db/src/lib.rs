@@ -1,14 +1,21 @@
 use carmine_api_core::network::{protocol_address, Network, Protocol, NEW_AMM_GENESIS_TIMESTAMP};
+use carmine_api_core::pool::{
+    MAINNET_BTC_USDC_CALL, MAINNET_BTC_USDC_PUT, MAINNET_ETH_STRK_CALL, MAINNET_ETH_STRK_PUT,
+    MAINNET_ETH_USDC_CALL, MAINNET_ETH_USDC_PUT, MAINNET_STRK_USDC_CALL, MAINNET_STRK_USDC_PUT,
+};
 use carmine_api_core::schema::{self};
 use carmine_api_core::types::{
     DbBlock, Event, IOption, InsuranceEvent, NewReferralEvent, OptionVolatility,
-    OptionWithVolatility, OraclePrice, Pool, PoolState, PoolStateWithTimestamp, ReferralCode,
-    ReferralEventDigest, StarkScanEventSettled, UserPoints, UserPointsDb, Volatility, Vote,
+    OptionWithVolatility, OraclePrice, Pool, PoolState, PoolStateWithTimestamp, PoolTvlInfo,
+    ReferralCode, ReferralEventDigest, StarkScanEventSettled, UserPoints, UserPointsDb, Volatility,
+    Vote,
 };
 
 use carmine_api_referral::referral_code::generate_referral_code;
 use diesel::dsl::max;
 use diesel::prelude::*;
+use diesel::sql_types::{Array, Text};
+use std::collections::HashMap;
 use std::env;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -760,4 +767,90 @@ pub fn get_votes() -> Vec<Vote> {
             }
         })
         .collect()
+}
+
+pub fn get_tvl_info() -> QueryResult<Vec<PoolTvlInfo>> {
+    use crate::schema::blocks::dsl as blocks_dsl;
+    use crate::schema::options::dsl as options_dsl;
+    use crate::schema::options_volatility::dsl as volatility_dsl;
+    use crate::schema::pool_state::dsl as pool_state_dsl;
+
+    let connection = &mut establish_connection(&Network::Mainnet);
+
+    let (max_block_num, max_block_timestamp) = blocks_dsl::blocks
+        .order(blocks_dsl::block_number.desc())
+        .select((blocks_dsl::block_number, blocks_dsl::timestamp))
+        .first::<(i64, i64)>(connection)?;
+
+    let results = options_dsl::options
+        .inner_join(volatility_dsl::options_volatility.on(options_dsl::option_address.eq(volatility_dsl::option_address)))
+        .inner_join(blocks_dsl::blocks.on(volatility_dsl::block_number.eq(blocks_dsl::block_number)))
+        .inner_join(pool_state_dsl::pool_state.on(blocks_dsl::block_number.eq(pool_state_dsl::block_number)
+                                                  .and(options_dsl::lp_address.eq(pool_state_dsl::lp_address))))
+        .filter(options_dsl::maturity.gt(max_block_timestamp))
+        .filter(options_dsl::option_side.eq(1))
+        .filter(volatility_dsl::block_number.eq(max_block_num))
+        .select((
+            blocks_dsl::block_number,
+            blocks_dsl::timestamp,
+            options_dsl::lp_address,
+            diesel::dsl::sql::<Array<Text>>("ARRAY_AGG(option_position) OVER (PARTITION BY options.lp_address, pool_state.unlocked_cap, pool_state.locked_cap)"),
+            pool_state_dsl::unlocked_cap,
+            pool_state_dsl::locked_cap
+        ))
+        .distinct_on((blocks_dsl::block_number, options_dsl::lp_address))
+        .load::<PoolTvlInfo>(connection)?;
+
+    Ok(results)
+}
+
+pub fn get_pool_tvl_map() -> HashMap<String, u128> {
+    let tvl = get_tvl_info().expect("Query failed");
+
+    let dec_18: u128 = 1_000_000_000_000_000_000;
+    let dec_8: u128 = 100_000_000;
+    let dec_6: u128 = 1_000_000;
+
+    let address_to_divisor = HashMap::from([
+        (MAINNET_BTC_USDC_CALL.address, (dec_8, dec_8)),
+        (MAINNET_BTC_USDC_PUT.address, (dec_6, dec_8)),
+        (MAINNET_ETH_USDC_CALL.address, (dec_18, dec_18)),
+        (MAINNET_ETH_USDC_PUT.address, (dec_6, dec_18)),
+        (MAINNET_ETH_STRK_CALL.address, (dec_18, dec_18)),
+        (MAINNET_ETH_STRK_PUT.address, (dec_18, dec_18)),
+        (MAINNET_STRK_USDC_CALL.address, (dec_18, dec_18)),
+        (MAINNET_STRK_USDC_PUT.address, (dec_6, dec_18)),
+    ]);
+
+    let mut pool_tvl_map = HashMap::new();
+
+    for tvl_info in tvl {
+        let lp_address = tvl_info.lp_address.clone();
+        let mut tvl: u128 = 0;
+
+        let ad_hoc_precission = 1000;
+
+        let (pool_divisor, option_divisor) = address_to_divisor
+            .get(&tvl_info.lp_address.as_str())
+            .expect("Failed getting divisor");
+
+        tvl += u128::from_str_radix(&tvl_info.locked_capital[2..], 16)
+            .expect("Failed to parse locked_capital")
+            * ad_hoc_precission
+            / pool_divisor;
+        tvl += u128::from_str_radix(&tvl_info.unlocked_capital[2..], 16)
+            .expect("Failed to parse unlocked_capital")
+            * ad_hoc_precission
+            / pool_divisor;
+
+        for hex in tvl_info.option_positions {
+            tvl += u128::from_str_radix(&hex[2..], 16).expect("Failed to parse option position")
+                * ad_hoc_precission
+                / option_divisor;
+        }
+
+        pool_tvl_map.insert(lp_address, tvl);
+    }
+
+    pool_tvl_map
 }
