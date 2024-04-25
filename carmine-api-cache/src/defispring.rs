@@ -1,3 +1,4 @@
+use reqwest::Error;
 use std::collections::HashMap;
 
 use carmine_api_core::{
@@ -61,17 +62,17 @@ async fn get_starknet_incentive() -> f64 {
     145.0
 }
 
-pub async fn get_defispring_stats() -> DefispringInfo {
-    let prices: PriceResponse = get_coingecko_prices().await.expect("Failed getting prices");
+pub async fn get_defispring_stats() -> Result<DefispringInfo, Error> {
+    let prices: PriceResponse = get_coingecko_prices().await?;
     let strk_in_usd = prices.starknet.usd;
     let tvl_usd = get_tvl_in_usd(prices).await;
     let strk_incentive = get_starknet_incentive().await;
 
-    let apy = (strk_incentive * strk_in_usd * 365.0 / tvl_usd) * 100.0;
+    let apy = (f64::powf(1.0 + strk_incentive * strk_in_usd / tvl_usd, 365.0) - 1.0) * 100.0;
 
-    DefispringInfo {
+    Ok(DefispringInfo {
         tvl: tvl_usd,
         strk_incentive,
         apy,
-    }
+    })
 }

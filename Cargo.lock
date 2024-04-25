@@ -567,6 +567,7 @@ dependencies = [
  "carmine-api-db",
  "carmine-api-starknet",
  "dotenvy",
+ "reqwest 0.12.4",
  "serde",
  "tokio",
 ]

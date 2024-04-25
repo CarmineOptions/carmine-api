@@ -10,6 +10,7 @@ carmine-api-core = { path = "../carmine-api-core" }
 carmine-api-db = { path = "../carmine-api-db" }
 carmine-api-starknet = { path = "../carmine-api-starknet" }
 dotenvy = "0.15.6"
+reqwest = "0.12.4"
 serde = { version = "1.0.156", features = ["derive"] }
 tokio = { version = "1.26.0", features = ["macros"] }
 
@@ -18,5 +19,5 @@ path = "./src/bin/state.rs"
 name = "state"
 
 [[bin]]
-path = "./src/bin/defi_spring.rs"
-name = "defi_spring"
+path = "./src/bin/defispring.rs"
+name = "defispring"

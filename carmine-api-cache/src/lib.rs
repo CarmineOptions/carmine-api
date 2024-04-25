@@ -66,7 +66,9 @@ impl Cache {
             Network::Testnet => vec![],
         };
         let defispring = match network {
-            Network::Mainnet => get_defispring_stats().await,
+            Network::Mainnet => get_defispring_stats()
+                .await
+                .expect("Failed getting defispring!"),
             // do not bother generating for testnet
             Network::Testnet => DefispringInfo {
                 tvl: 0.0,
@@ -420,8 +422,10 @@ impl Cache {
     }
 
     pub async fn update_defispring(&mut self) {
-        let new_defispring = get_defispring_stats().await;
-        self.defispring = new_defispring;
+        match get_defispring_stats().await {
+            Ok(data) => self.defispring = data,
+            Err(_) => telegram_bot::send_message("Failed updating DefiSpring data.").await,
+        }
     }
 
     pub fn update_trade_history(&mut self) {
