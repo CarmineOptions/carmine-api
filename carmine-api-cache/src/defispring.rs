@@ -56,17 +56,19 @@ async fn get_tvl_in_usd(prices: PriceResponse) -> f64 {
     tvl
 }
 
-// TODO: implement
-async fn get_starknet_incentive() -> f64 {
-    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-    145.0
+async fn get_starknet_incentive() -> Result<f64, Error> {
+    let url = "TODO: API url with endpoint";
+    let res = reqwest::get(url).await?;
+
+    // TODO: get value from "res" and return it
+    Ok(145.0)
 }
 
 pub async fn get_defispring_stats() -> Result<DefispringInfo, Error> {
     let prices: PriceResponse = get_coingecko_prices().await?;
+    let strk_incentive = get_starknet_incentive().await?;
     let strk_in_usd = prices.starknet.usd;
     let tvl_usd = get_tvl_in_usd(prices).await;
-    let strk_incentive = get_starknet_incentive().await;
 
     let apy = (f64::powf(1.0 + strk_incentive * strk_in_usd / tvl_usd, 365.0) - 1.0) * 100.0;
 
