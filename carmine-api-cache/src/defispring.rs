@@ -1,11 +1,11 @@
-use reqwest::Error;
 use std::collections::HashMap;
 
 use carmine_api_core::{
-    types::{DefispringInfo, PriceResponse},
+    types::{DefispringInfo, OpenblockResponse, PriceResponse},
     utils::get_coingecko_prices,
 };
 use carmine_api_db::get_pool_tvl_map;
+use reqwest::Error;
 
 async fn get_tvl_in_usd(prices: PriceResponse) -> f64 {
     let mut pool_tvl_map = get_pool_tvl_map();
@@ -62,7 +62,7 @@ async fn get_starknet_incentive() -> f64 {
     145.0
 }
 
-pub async fn get_defispring_stats() -> Result<DefispringInfo, Error> {
+pub async fn _get_defispring_stats() -> Result<DefispringInfo, Error> {
     let prices: PriceResponse = get_coingecko_prices().await?;
     let strk_in_usd = prices.starknet.usd;
     let tvl_usd = get_tvl_in_usd(prices).await;
@@ -72,7 +72,39 @@ pub async fn get_defispring_stats() -> Result<DefispringInfo, Error> {
 
     Ok(DefispringInfo {
         tvl: tvl_usd,
-        strk_incentive,
+        allocation: strk_incentive,
         apy,
+    })
+}
+
+#[derive(Debug)]
+pub enum OpenBlockError {
+    RequestFailed,
+    InvalidData,
+}
+
+pub async fn get_defispring_stats() -> Result<DefispringInfo, OpenBlockError> {
+    let url = "https://kx58j6x5me.execute-api.us-east-1.amazonaws.com/starknet/fetchFile?file=qa-api/perps/qa_perps_strk_grant.json";
+
+    let api_response = match reqwest::get(url).await {
+        Ok(response) => response,
+        Err(_) => return Err(OpenBlockError::RequestFailed),
+    };
+
+    let data = match api_response.json::<OpenblockResponse>().await {
+        Ok(data) => data,
+        Err(_) => return Err(OpenBlockError::RequestFailed),
+    };
+
+    let latest_data = data
+        .carmine
+        .into_iter()
+        .max_by_key(|d| d.date.clone())
+        .ok_or(OpenBlockError::InvalidData)?;
+
+    Ok(DefispringInfo {
+        tvl: latest_data.tvl,
+        allocation: latest_data.allocation,
+        apy: latest_data.apr,
     })
 }
