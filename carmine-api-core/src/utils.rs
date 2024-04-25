@@ -1,9 +1,17 @@
-use crate::constants::MATH_64;
+use reqwest::Error;
+
+use crate::{constants::MATH_64, types::PriceResponse};
 
 pub fn strike_from_hex(hex_str: &str) -> f64 {
     // Parse the hex string as u128, skipping the "0x" prefix
     let num = u128::from_str_radix(&hex_str[2..], 16).expect("Failed to parse hex string");
     num as f64 / MATH_64
+}
+
+pub async fn get_coingecko_prices() -> Result<PriceResponse, Error> {
+    let url = "https://api.coingecko.com/api/v3/simple/price?ids=ethereum,usd-coin,starknet,bitcoin&vs_currencies=usd";
+
+    reqwest::get(url).await?.json::<PriceResponse>().await
 }
 
 #[cfg(test)]

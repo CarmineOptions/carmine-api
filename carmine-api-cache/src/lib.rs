@@ -3,7 +3,7 @@ use carmine_api_core::{
     pool::{get_all_pools, Pool},
     telegram_bot,
     types::{
-        AppData, IOption, OraclePrice, OraclePriceConcise, PoolStateWithTimestamp,
+        AppData, DefispringInfo, IOption, OraclePrice, OraclePriceConcise, PoolStateWithTimestamp,
         ReferralEventDigest, StarkScanEventSettled, TokenPair, TradeEvent, TradeHistory,
         UserPointsWithPosition, Vote, APY,
     },
@@ -15,9 +15,11 @@ use carmine_api_db::{
     get_user_points_lastest_timestamp, get_votes,
 };
 use carmine_api_starknet::carmine::Carmine;
+use defispring::get_defispring_stats;
 use std::{collections::HashMap, time::SystemTime, vec};
 
 mod apy;
+pub mod defispring;
 
 // Only store Events we know and not ExpireOptionTokenForPool and Upgrade
 const ALLOWED_METHODS: &'static [&'static str; 10] = &[
@@ -46,6 +48,7 @@ pub struct Cache {
     user_points_timestamp: SystemTime,
     user_points: HashMap<String, UserPointsWithPosition>,
     top_user_points: Vec<UserPointsWithPosition>,
+    defispring: DefispringInfo,
 }
 
 impl Cache {
@@ -62,6 +65,18 @@ impl Cache {
             // no referral events on Testnet
             Network::Testnet => vec![],
         };
+        let defispring = match network {
+            Network::Mainnet => get_defispring_stats()
+                .await
+                .expect("Failed getting defispring!"),
+            // do not bother generating for testnet
+            Network::Testnet => DefispringInfo {
+                tvl: 0.0,
+                strk_incentive: 0.0,
+                apy: 0.0,
+            },
+        };
+
         let mut cache = Cache {
             network,
             carmine,
@@ -74,6 +89,7 @@ impl Cache {
             user_points_timestamp: SystemTime::UNIX_EPOCH,
             user_points: HashMap::new(), // initialize empty
             top_user_points: vec![],     // initialize empty
+            defispring,
         };
 
         cache.trade_history = Cache::generate_trade_history(&mut cache);
@@ -96,12 +112,15 @@ impl Cache {
         let trades = self.generate_trades_hashmap();
         let votes = get_votes();
         let mut votes_map: HashMap<String, Vec<Vote>> = HashMap::new();
+
         for vote in votes.iter() {
             votes_map
                 .entry(vote.user_address.clone())
                 .or_insert_with(Vec::new)
                 .push(vote.clone());
         }
+
+        let defispring = self.defispring;
 
         AppData {
             all_non_expired,
@@ -116,6 +135,7 @@ impl Cache {
             top_user_points,
             votes,
             votes_map,
+            defispring,
         }
     }
 
@@ -401,6 +421,13 @@ impl Cache {
         }
     }
 
+    pub async fn update_defispring(&mut self) {
+        match get_defispring_stats().await {
+            Ok(data) => self.defispring = data,
+            Err(_) => telegram_bot::send_message("Failed updating DefiSpring data.").await,
+        }
+    }
+
     pub fn update_trade_history(&mut self) {
         self.trade_history = Cache::generate_trade_history(self);
     }
@@ -417,6 +444,7 @@ impl Cache {
         self.update_options();
         self.update_events();
         self.update_all_non_expired().await;
+        self.update_defispring().await;
         self.update_trade_history();
         self.update_user_points();
     }
