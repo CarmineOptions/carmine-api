@@ -71,9 +71,9 @@ impl Cache {
                 .expect("Failed getting defispring!"),
             // do not bother generating for testnet
             Network::Testnet => DefispringInfo {
-                tvl: 0.0,
-                strk_incentive: 0.0,
+                allocation: 0.0,
                 apy: 0.0,
+                tvl: 0.0,
             },
         };
 

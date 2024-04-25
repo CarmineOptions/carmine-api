@@ -375,6 +375,23 @@ pub struct PriceResponse {
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct DefispringInfo {
     pub tvl: f64,
-    pub strk_incentive: f64,
+    pub allocation: f64,
     pub apy: f64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct OpenblockData {
+    pub date: String,
+    pub protocol: String,
+    pub allocation: f64,
+    pub tvl: f64,
+    pub volumes: f64,
+    pub beta_fees: f64,
+    pub apr: f64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct OpenblockResponse {
+    #[serde(rename = "Carmine")]
+    pub carmine: Vec<OpenblockData>,
 }
