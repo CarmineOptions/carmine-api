@@ -1,10 +1,11 @@
-use carmine_api_db::get_pool_tvl_map;
+use carmine_api_core::network::{Network, LEGACY_AMM_CONTRACT_ADDRESS};
+use carmine_api_db::get_events_by_address;
 use dotenvy::dotenv;
 
 fn main() {
     dotenv().ok();
 
-    let pool_tvl_map = get_pool_tvl_map();
+    let legacy_events = get_events_by_address(&Network::Mainnet, LEGACY_AMM_CONTRACT_ADDRESS);
 
-    println!("{:#?}", pool_tvl_map);
+    println!("event count: {}", legacy_events.len());
 }

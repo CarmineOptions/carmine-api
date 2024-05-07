@@ -75,6 +75,7 @@ pub enum OracleName {
 pub struct AppData {
     pub all_non_expired: Vec<String>,
     pub trade_history: Vec<TradeHistory>,
+    pub legacy_trade_history: Vec<TradeHistory>,
     pub trades: HashMap<String, Vec<TradeEvent>>,
     pub option_volatility: Vec<OptionWithVolatility>,
     pub state: HashMap<String, Vec<PoolStateWithTimestamp>>,
