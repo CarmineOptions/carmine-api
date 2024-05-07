@@ -237,6 +237,16 @@ pub fn get_protocol_events(network: &Network, protocol: &Protocol) -> Vec<StarkS
         .expect("Error loading starkscan events")
 }
 
+pub fn get_events_by_address(network: &Network, address: &str) -> Vec<StarkScanEventSettled> {
+    use crate::schema::starkscan_events::dsl::*;
+
+    let connection = &mut establish_connection(network);
+    starkscan_events
+        .filter(from_address.eq(address))
+        .load::<StarkScanEventSettled>(connection)
+        .expect("Error loading starkscan events")
+}
+
 pub fn get_protocol_events_from_block(
     network: &Network,
     protocol: &Protocol,
@@ -301,6 +311,16 @@ pub fn get_options(network: &Network) -> Vec<IOption> {
     let connection = &mut establish_connection(network);
     options
         .filter(maturity.gt(NEW_AMM_GENESIS_TIMESTAMP)) // only get new AMM options
+        .load::<IOption>(connection)
+        .expect("Error loading options")
+}
+
+pub fn get_legacy_options(network: &Network) -> Vec<IOption> {
+    use crate::schema::options::dsl::*;
+
+    let connection = &mut establish_connection(network);
+    options
+        .filter(maturity.lt(NEW_AMM_GENESIS_TIMESTAMP)) // only get new AMM options
         .load::<IOption>(connection)
         .expect("Error loading options")
 }

@@ -1,5 +1,5 @@
 use carmine_api_core::{
-    network::{Network, Protocol},
+    network::{Network, Protocol, LEGACY_AMM_CONTRACT_ADDRESS},
     pool::{get_all_pools, Pool},
     telegram_bot,
     types::{
@@ -10,9 +10,10 @@ use carmine_api_core::{
     utils::strike_from_hex,
 };
 use carmine_api_db::{
-    get_all_user_points, get_options, get_options_volatility, get_oracle_prices, get_pool_state,
-    get_protocol_events, get_protocol_events_from_block, get_referral_events,
-    get_user_points_lastest_timestamp, get_votes,
+    get_all_user_points, get_events_by_address, get_legacy_options, get_options,
+    get_options_volatility, get_oracle_prices, get_pool_state, get_protocol_events,
+    get_protocol_events_from_block, get_referral_events, get_user_points_lastest_timestamp,
+    get_votes,
 };
 use carmine_api_starknet::carmine::Carmine;
 use defispring::get_defispring_stats;
@@ -40,9 +41,11 @@ pub struct Cache {
     network: Network,
     carmine: Carmine,
     events: Vec<StarkScanEventSettled>,
+    legacy_events: Vec<StarkScanEventSettled>,
     options: HashMap<String, IOption>,
     all_non_expired: Vec<String>,
     trade_history: Vec<TradeHistory>,
+    legacy_trade_history: Vec<TradeHistory>,
     pools: Vec<Pool>,
     referrals: Vec<ReferralEventDigest>,
     user_points_timestamp: SystemTime,
@@ -56,6 +59,12 @@ impl Cache {
         let network = network;
         let carmine = Carmine::new(network);
         let events = get_protocol_events(&network, &Protocol::CarmineOptions);
+        let legacy_events = match network {
+            Network::Mainnet => {
+                get_events_by_address(&Network::Mainnet, LEGACY_AMM_CONTRACT_ADDRESS)
+            }
+            Network::Testnet => vec![],
+        };
         let options_vec = get_options(&network);
         let options = Cache::options_vec_to_hashmap(options_vec);
         let all_non_expired = vec![];
@@ -81,9 +90,11 @@ impl Cache {
             network,
             carmine,
             events,
+            legacy_events,
             options,
             all_non_expired,
-            trade_history: Vec::new(),
+            trade_history: vec![],
+            legacy_trade_history: vec![],
             pools,
             referrals,
             user_points_timestamp: SystemTime::UNIX_EPOCH,
@@ -93,6 +104,7 @@ impl Cache {
         };
 
         cache.trade_history = Cache::generate_trade_history(&mut cache);
+        cache.legacy_trade_history = Cache::generate_legacy_trade_history(&mut cache);
         cache.update_all_non_expired().await;
         cache.update_user_points();
 
@@ -102,6 +114,7 @@ impl Cache {
     pub fn get_app_data(&self) -> AppData {
         let all_non_expired = self.get_all_non_expired();
         let trade_history = self.get_trade_history();
+        let legacy_trade_history = self.get_legacy_trade_history();
         let option_volatility = get_options_volatility(&self.network);
         let state = self.generate_state_hashmap();
         let apy = self.generate_apy_hashmap();
@@ -125,6 +138,7 @@ impl Cache {
         AppData {
             all_non_expired,
             trade_history,
+            legacy_trade_history,
             trades,
             option_volatility,
             state,
@@ -145,6 +159,10 @@ impl Cache {
 
     pub fn get_trade_history(&self) -> Vec<TradeHistory> {
         self.trade_history.clone()
+    }
+
+    pub fn get_legacy_trade_history(&self) -> Vec<TradeHistory> {
+        self.legacy_trade_history.clone()
     }
 
     fn options_vec_to_hashmap(vec: Vec<IOption>) -> HashMap<String, IOption> {
@@ -348,6 +366,69 @@ impl Cache {
                         }
                         None => None,
                     }
+                } else {
+                    None
+                };
+
+                TradeHistory {
+                    timestamp: e.timestamp,
+                    action,
+                    caller: e.data[0].to_owned(),
+                    capital_transfered: e.data[2].to_owned(),
+                    tokens_minted: e.data[4].to_owned(),
+                    option,
+                    liquidity_pool,
+                }
+            })
+            .collect::<Vec<TradeHistory>>();
+
+        trade_history.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
+        trade_history
+    }
+
+    fn generate_legacy_trade_history(&self) -> Vec<TradeHistory> {
+        let legacy_pool_hash_map = HashMap::from([
+            (
+                "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024",
+                "ETH/USDC Call",
+            ),
+            (
+                "0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a",
+                "ETH/USDC Put",
+            ),
+        ]);
+
+        let legacy_options = get_legacy_options(&Network::Mainnet);
+
+        let legacy_options_map =
+            legacy_options
+                .into_iter()
+                .fold(HashMap::new(), |mut acc, option| {
+                    acc.insert(option.option_address.clone(), option);
+                    acc
+                });
+
+        let mut trade_history: Vec<TradeHistory> = self
+            .legacy_events
+            .iter()
+            .filter(|event| ALLOWED_METHODS.contains(&event.key_name.as_str()))
+            .map(|e| {
+                let token_address = e.data[1].to_owned();
+                let action = String::from(
+                    &e.key_name
+                        // remove prefix in C1 contracts
+                        .replace("carmine_protocol::amm_core::amm::AMM::", ""),
+                );
+                let option = match legacy_options_map.get(&token_address) {
+                    Some(v) => Some(v.clone()),
+                    None => None,
+                };
+                let liquidity_pool: Option<String> = if action.as_str() == "DepositLiquidity"
+                    || action.as_str() == "WithdrawLiquidity"
+                {
+                    legacy_pool_hash_map
+                        .get(token_address.as_str())
+                        .map(|&s| s.to_string())
                 } else {
                     None
                 };

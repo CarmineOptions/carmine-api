@@ -160,6 +160,46 @@ pub async fn all_transactions(
     })
 }
 
+#[get("/{network}/all-legacy-transactions")]
+pub async fn all_legacy_transactions(
+    path: web::Path<String>,
+    data: web::Data<Arc<Mutex<AppState>>>,
+) -> impl Responder {
+    let network = match path.into_inner().as_str() {
+        TESTNET => Network::Testnet,
+        MAINNET => Network::Mainnet,
+        _ => {
+            return HttpResponse::BadRequest().json(GenericResponse {
+                status: "bad_request".to_string(),
+                message: "Specify network in the path".to_string(),
+            });
+        }
+    };
+    let locked = &data.lock();
+    let app_state = match locked {
+        Ok(app_data) => app_data,
+        _ => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "server_error".to_string(),
+                message: "Failed to read AppState".to_string(),
+            });
+        }
+    };
+
+    let data = match network {
+        Network::Testnet => &app_state.testnet.legacy_trade_history,
+        Network::Mainnet => &app_state.mainnet.legacy_trade_history,
+    };
+
+    let length = data.len();
+
+    HttpResponse::Ok().json(AllTradeHistoryResponse {
+        status: "success".to_string(),
+        data: data.iter().collect(),
+        length,
+    })
+}
+
 #[get("/mainnet/airdrop")]
 pub async fn airdrop(
     opts: web::Query<QueryOptions>,

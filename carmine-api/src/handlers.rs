@@ -30,6 +30,7 @@ pub fn config(conf: &mut web::ServiceConfig) {
                         .service(v1::live_options)
                         .service(v1::transactions)
                         .service(v1::all_transactions)
+                        .service(v1::all_legacy_transactions)
                         .service(v1::votes)
                         .service(v1::airdrop)
                         .service(v1::defispring)
