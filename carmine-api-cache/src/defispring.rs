@@ -84,7 +84,7 @@ pub enum OpenBlockError {
 }
 
 pub async fn get_defispring_stats() -> Result<DefispringInfo, OpenBlockError> {
-    let url = "https://kx58j6x5me.execute-api.us-east-1.amazonaws.com/starknet/fetchFile?file=qa-api/perps/qa_perps_strk_grant.json";
+    let url = "https://kx58j6x5me.execute-api.us-east-1.amazonaws.com/starknet/fetchFile?file=prod-api/perps/perps_strk_grant.json";
 
     let api_response = match reqwest::get(url).await {
         Ok(response) => response,
