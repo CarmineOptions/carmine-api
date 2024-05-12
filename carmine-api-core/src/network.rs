@@ -1,5 +1,10 @@
 use std::fmt;
 
+use crate::pool::{
+    MAINNET_BTC_USDC_CALL, MAINNET_BTC_USDC_PUT, MAINNET_ETH_STRK_CALL, MAINNET_ETH_STRK_PUT,
+    MAINNET_ETH_USDC_CALL, MAINNET_ETH_USDC_PUT, MAINNET_STRK_USDC_CALL, MAINNET_STRK_USDC_PUT,
+};
+
 pub const MAINNET_CONTRACT_ADDRESS: &str =
     "0x047472e6755afc57ada9550b6a3ac93129cc4b5f98f51c73e0644d129fd208d9";
 pub const MAINNET_AUXILIARY_CONTRACT: &str =
@@ -31,6 +36,14 @@ const TESTNET_STARKSCAN_API_BASE_URL: &str = "https://api-testnet.starkscan.co/a
 pub enum Protocol {
     CarmineOptions,
     CarmineGovernance,
+    CarminePoolEthUsdcCall,
+    CarminePoolEthUsdcPut,
+    CarminePoolBtcUsdcCall,
+    CarminePoolBtcUsdcPut,
+    CarminePoolEthStrkCall,
+    CarminePoolEthStrkPut,
+    CarminePoolStrkUsdcCall,
+    CarminePoolStrkUsdcPut,
     Hashstack,
     Hashstack2,
     ZkLend,
@@ -165,6 +178,14 @@ pub fn protocol_address(network: &Network, protocol: &Protocol) -> &'static str 
         Protocol::CarmineGovernance => {
             "0x001405ab78ab6ec90fba09e6116f373cda53b0ba557789a4578d8c1ec374ba0f"
         }
+        Protocol::CarminePoolEthUsdcCall => MAINNET_ETH_USDC_CALL.address,
+        Protocol::CarminePoolEthUsdcPut => MAINNET_ETH_USDC_PUT.address,
+        Protocol::CarminePoolBtcUsdcCall => MAINNET_BTC_USDC_CALL.address,
+        Protocol::CarminePoolBtcUsdcPut => MAINNET_BTC_USDC_PUT.address,
+        Protocol::CarminePoolEthStrkCall => MAINNET_ETH_STRK_CALL.address,
+        Protocol::CarminePoolEthStrkPut => MAINNET_ETH_STRK_PUT.address,
+        Protocol::CarminePoolStrkUsdcCall => MAINNET_STRK_USDC_CALL.address,
+        Protocol::CarminePoolStrkUsdcPut => MAINNET_STRK_USDC_PUT.address,
         Protocol::Hashstack => HASHSTACK_ADDRESS,
         Protocol::Hashstack2 => {
             "0x01ef7f9f8bf01678dc6d27e2c26fb7e8eac3812a24752e6a1d6a49d153bec9f3"
