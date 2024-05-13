@@ -730,3 +730,22 @@ pub async fn defispring(data: web::Data<Arc<Mutex<AppState>>>) -> impl Responder
         data: app_state.mainnet.defispring,
     })
 }
+
+#[get("/mainnet/token-prices")]
+pub async fn token_prices(data: web::Data<Arc<Mutex<AppState>>>) -> impl Responder {
+    let locked = &mut data.lock();
+    let app_state = match locked {
+        Ok(app_data) => app_data,
+        _ => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "server_error".to_string(),
+                message: "Failed to read AppState".to_string(),
+            });
+        }
+    };
+
+    HttpResponse::Ok().json(DataResponse {
+        status: "success".to_string(),
+        data: app_state.token_prices,
+    })
+}

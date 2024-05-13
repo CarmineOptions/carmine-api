@@ -93,6 +93,7 @@ pub struct AppState {
     pub mainnet: AppData,
     pub testnet: AppData,
     pub airdrop: MerkleTree,
+    pub token_prices: TokenPrices,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -369,8 +370,16 @@ pub struct PriceResponse {
     pub ethereum: CoinGeckoPrice,
     #[serde(rename = "usd-coin")]
     pub usd_coin: CoinGeckoPrice,
-    pub starknet: CoinGeckoPrice, // Ensure the correct token ID for Starknet if different
+    pub starknet: CoinGeckoPrice,
     pub bitcoin: CoinGeckoPrice,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+pub struct TokenPrices {
+    pub eth: f64,
+    pub usdc: f64,
+    pub strk: f64,
+    pub btc: f64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]

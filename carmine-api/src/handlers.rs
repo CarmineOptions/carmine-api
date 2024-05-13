@@ -1,4 +1,4 @@
-use actix_web::web::{self, service};
+use actix_web::web;
 
 mod common;
 mod v1;
@@ -42,6 +42,7 @@ pub fn config(conf: &mut web::ServiceConfig) {
                         .service(v1::get_top_user_points)
                         .service(v1::get_user_points)
                         .service(v1::trades)
+                        .service(v1::token_prices)
                         .service(v1::pool_state)
                         .service(v1::pool_state_last)
                         .service(v1::pool_apy)

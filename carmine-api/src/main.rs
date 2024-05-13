@@ -8,13 +8,14 @@ use actix_web::{http::header, App, HttpServer};
 use carmine_api_airdrop::merkle_tree::MerkleTree;
 use carmine_api_cache::Cache;
 use carmine_api_core::network::Network;
-use carmine_api_core::types::AppState;
+use carmine_api_core::types::{AppState, TokenPrices};
+use carmine_api_core::utils::get_coingecko_prices;
 use dotenvy::dotenv;
 use std::env;
 use std::sync::{Arc, Mutex};
 use tokio::time::{sleep, Duration};
 
-const UPDATE_APP_STATE_INTERVAL: u64 = 300;
+const UPDATE_APP_STATE_INTERVAL: u64 = 15;
 
 const LOCAL_IP: &str = "127.0.0.1";
 const DOCKER_IP: &str = "0.0.0.0";
@@ -81,10 +82,24 @@ async fn main() -> std::io::Result<()> {
 
     println!("🛠️  Creating app state...");
 
+    let token_prices = match get_coingecko_prices().await {
+        Ok(res) => TokenPrices {
+            eth: res.ethereum.usd,
+            usdc: res.usd_coin.usd,
+            strk: res.starknet.usd,
+            btc: res.bitcoin.usd,
+        },
+        Err(e) => {
+            println!("{:#?}", e);
+            panic!("Failed getting gecko prices")
+        }
+    };
+
     let app_state = Data::new(Arc::new(Mutex::new(AppState {
         mainnet,
         testnet,
         airdrop,
+        token_prices,
     })));
 
     println!("🛠️  Cloning app state...");
@@ -92,6 +107,8 @@ async fn main() -> std::io::Result<()> {
     let app_state_clone = app_state.clone();
 
     println!("🛠️  Spawning app state updating thread...");
+
+    let mut counter: u16 = 0;
 
     // updates app state
     actix_web::rt::spawn(async move {
@@ -102,17 +119,45 @@ async fn main() -> std::io::Result<()> {
             } else {
                 sleep(Duration::from_secs(UPDATE_APP_STATE_INTERVAL)).await;
             }
-            println!("Updating AppState");
-            mainnet_cache.update().await;
-            testnet_cache.update().await;
-            let mainnet = mainnet_cache.get_app_data();
-            let testnet = testnet_cache.get_app_data();
 
-            let mut app_state_lock = app_state_clone.lock().unwrap();
-            app_state_lock.mainnet = mainnet;
-            app_state_lock.testnet = testnet;
-            drop(app_state_lock);
-            println!("AppState updated");
+            if counter % 15 == 0 {
+                counter = 1;
+                println!("Updating AppState");
+                mainnet_cache.update().await;
+                testnet_cache.update().await;
+                let mainnet = mainnet_cache.get_app_data();
+                let testnet = testnet_cache.get_app_data();
+
+                let mut app_state_lock = app_state_clone.lock().unwrap();
+                app_state_lock.mainnet = mainnet;
+                app_state_lock.testnet = testnet;
+                drop(app_state_lock);
+                println!("AppState updated");
+            } else {
+                counter += 1;
+                println!("Updating Gecko prices");
+                let token_prices_response = match get_coingecko_prices().await {
+                    Ok(res) => Ok(TokenPrices {
+                        eth: res.ethereum.usd,
+                        usdc: res.usd_coin.usd,
+                        strk: res.starknet.usd,
+                        btc: res.bitcoin.usd,
+                    }),
+                    Err(e) => Err(e),
+                };
+
+                let mut app_state_lock = app_state_clone.lock().unwrap();
+
+                match token_prices_response {
+                    Ok(token_prices) => {
+                        app_state_lock.token_prices = token_prices;
+                        println!("Gecko prices updated");
+                    }
+                    Err(e) => println!("Failed updating Gecko prices: {:?}", e),
+                };
+
+                drop(app_state_lock);
+            }
         }
     });
 
