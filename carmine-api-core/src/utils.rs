@@ -1,5 +1,3 @@
-use reqwest::Error;
-
 use crate::{constants::MATH_64, types::PriceResponse};
 
 pub fn strike_from_hex(hex_str: &str) -> f64 {
@@ -8,7 +6,7 @@ pub fn strike_from_hex(hex_str: &str) -> f64 {
     num as f64 / MATH_64
 }
 
-pub async fn get_coingecko_prices() -> Result<PriceResponse, Error> {
+pub async fn get_coingecko_prices() -> Result<PriceResponse, reqwest::Error> {
     let url = "https://api.coingecko.com/api/v3/simple/price?ids=ethereum,usd-coin,starknet,bitcoin&vs_currencies=usd";
 
     reqwest::get(url).await?.json::<PriceResponse>().await
