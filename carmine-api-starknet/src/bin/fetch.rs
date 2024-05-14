@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
 use carmine_api_core::network::{Network, Protocol};
-use carmine_api_db::create_batch_of_starkscan_events;
 
+use carmine_api_db::create_batch_of_starkscan_events;
 use carmine_api_starknet::starkscan::get_block_range_events;
 use dotenvy::dotenv;
 
@@ -11,12 +11,21 @@ async fn main() {
     dotenv().ok();
 
     let network = &Network::Mainnet;
-    let protocols = vec![&Protocol::CarmineGovernance];
+    let protocols = vec![
+        &Protocol::CarminePoolEthUsdcCall,
+        &Protocol::CarminePoolEthUsdcPut,
+        &Protocol::CarminePoolBtcUsdcCall,
+        &Protocol::CarminePoolBtcUsdcPut,
+        &Protocol::CarminePoolEthStrkCall,
+        &Protocol::CarminePoolEthStrkPut,
+        &Protocol::CarminePoolStrkUsdcCall,
+        &Protocol::CarminePoolStrkUsdcPut,
+    ];
 
-    let start = 32000;
+    let start = 504000;
     let mut current;
     let increment = 4000;
-    let max = 630000;
+    let max = 640000;
 
     let mut events = vec![];
 
