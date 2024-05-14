@@ -1,4 +1,4 @@
-use crate::network::Network;
+use crate::{network::Network, utils::normalize_address};
 use std::fmt;
 
 #[derive(Debug)]
@@ -16,6 +16,18 @@ pub struct Pool {
     pub base: Token,
     pub quote: Token,
     pub id: &'static str,
+}
+
+impl Pool {
+    pub fn descriptor(&self) -> String {
+        format!("{}/{} {}", self.base.symbol, self.quote.symbol, self.type_)
+    }
+
+    pub fn is_address(&self, address: &str) -> bool {
+        let left = normalize_address(&self.address);
+        let right = normalize_address(&address);
+        left == right
+    }
 }
 
 #[derive(Debug)]

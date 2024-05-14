@@ -23,7 +23,7 @@ mod apy;
 pub mod defispring;
 
 // Only store Events we know and not ExpireOptionTokenForPool and Upgrade
-const ALLOWED_METHODS: &'static [&'static str; 10] = &[
+const ALLOWED_METHODS: &'static [&'static str; 12] = &[
     "TradeOpen",
     "TradeClose",
     "TradeSettle",
@@ -35,6 +35,9 @@ const ALLOWED_METHODS: &'static [&'static str; 10] = &[
     "carmine_protocol::amm_core::amm::AMM::TradeSettle",
     "carmine_protocol::amm_core::amm::AMM::DepositLiquidity",
     "carmine_protocol::amm_core::amm::AMM::WithdrawLiquidity",
+    // synthetic events
+    "synthetic::DepositLiquidity",
+    "synthetic::WithdrawLiquidity",
 ];
 
 pub struct Cache {
@@ -342,7 +345,8 @@ impl Cache {
                 let action = String::from(
                     &e.key_name
                         // remove prefix in C1 contracts
-                        .replace("carmine_protocol::amm_core::amm::AMM::", ""),
+                        .replace("carmine_protocol::amm_core::amm::AMM::", "")
+                        .replace("synthetic::", ""),
                 );
                 let option = match self.options.get(&token_address) {
                     Some(v) => Some(v.clone()),
@@ -351,21 +355,10 @@ impl Cache {
                 let liquidity_pool: Option<String> = if action.as_str() == "DepositLiquidity"
                     || action.as_str() == "WithdrawLiquidity"
                 {
-                    let matched_pool = self
-                        .pools
+                    self.pools
                         .iter()
-                        .find(|&pool| pool.address == token_address.as_str());
-
-                    match matched_pool {
-                        Some(pool) => {
-                            let pool_description = format!(
-                                "{}/{} {}",
-                                pool.base.symbol, pool.quote.symbol, pool.type_
-                            );
-                            Some(pool_description)
-                        }
-                        None => None,
-                    }
+                        .find(|&pool| pool.address == token_address.as_str())
+                        .map(|p| p.descriptor())
                 } else {
                     None
                 };
@@ -417,7 +410,8 @@ impl Cache {
                 let action = String::from(
                     &e.key_name
                         // remove prefix in C1 contracts
-                        .replace("carmine_protocol::amm_core::amm::AMM::", ""),
+                        .replace("carmine_protocol::amm_core::amm::AMM::", "")
+                        .replace("synthetic::", ""),
                 );
                 let option = match legacy_options_map.get(&token_address) {
                     Some(v) => Some(v.clone()),

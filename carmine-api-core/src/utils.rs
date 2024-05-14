@@ -12,6 +12,11 @@ pub async fn get_coingecko_prices() -> Result<PriceResponse, reqwest::Error> {
     reqwest::get(url).await?.json::<PriceResponse>().await
 }
 
+pub fn normalize_address(address: &str) -> String {
+    let res = &address[2..].trim_start_matches('0');
+    format!("0x{}", res)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::utils::strike_from_hex;

@@ -2,7 +2,8 @@ use std::{cmp::min, env, time::Duration};
 
 use async_recursion::async_recursion;
 use carmine_api_core::{
-    network::{protocol_address, starkscan_base_url, Network, Protocol},
+    network::{protocol_address, starkscan_base_url, Network, Protocol, MAINNET_CONTRACT_ADDRESS},
+    pool::get_all_pools,
     telegram_bot,
     types::{Event, StarkScanEvent, StarkScanEventResult, StarkScanEventSettled},
 };
@@ -183,9 +184,13 @@ pub fn parse_settled_event(event: StarkScanEventSettled) -> Option<Event> {
     })
 }
 
-fn get_settled_event(event: StarkScanEvent) -> Option<StarkScanEventSettled> {
+fn get_settled_events(event: StarkScanEvent) -> Option<Vec<StarkScanEventSettled>> {
+    if event.block_hash.is_none() || event.block_number.is_none() {
+        return None;
+    }
     if event.block_hash.is_some() && event.block_number.is_some() && event.key_name.is_some() {
-        return Some(StarkScanEventSettled {
+        // regular event, return vec size 1
+        return Some(vec![StarkScanEventSettled {
             id: format!("{}_{}", event.transaction_hash, event.event_index),
             block_hash: event.block_hash.unwrap(),
             block_number: event.block_number.unwrap(),
@@ -196,9 +201,83 @@ fn get_settled_event(event: StarkScanEvent) -> Option<StarkScanEventSettled> {
             data: event.data,
             timestamp: event.timestamp,
             key_name: event.key_name.unwrap(),
-        });
+        }]);
     }
-    return None;
+
+    let pools = get_all_pools(&Network::Mainnet);
+
+    // if from_address matches pool address it is a LP transfer/mint/burn event
+    let matched_pool = pools
+        .iter()
+        .find(|&pool| pool.is_address(event.from_address.as_str()));
+
+    if matched_pool.is_none() || event.keys.len() != 4 || event.data.len() < 1 {
+        return None;
+    }
+
+    let pool_address = matched_pool.unwrap().address;
+
+    let zero = "0x0".to_string();
+    let keys = event.keys;
+    let data = event.data;
+    let from = &keys[2];
+    let to = &keys[3];
+    let amount = &data[0];
+
+    if from == &zero || to == &zero {
+        // mint or burn
+        return None;
+    }
+
+    let base_id = format!("{}_{}", event.transaction_hash, event.event_index);
+    let block_hash = event.block_hash.unwrap();
+    let block_number = event.block_number.unwrap();
+    let transaction_hash = event.transaction_hash;
+    let timestamp = event.timestamp;
+
+    let syntetic_withdraw = StarkScanEventSettled {
+        id: format!("{}_0", &base_id),
+        block_hash: block_hash.to_string(),
+        block_number,
+        transaction_hash: transaction_hash.to_string(),
+        event_index: 2, // this tx has 2 events, this is syntetic 3rd
+        from_address: MAINNET_CONTRACT_ADDRESS.to_string(),
+        keys: keys.to_vec(),
+        // event event WithdrawLiquidity(caller,lp_token,capital_transfered,lp_tokens_burned)
+        data: vec![
+            from.to_string(),         // caller is from original event
+            pool_address.to_string(), // lp token is pool address
+            zero.to_string(), // capital transfered is zero because we don't have this information
+            zero.to_string(), // u256 trailing 0
+            amount.to_string(), // tokens burned is amount from event
+            zero.to_string(), // u256 trailing 0
+        ],
+        timestamp,
+        key_name: "synthetic::WithdrawLiquidity".to_string(),
+    };
+
+    let syntetic_deposit = StarkScanEventSettled {
+        id: format!("{}_1", &base_id),
+        block_hash: block_hash.to_string(),
+        block_number,
+        transaction_hash: transaction_hash.to_string(),
+        event_index: 3, // this tx has 2 events, this is syntetic 4th
+        from_address: MAINNET_CONTRACT_ADDRESS.to_string(),
+        keys: keys.to_vec(),
+        // event DepositLiquidity(caller,lp_token,capital_transfered,lp_tokens_minted)
+        data: vec![
+            to.to_string(),           // caller is from original event
+            pool_address.to_string(), // lp token is pool address
+            zero.to_string(), // capital transfered is zero because we don't have this information
+            zero.to_string(), // u256 trailing 0
+            amount.to_string(), // tokens minted is amount from event
+            zero.to_string(), // u256 trailing 0
+        ],
+        timestamp,
+        key_name: "synthetic::DepositLiquidity".to_string(),
+    };
+
+    Some(vec![syntetic_withdraw, syntetic_deposit])
 }
 
 #[async_recursion]
@@ -228,8 +307,8 @@ async fn _fetch_events(url: &str, data: &mut Vec<StarkScanEventSettled>, cutoff_
     if let Some(response_data) = starkscan_response.data {
         for event in response_data {
             if event.timestamp > cutoff_timestamp {
-                if let Some(settled) = get_settled_event(event) {
-                    data.push(settled);
+                if let Some(settled) = get_settled_events(event) {
+                    data.extend(settled);
                 }
             } else {
                 return;
