@@ -11,6 +11,7 @@ diesel = { version = "2.0.0", features = ["postgres"] }
 lazy_static = "1.4.0"
 reqwest = { version = "0.12.4", features = ["json"] }
 serde = { version = "1.0.156", features = ["derive"] }
+starknet = { git = "https://github.com/xJonathanLEI/starknet-rs" }
 teloxide = "0.12.2"
 tokio = { version = "1.26.0", features = ["macros", "rt-multi-thread"] }
 

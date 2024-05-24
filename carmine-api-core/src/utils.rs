@@ -1,3 +1,7 @@
+use std::str::FromStr;
+
+use starknet::core::types::FieldElement;
+
 use crate::{constants::MATH_64, types::PriceResponse};
 
 pub fn strike_from_hex(hex_str: &str) -> f64 {
@@ -17,9 +21,38 @@ pub fn normalize_address(address: &str) -> String {
     format!("0x{}", res)
 }
 
+pub fn felt_to_float(felt: FieldElement, decimals: usize) -> f64 {
+    let input_str = felt.to_string(); // decimal number as string
+
+    // Ensure the string is long enough
+    let padded_str = if input_str.len() < decimals {
+        format!("{:0>width$}", input_str, width = decimals + 1)
+    } else {
+        input_str.to_string()
+    };
+
+    // Insert the decimal point 18 positions from the right
+    let len = padded_str.len();
+    let decimal_str = format!(
+        "{}.{}",
+        &padded_str[..len - decimals],
+        &padded_str[len - decimals..]
+    );
+
+    let result: f64 = decimal_str.parse().expect("Failed parsing lp token value");
+
+    result
+}
+
+pub fn string_to_float(str_num: &str, decimals: usize) -> f64 {
+    let felt = FieldElement::from_str(str_num).expect("Failed parsing felt");
+
+    felt_to_float(felt, decimals)
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::utils::strike_from_hex;
+    use crate::utils::{strike_from_hex, string_to_float};
 
     #[test]
     fn float_strike_price() {
@@ -32,5 +65,16 @@ mod tests {
     #[test]
     fn high_strike_price() {
         assert_eq!(strike_from_hex("0xb3b00000000000000000"), 46000.0);
+    }
+
+    #[test]
+    fn float_from_hex() {
+        assert_eq!(string_to_float("0x2DFD1C040", 9), 12.345);
+        assert_eq!(string_to_float("0xe32ec9d196c2cbd", 18), 1.0231402248470642);
+    }
+
+    #[test]
+    fn float_from_dec() {
+        assert_eq!(string_to_float("1234567890000000000", 18), 1.23456789);
     }
 }

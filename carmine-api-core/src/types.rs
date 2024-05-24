@@ -201,6 +201,8 @@ pub struct PoolState {
     pub lp_balance: String,
     pub pool_position: Option<String>,
     pub lp_token_value: Option<String>,
+    pub lp_token_value_usd: Option<f64>,
+    pub underlying_asset_price: Option<f64>,
     pub block_number: i64,
     pub lp_address: String,
 }
@@ -212,6 +214,8 @@ pub struct PoolStateWithTimestamp {
     pub lp_balance: String,
     pub pool_position: Option<String>,
     pub lp_token_value: Option<String>,
+    pub lp_token_value_usd: Option<f64>,
+    pub underlying_asset_price: Option<f64>,
     pub block_number: i64,
     pub lp_address: String,
     pub timestamp: i64,
