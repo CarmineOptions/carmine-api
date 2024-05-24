@@ -11,7 +11,13 @@ carmine-api-referral = { path = "../carmine-api-referral" }
 diesel = { version = "2.0.0", features = ["postgres"] }
 dotenvy = "0.15.6"
 serde = { version = "1.0.156", features = ["derive"] }
+serde_json = "1.0.96"
+starknet = { git = "https://github.com/xJonathanLEI/starknet-rs" }
 
 [[bin]]
 path = "./src/bin/query.rs"
 name = "query"
+
+[[bin]]
+path = "./src/bin/lp_value.rs"
+name = "lp_value"

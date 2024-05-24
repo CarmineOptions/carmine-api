@@ -3,12 +3,13 @@ use carmine_api_core::pool::{
     MAINNET_BTC_USDC_CALL, MAINNET_BTC_USDC_PUT, MAINNET_ETH_STRK_CALL, MAINNET_ETH_STRK_PUT,
     MAINNET_ETH_USDC_CALL, MAINNET_ETH_USDC_PUT, MAINNET_STRK_USDC_CALL, MAINNET_STRK_USDC_PUT,
 };
+use carmine_api_core::schema::pool_state::lp_token_value_usd;
 use carmine_api_core::schema::{self};
 use carmine_api_core::types::{
     DbBlock, Event, IOption, InsuranceEvent, NewReferralEvent, OptionVolatility,
-    OptionWithVolatility, OraclePrice, Pool, PoolState, PoolStateWithTimestamp, PoolTvlInfo,
-    ReferralCode, ReferralEventDigest, StarkScanEventSettled, UserPoints, UserPointsDb, Volatility,
-    Vote,
+    OptionWithVolatility, OraclePrice, Pool, PoolState, PoolStatePriceUpdate,
+    PoolStateWithTimestamp, PoolTvlInfo, ReferralCode, ReferralEventDigest, StarkScanEventSettled,
+    UserPoints, UserPointsDb, Volatility, Vote,
 };
 
 use carmine_api_referral::referral_code::generate_referral_code;
@@ -438,21 +439,100 @@ pub fn get_pool_state(pool_address: &str, network: &Network) -> Vec<PoolStateWit
         .load::<(PoolState, DbBlock)>(connection)
         .expect("Error loading pool state")
         .into_iter()
-        .map(|(pool, block)| PoolStateWithTimestamp {
-            unlocked_cap: pool.unlocked_cap,
-            locked_cap: pool.locked_cap,
-            lp_balance: pool.lp_balance,
-            pool_position: pool.pool_position,
-            lp_token_value: pool.lp_token_value,
-            lp_address: pool.lp_address,
-            block_number: block.block_number,
-            timestamp: block.timestamp,
-        })
+        .map(
+            |(pool, block): (PoolState, DbBlock)| PoolStateWithTimestamp {
+                unlocked_cap: pool.unlocked_cap,
+                locked_cap: pool.locked_cap,
+                lp_balance: pool.lp_balance,
+                pool_position: pool.pool_position,
+                lp_token_value: pool.lp_token_value,
+                lp_token_value_usd: pool.lp_token_value_usd,
+                underlying_asset_price: pool.underlying_asset_price,
+                lp_address: pool.lp_address,
+                block_number: block.block_number,
+                timestamp: block.timestamp,
+            },
+        )
         .collect();
 
     data.sort_by(|a, b| b.block_number.cmp(&a.block_number));
 
     data
+}
+
+pub fn get_pool_states_with_prices(
+    pool_address: &str,
+    network: &Network,
+) -> Vec<(PoolState, Vec<OraclePrice>)> {
+    use crate::schema::oracle_prices::dsl::{block_number as oracle_block_number, oracle_prices};
+    use crate::schema::pool_state::dsl::{
+        block_number as pool_state_block_number, lp_address, pool_state,
+    };
+
+    let connection = &mut establish_connection(network);
+
+    let pool_states_with_blocks: Vec<PoolState> = pool_state
+        .filter(lp_address.eq(pool_address))
+        .filter(pool_state_block_number.gt(495000))
+        .filter(lp_token_value_usd.is_null()) // only states that do not have price yet
+        .load::<PoolState>(connection)
+        .expect("Error loading pool state");
+
+    let block_numbers: Vec<i64> = pool_states_with_blocks
+        .iter()
+        .map(|ps| ps.block_number)
+        .collect();
+
+    let prices: Vec<OraclePrice> = oracle_prices
+        .filter(oracle_block_number.eq_any(&block_numbers))
+        .load::<OraclePrice>(connection)
+        .expect("Error loading oracle prices");
+
+    let mut prices_map: std::collections::HashMap<i64, Vec<OraclePrice>> =
+        std::collections::HashMap::new();
+    for price in prices {
+        prices_map
+            .entry(price.block_number)
+            .or_insert_with(Vec::new)
+            .push(price);
+    }
+
+    let mut results: Vec<(PoolState, Vec<OraclePrice>)> = pool_states_with_blocks
+        .into_iter()
+        .map(|pool| {
+            let block_prices = prices_map.remove(&pool.block_number).unwrap_or_default();
+            (pool, block_prices)
+        })
+        .collect();
+
+    results.sort_by(|a, b| b.0.block_number.cmp(&a.0.block_number));
+
+    results
+}
+
+pub fn update_pool_state_asset_prices(
+    pool_state_price_updates: Vec<PoolStatePriceUpdate>,
+) -> Result<(), diesel::result::Error> {
+    use self::schema::pool_state::dsl::*;
+
+    let connection = &mut establish_connection(&Network::Mainnet);
+
+    for price_update in pool_state_price_updates {
+        diesel::update(
+            pool_state.filter(
+                lp_address
+                    .eq(price_update.lp_address)
+                    .and(block_number.eq(price_update.block_number)),
+            ),
+        )
+        .set((
+            lp_token_value_usd.eq(price_update.lp_token_value_usd),
+            underlying_asset_price.eq(price_update.underlying_asset_price),
+        ))
+        .execute(connection)?;
+    }
+
+    Ok(())
 }
 
 pub fn get_pool_state_block_numbers_in_range(

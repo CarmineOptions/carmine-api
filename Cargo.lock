@@ -630,6 +630,7 @@ dependencies = [
  "lazy_static",
  "reqwest 0.12.4",
  "serde",
+ "starknet",
  "teloxide",
  "tokio",
 ]
@@ -643,6 +644,8 @@ dependencies = [
  "diesel",
  "dotenvy",
  "serde",
+ "serde_json",
+ "starknet",
 ]
 
 [[package]]

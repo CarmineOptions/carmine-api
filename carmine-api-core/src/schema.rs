@@ -49,6 +49,8 @@ diesel::table! {
         lp_balance -> Text,
         pool_position -> Nullable<Text>,
         lp_token_value -> Nullable<Text>,
+        lp_token_value_usd -> Nullable<Double>,
+        underlying_asset_price -> Nullable<Double>,
         block_number -> Int8,
         lp_address -> Text,
     }
