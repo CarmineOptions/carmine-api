@@ -1,14 +1,14 @@
-use std::fs::File;
-
 use carmine_api_core::{
     network::Network,
-    pool::MAINNET_ETH_USDC_CALL,
-    types::{OraclePrice, PoolState},
+    pool::{
+        MAINNET_BTC_USDC_CALL, MAINNET_BTC_USDC_PUT, MAINNET_ETH_STRK_CALL, MAINNET_ETH_STRK_PUT,
+        MAINNET_ETH_USDC_CALL, MAINNET_ETH_USDC_PUT, MAINNET_STRK_USDC_CALL, MAINNET_STRK_USDC_PUT,
+    },
+    types::{OraclePrice, PoolStatePriceUpdate},
     utils::string_to_float,
 };
-use carmine_api_db::get_pool_states_with_prices;
+use carmine_api_db::{get_pool_states_with_prices, update_pool_state_asset_prices};
 use dotenvy::dotenv;
-use serde_json::to_writer_pretty;
 
 fn oracle_to_price(oracle: &OraclePrice) -> f64 {
     let decimals: i32 = oracle.decimals as i32;
@@ -20,43 +20,59 @@ fn oracle_to_price(oracle: &OraclePrice) -> f64 {
 fn main() {
     dotenv().ok();
     let net = &Network::Mainnet;
-    let pool_states = get_pool_states_with_prices(MAINNET_ETH_USDC_CALL.address, net);
 
-    let eth_token_pair = "eth-usdc";
+    let address_pair = vec![
+        (MAINNET_ETH_USDC_CALL.address, "eth-usdc"),
+        (MAINNET_ETH_USDC_PUT.address, "usdc"),
+        (MAINNET_BTC_USDC_CALL.address, "btc-usdc"),
+        (MAINNET_BTC_USDC_PUT.address, "usdc"),
+        (MAINNET_ETH_STRK_CALL.address, "eth-usdc"),
+        (MAINNET_ETH_STRK_PUT.address, "strk-usdc"),
+        (MAINNET_STRK_USDC_CALL.address, "strk-usdc"),
+        (MAINNET_STRK_USDC_PUT.address, "usdc"),
+    ];
 
-    let mut infos = vec![];
+    for (pool_address, token_pair) in address_pair {
+        let pool_states = get_pool_states_with_prices(pool_address, net);
 
-    println!("Iterating over {} items", pool_states.len());
+        let mut updates = vec![];
 
-    for rich_pool_state in pool_states {
-        let (pool_state, prices) = rich_pool_state;
-        let eth_price_struct_options: Option<&OraclePrice> =
-            prices.iter().find(|p| p.token_pair == eth_token_pair);
-        if eth_price_struct_options.is_none() {
-            continue;
-        }
-        if let Some(lp_token_value) = pool_state.lp_token_value {
-            let lp_float = string_to_float(lp_token_value.as_str(), 18);
-            let eth_price = oracle_to_price(eth_price_struct_options.unwrap());
+        println!("Iterating over {} items", pool_states.len());
 
-            let info = PoolState {
-                unlocked_cap: pool_state.unlocked_cap,
-                locked_cap: pool_state.locked_cap,
-                lp_balance: pool_state.lp_balance,
-                pool_position: pool_state.pool_position,
-                lp_token_value: Some(lp_token_value),
-                lp_token_value_usd: Some(lp_float * eth_price),
-                underlying_asset_price: Some(eth_price),
-                block_number: pool_state.block_number,
-                lp_address: pool_state.lp_address,
+        for rich_pool_state in pool_states {
+            let (pool_state, prices) = rich_pool_state;
+
+            let price = match token_pair {
+                "usdc" => 1.0,
+                pair => {
+                    let price_struct_option: Option<&OraclePrice> =
+                        prices.iter().find(|p| p.token_pair == pair);
+                    if price_struct_option.is_none() {
+                        continue;
+                    }
+                    oracle_to_price(price_struct_option.unwrap())
+                }
             };
 
-            infos.push(info);
+            if let Some(lp_token_value) = pool_state.lp_token_value {
+                let lp_float = string_to_float(lp_token_value.as_str(), 18);
+
+                let info = PoolStatePriceUpdate {
+                    lp_token_value_usd: lp_float * price,
+                    underlying_asset_price: price,
+                    block_number: pool_state.block_number,
+                    lp_address: pool_state.lp_address,
+                };
+
+                updates.push(info);
+            }
+        }
+
+        println!("Got {} pool updates", updates.len());
+
+        match update_pool_state_asset_prices(updates) {
+            Ok(_) => println!("{} Succeeded", pool_address),
+            Err(e) => println!("{} Failed: {:#?}", pool_address, e),
         }
     }
-
-    println!("Got {} pool infos", infos.len());
-
-    let file = File::create("./pool_infos.json").expect("Failed creating file");
-    to_writer_pretty(file, &infos).expect("Failed writing to file");
 }

@@ -598,6 +598,8 @@ impl Carmine {
                     Some(v) => Some(v),
                     None => None,
                 },
+                lp_token_value_usd: None,
+                underlying_asset_price: None,
             });
         }
 

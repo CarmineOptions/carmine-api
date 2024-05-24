@@ -208,6 +208,14 @@ pub struct PoolState {
 }
 
 #[derive(Debug, Serialize)]
+pub struct PoolStatePriceUpdate {
+    pub lp_token_value_usd: f64,
+    pub underlying_asset_price: f64,
+    pub block_number: i64,
+    pub lp_address: String,
+}
+
+#[derive(Debug, Serialize)]
 pub struct PoolStateWithTimestamp {
     pub unlocked_cap: String,
     pub locked_cap: String,

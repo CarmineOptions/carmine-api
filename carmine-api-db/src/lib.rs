@@ -3,12 +3,13 @@ use carmine_api_core::pool::{
     MAINNET_BTC_USDC_CALL, MAINNET_BTC_USDC_PUT, MAINNET_ETH_STRK_CALL, MAINNET_ETH_STRK_PUT,
     MAINNET_ETH_USDC_CALL, MAINNET_ETH_USDC_PUT, MAINNET_STRK_USDC_CALL, MAINNET_STRK_USDC_PUT,
 };
+use carmine_api_core::schema::pool_state::lp_token_value_usd;
 use carmine_api_core::schema::{self};
 use carmine_api_core::types::{
     DbBlock, Event, IOption, InsuranceEvent, NewReferralEvent, OptionVolatility,
-    OptionWithVolatility, OraclePrice, Pool, PoolState, PoolStateWithTimestamp, PoolTvlInfo,
-    ReferralCode, ReferralEventDigest, StarkScanEventSettled, UserPoints, UserPointsDb, Volatility,
-    Vote,
+    OptionWithVolatility, OraclePrice, Pool, PoolState, PoolStatePriceUpdate,
+    PoolStateWithTimestamp, PoolTvlInfo, ReferralCode, ReferralEventDigest, StarkScanEventSettled,
+    UserPoints, UserPointsDb, Volatility, Vote,
 };
 
 use carmine_api_referral::referral_code::generate_referral_code;
@@ -473,6 +474,7 @@ pub fn get_pool_states_with_prices(
     let pool_states_with_blocks: Vec<PoolState> = pool_state
         .filter(lp_address.eq(pool_address))
         .filter(pool_state_block_number.gt(495000))
+        .filter(lp_token_value_usd.is_null()) // only states that do not have price yet
         .load::<PoolState>(connection)
         .expect("Error loading pool state");
 
@@ -506,6 +508,31 @@ pub fn get_pool_states_with_prices(
     results.sort_by(|a, b| b.0.block_number.cmp(&a.0.block_number));
 
     results
+}
+
+pub fn update_pool_state_asset_prices(
+    pool_state_price_updates: Vec<PoolStatePriceUpdate>,
+) -> Result<(), diesel::result::Error> {
+    use self::schema::pool_state::dsl::*;
+
+    let connection = &mut establish_connection(&Network::Mainnet);
+
+    for price_update in pool_state_price_updates {
+        diesel::update(
+            pool_state.filter(
+                lp_address
+                    .eq(price_update.lp_address)
+                    .and(block_number.eq(price_update.block_number)),
+            ),
+        )
+        .set((
+            lp_token_value_usd.eq(price_update.lp_token_value_usd),
+            underlying_asset_price.eq(price_update.underlying_asset_price),
+        ))
+        .execute(connection)?;
+    }
+
+    Ok(())
 }
 
 pub fn get_pool_state_block_numbers_in_range(
