@@ -42,3 +42,9 @@ pub struct EventsResponse {
 pub struct QueryOptions {
     pub address: Option<String>,
 }
+
+#[derive(Deserialize)]
+pub struct PoolStateQueryOptions {
+    pub min_block_number: Option<i64>,
+    pub max_block_number: Option<i64>,
+}

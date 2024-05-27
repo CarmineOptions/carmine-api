@@ -1,8 +1,8 @@
 use crate::{
     handlers::format_tx,
     types::{
-        AllNonExpired, AllTradeHistoryResponse, DataResponse, GenericResponse, QueryOptions,
-        TradeHistoryResponse,
+        AllNonExpired, AllTradeHistoryResponse, DataResponse, GenericResponse,
+        PoolStateQueryOptions, QueryOptions, TradeHistoryResponse,
     },
 };
 use actix_web::{
@@ -14,7 +14,7 @@ use actix_web::{
 };
 use carmine_api_core::{
     network::Network,
-    types::{AppState, InsuranceEvent, NewReferralEvent, Vote},
+    types::{AppState, InsuranceEvent, NewReferralEvent, PoolStateWithTimestamp, Vote},
 };
 use carmine_api_db::{create_insurance_event, create_referral_event, get_referral_code};
 use lazy_static::lazy_static;
@@ -260,12 +260,52 @@ pub async fn get_referral_events(data: web::Data<Arc<Mutex<AppState>>>) -> impl 
     })
 }
 
+const MAX_POOL_STATE_BLOCK_SIZE: i64 = 20000;
+
 #[get("/mainnet/{pool}")]
 pub async fn pool_state(
     path: web::Path<String>,
     data: web::Data<Arc<Mutex<AppState>>>,
+    opts: web::Query<PoolStateQueryOptions>,
 ) -> impl Responder {
     let pool_id = path.into_inner();
+
+    let min_block = match &opts.min_block_number {
+        Some(block) => block,
+        None => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "bad_request".to_string(),
+                message: "min_block_number must be specified".to_string(),
+            });
+        }
+    };
+
+    let max_block = match &opts.max_block_number {
+        Some(block) => block,
+        None => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "bad_request".to_string(),
+                message: "max_block_number must be specified".to_string(),
+            });
+        }
+    };
+
+    if min_block >= max_block {
+        return HttpResponse::InternalServerError().json(GenericResponse {
+            status: "bad_request".to_string(),
+            message: "max_block_number must be greater than min_block_number".to_string(),
+        });
+    }
+
+    if max_block - min_block > MAX_POOL_STATE_BLOCK_SIZE {
+        return HttpResponse::InternalServerError().json(GenericResponse {
+            status: "bad_request".to_string(),
+            message: format!(
+                "can only retrieve {} blocks at a time",
+                MAX_POOL_STATE_BLOCK_SIZE
+            ),
+        });
+    }
 
     let locked = &data.lock();
     let app_state = match locked {
@@ -278,16 +318,8 @@ pub async fn pool_state(
         }
     };
 
-    match app_state.mainnet.state.get(&pool_id) {
-        Some(state) => {
-            // found state
-            return HttpResponse::Ok()
-                .insert_header(AcceptEncoding(vec!["gzip".parse().unwrap()]))
-                .json(DataResponse {
-                    status: "success".to_string(),
-                    data: state,
-                });
-        }
+    let pool_state = match app_state.mainnet.state.get(&pool_id) {
+        Some(state) => state,
         None => {
             // invalid pool
             return HttpResponse::BadRequest().json(GenericResponse {
@@ -295,7 +327,19 @@ pub async fn pool_state(
                 message: "Invalid pool".to_string(),
             });
         }
-    }
+    };
+
+    let filtered_state: Vec<&PoolStateWithTimestamp> = pool_state
+        .iter()
+        .filter(|state| &state.block_number > min_block && &state.block_number <= max_block)
+        .collect();
+
+    HttpResponse::Ok()
+        .insert_header(AcceptEncoding(vec!["gzip".parse().unwrap()]))
+        .json(DataResponse {
+            status: "success".to_string(),
+            data: filtered_state,
+        })
 }
 
 #[get("/mainnet/{pool}/state")]
