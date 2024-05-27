@@ -14,7 +14,7 @@ use actix_web::{
 };
 use carmine_api_core::{
     network::Network,
-    types::{AppState, InsuranceEvent, NewReferralEvent, Vote},
+    types::{AppState, InsuranceEvent, NewReferralEvent, PoolStateWithTimestamp, Vote},
 };
 use carmine_api_db::{create_insurance_event, create_referral_event, get_referral_code};
 use lazy_static::lazy_static;
@@ -278,16 +278,8 @@ pub async fn pool_state(
         }
     };
 
-    match app_state.mainnet.state.get(&pool_id) {
-        Some(state) => {
-            // found state
-            return HttpResponse::Ok()
-                .insert_header(AcceptEncoding(vec!["gzip".parse().unwrap()]))
-                .json(DataResponse {
-                    status: "success".to_string(),
-                    data: state,
-                });
-        }
+    let pool_state = match app_state.mainnet.state.get(&pool_id) {
+        Some(state) => state,
         None => {
             // invalid pool
             return HttpResponse::BadRequest().json(GenericResponse {
@@ -295,7 +287,35 @@ pub async fn pool_state(
                 message: "Invalid pool".to_string(),
             });
         }
-    }
+    };
+
+    let max_block_number_option = pool_state.iter().map(|block| block.block_number).max();
+
+    let max_block_number = match max_block_number_option {
+        Some(block_number) => block_number,
+        None => {
+            // invalid pool
+            return HttpResponse::BadRequest().json(GenericResponse {
+                status: "bad_request".to_string(),
+                message: "Invalid pool".to_string(),
+            });
+        }
+    };
+
+    // TODO: only returns last 20000 blocks
+    // should be specifiable through query params
+    let lower_bound = max_block_number.saturating_sub(20000);
+    let filtered_state: Vec<&PoolStateWithTimestamp> = pool_state
+        .iter()
+        .filter(|state| state.block_number >= lower_bound && state.block_number <= max_block_number)
+        .collect();
+
+    HttpResponse::Ok()
+        .insert_header(AcceptEncoding(vec!["gzip".parse().unwrap()]))
+        .json(DataResponse {
+            status: "success".to_string(),
+            data: filtered_state,
+        })
 }
 
 #[get("/mainnet/{pool}/state")]
