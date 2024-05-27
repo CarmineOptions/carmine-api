@@ -1,8 +1,8 @@
 use crate::{
     handlers::format_tx,
     types::{
-        AllNonExpired, AllTradeHistoryResponse, DataResponse, GenericResponse, QueryOptions,
-        TradeHistoryResponse,
+        AllNonExpired, AllTradeHistoryResponse, DataResponse, GenericResponse,
+        PoolStateQueryOptions, QueryOptions, TradeHistoryResponse,
     },
 };
 use actix_web::{
@@ -260,12 +260,52 @@ pub async fn get_referral_events(data: web::Data<Arc<Mutex<AppState>>>) -> impl 
     })
 }
 
+const MAX_POOL_STATE_BLOCK_SIZE: i64 = 20000;
+
 #[get("/mainnet/{pool}")]
 pub async fn pool_state(
     path: web::Path<String>,
     data: web::Data<Arc<Mutex<AppState>>>,
+    opts: web::Query<PoolStateQueryOptions>,
 ) -> impl Responder {
     let pool_id = path.into_inner();
+
+    let min_block = match &opts.min_block_number {
+        Some(block) => block,
+        None => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "bad_request".to_string(),
+                message: "min_block_number must be specified".to_string(),
+            });
+        }
+    };
+
+    let max_block = match &opts.max_block_number {
+        Some(block) => block,
+        None => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "bad_request".to_string(),
+                message: "max_block_number must be specified".to_string(),
+            });
+        }
+    };
+
+    if min_block >= max_block {
+        return HttpResponse::InternalServerError().json(GenericResponse {
+            status: "bad_request".to_string(),
+            message: "max_block_number must be greater than min_block_number".to_string(),
+        });
+    }
+
+    if max_block - min_block > MAX_POOL_STATE_BLOCK_SIZE {
+        return HttpResponse::InternalServerError().json(GenericResponse {
+            status: "bad_request".to_string(),
+            message: format!(
+                "can only retrieve {} blocks at a time",
+                MAX_POOL_STATE_BLOCK_SIZE
+            ),
+        });
+    }
 
     let locked = &data.lock();
     let app_state = match locked {
@@ -289,25 +329,9 @@ pub async fn pool_state(
         }
     };
 
-    let max_block_number_option = pool_state.iter().map(|block| block.block_number).max();
-
-    let max_block_number = match max_block_number_option {
-        Some(block_number) => block_number,
-        None => {
-            // invalid pool
-            return HttpResponse::BadRequest().json(GenericResponse {
-                status: "bad_request".to_string(),
-                message: "Invalid pool".to_string(),
-            });
-        }
-    };
-
-    // TODO: only returns last 20000 blocks
-    // should be specifiable through query params
-    let lower_bound = max_block_number.saturating_sub(20000);
     let filtered_state: Vec<&PoolStateWithTimestamp> = pool_state
         .iter()
-        .filter(|state| state.block_number >= lower_bound && state.block_number <= max_block_number)
+        .filter(|state| &state.block_number > min_block && &state.block_number <= max_block)
         .collect();
 
     HttpResponse::Ok()
