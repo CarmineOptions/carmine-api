@@ -20,6 +20,8 @@ use std::collections::HashMap;
 use std::env;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+pub mod lp_value;
+
 const BATCH_SIZE: usize = 500;
 
 fn get_db_url(network: &Network) -> String {

@@ -654,6 +654,7 @@ version = "0.1.0"
 dependencies = [
  "actix-web",
  "carmine-api-core",
+ "carmine-api-db",
  "carmine-api-rpc-gateway",
  "carmine-api-starknet",
  "dotenvy",
