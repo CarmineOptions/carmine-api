@@ -9,7 +9,7 @@ use carmine_api_core::types::{
     DbBlock, Event, IOption, InsuranceEvent, NewReferralEvent, OptionVolatility,
     OptionWithVolatility, OraclePrice, Pool, PoolState, PoolStatePriceUpdate,
     PoolStateWithTimestamp, PoolTvlInfo, ReferralCode, ReferralEventDigest, StarkScanEventSettled,
-    UserPoints, UserPointsDb, Volatility, Vote,
+    TokenPair, UserPoints, UserPointsDb, Volatility, Vote,
 };
 
 use carmine_api_referral::referral_code::generate_referral_code;
@@ -955,4 +955,20 @@ pub fn get_pool_tvl_map() -> HashMap<String, u128> {
     }
 
     pool_tvl_map
+}
+
+pub fn get_price_block_numbers(pair: &TokenPair, min_block: i64, max_block: i64) -> Vec<i64> {
+    use crate::schema::oracle_prices::dsl::*;
+
+    let token_id = pair.id();
+
+    let connection = &mut establish_connection(&Network::Mainnet);
+
+    oracle_prices
+        .select(block_number)
+        .filter(token_pair.eq(token_id))
+        .filter(block_number.ge(min_block))
+        .filter(block_number.le(max_block))
+        .load::<i64>(connection)
+        .expect("Error loading block numbers")
 }
