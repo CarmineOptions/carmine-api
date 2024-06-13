@@ -7,7 +7,7 @@ use carmine_api_core::{
         ReferralEventDigest, StarkScanEventSettled, TokenPair, TradeEvent, TradeHistory,
         UserPointsWithPosition, Vote, APY,
     },
-    utils::strike_from_hex,
+    utils::{normalize_address, strike_from_hex},
 };
 use carmine_api_db::{
     get_all_user_points, get_events_by_address, get_legacy_options, get_options,
@@ -406,7 +406,7 @@ impl Cache {
             .iter()
             .filter(|event| ALLOWED_METHODS.contains(&event.key_name.as_str()))
             .map(|e| {
-                let token_address = e.data[1].to_owned();
+                let token_address = normalize_address(e.data[1].as_str());
                 let action = String::from(
                     &e.key_name
                         // remove prefix in C1 contracts
