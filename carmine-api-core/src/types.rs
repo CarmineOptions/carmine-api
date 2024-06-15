@@ -2,8 +2,8 @@ use core::fmt;
 use std::{collections::HashMap, time::SystemTime};
 
 use crate::schema::{
-    blocks, events, insurance_events, options, options_volatility, oracle_prices, pool_state,
-    pools, referral_codes, referral_events, starkscan_events,
+    blocks, braavos_bonus, events, insurance_events, options, options_volatility, oracle_prices,
+    pool_state, pools, referral_codes, referral_events, starkscan_events,
 };
 use carmine_api_airdrop::merkle_tree::MerkleTree;
 use diesel::prelude::*;
@@ -416,4 +416,12 @@ pub struct OpenblockData {
 pub struct OpenblockResponse {
     #[serde(rename = "Carmine")]
     pub carmine: Vec<OpenblockData>,
+}
+
+#[derive(Queryable, Insertable, AsChangeset)]
+#[diesel(table_name = braavos_bonus)]
+pub struct BraavosBonus {
+    pub user_address: String,
+    pub pro_score_80: Option<i64>,
+    pub braavos_referral: Option<i64>,
 }

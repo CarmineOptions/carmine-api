@@ -130,6 +130,14 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    braavos_bonus (user_address) {
+        user_address -> Text,
+        pro_score_80 -> Nullable<Int8>,
+        braavos_referral -> Nullable<Int8>,
+    }
+}
+
 diesel::allow_tables_to_appear_in_same_query!(
     events,
     options,
