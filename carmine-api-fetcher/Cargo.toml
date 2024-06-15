@@ -13,7 +13,16 @@ carmine-api-starknet = { path = "../carmine-api-starknet" }
 carmine-api-rpc-gateway = { path = "../carmine-api-rpc-gateway" }
 dotenvy = "0.15.6"
 tokio = "1.26.0"
+reqwest = { version = "0.12.4", features = ["json"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokyo = "1.0.0"
 
 [[bin]]
 path = "./src/bin/amm_state.rs"
 name = "amm_state"
+
+
+[[bin]]
+path = "./src/bin/braavos_proscore.rs"
+name = "braavos_proscore"

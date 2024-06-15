@@ -36,6 +36,9 @@ const TESTNET_STARKSCAN_API_BASE_URL: &str = "https://api-testnet.starkscan.co/a
 pub enum Protocol {
     CarmineOptions,
     CarmineGovernance,
+    LegacyCarminePoolEthUsdcCall,
+    LegacyCarminePoolEthUsdcPut,
+    LegacyCarmineOptions,
     CarminePoolEthUsdcCall,
     CarminePoolEthUsdcPut,
     CarminePoolBtcUsdcCall,
@@ -178,6 +181,13 @@ pub fn protocol_address(network: &Network, protocol: &Protocol) -> &'static str 
         Protocol::CarmineGovernance => {
             "0x001405ab78ab6ec90fba09e6116f373cda53b0ba557789a4578d8c1ec374ba0f"
         }
+        Protocol::LegacyCarminePoolEthUsdcCall => {
+            "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024"
+        }
+        Protocol::LegacyCarminePoolEthUsdcPut => {
+            "0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a"
+        }
+        Protocol::LegacyCarmineOptions => LEGACY_AMM_CONTRACT_ADDRESS,
         Protocol::CarminePoolEthUsdcCall => MAINNET_ETH_USDC_CALL.address,
         Protocol::CarminePoolEthUsdcPut => MAINNET_ETH_USDC_PUT.address,
         Protocol::CarminePoolBtcUsdcCall => MAINNET_BTC_USDC_CALL.address,

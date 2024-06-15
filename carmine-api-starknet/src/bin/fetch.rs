@@ -11,21 +11,12 @@ async fn main() {
     dotenv().ok();
 
     let network = &Network::Mainnet;
-    let protocols = vec![
-        &Protocol::CarminePoolEthUsdcCall,
-        &Protocol::CarminePoolEthUsdcPut,
-        &Protocol::CarminePoolBtcUsdcCall,
-        &Protocol::CarminePoolBtcUsdcPut,
-        &Protocol::CarminePoolEthStrkCall,
-        &Protocol::CarminePoolEthStrkPut,
-        &Protocol::CarminePoolStrkUsdcCall,
-        &Protocol::CarminePoolStrkUsdcPut,
-    ];
+    let protocols = vec![&Protocol::LegacyCarmineOptions];
 
-    let start = 504000;
+    let start = 316837;
     let mut current;
-    let increment = 4000;
-    let max = 640000;
+    let increment = 3;
+    let max = 316839;
 
     let mut events = vec![];
 

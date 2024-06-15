@@ -6,7 +6,7 @@ use carmine_api_core::pool::{
 use carmine_api_core::schema::pool_state::lp_token_value_usd;
 use carmine_api_core::schema::{self};
 use carmine_api_core::types::{
-    DbBlock, Event, IOption, InsuranceEvent, NewReferralEvent, OptionVolatility,
+    BraavosBonus, DbBlock, Event, IOption, InsuranceEvent, NewReferralEvent, OptionVolatility,
     OptionWithVolatility, OraclePrice, Pool, PoolState, PoolStatePriceUpdate,
     PoolStateWithTimestamp, PoolTvlInfo, ReferralCode, ReferralEventDigest, StarkScanEventSettled,
     TokenPair, UserPoints, UserPointsDb, Volatility, Vote,
@@ -14,8 +14,8 @@ use carmine_api_core::types::{
 
 use carmine_api_referral::referral_code::generate_referral_code;
 use diesel::dsl::max;
-use diesel::prelude::*;
 use diesel::sql_types::{Array, Text};
+use diesel::{insert_into, prelude::*, update};
 use std::collections::HashMap;
 use std::env;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -834,6 +834,29 @@ pub fn get_all_user_points(ts: SystemTime) -> Vec<UserPoints> {
         .collect()
 }
 
+pub fn get_braavos_eligible_user_addresses() -> Vec<String> {
+    use crate::schema::user_points::dsl::*;
+
+    let connection = &mut establish_connection(&Network::Mainnet);
+
+    // Subquery to find the maximum timestamp
+    let max_timestamp_option = user_points
+        .select(max(timestamp))
+        .first::<Option<SystemTime>>(connection)
+        .expect("Failed getting braavos eligible timestamp");
+
+    if let Some(max_timestamp) = max_timestamp_option {
+        user_points
+            .filter(timestamp.eq(max_timestamp))
+            .select(user_address)
+            .distinct()
+            .load::<String>(connection)
+            .expect("Failed getting braavos eligible user addresses")
+    } else {
+        vec![]
+    }
+}
+
 pub fn get_votes() -> Vec<Vote> {
     use crate::schema::starkscan_events::dsl::*;
 
@@ -971,4 +994,48 @@ pub fn get_price_block_numbers(pair: &TokenPair, min_block: i64, max_block: i64)
         .filter(block_number.le(max_block))
         .load::<i64>(connection)
         .expect("Error loading block numbers")
+}
+
+pub fn upsert_braavos_pro_score_80(address: &str, ts: i64) -> QueryResult<usize> {
+    use crate::schema::braavos_bonus::dsl::*;
+
+    let connection = &mut establish_connection(&Network::Mainnet);
+
+    // Check if the user exists
+    let existing_user: Option<BraavosBonus> = braavos_bonus
+        .filter(user_address.eq(address))
+        .first::<BraavosBonus>(connection)
+        .optional()?;
+
+    match existing_user {
+        Some(mut user) => {
+            if user.pro_score_80.is_none() {
+                user.pro_score_80 = Some(ts);
+                update(braavos_bonus.find(address))
+                    .set(&user)
+                    .execute(connection)
+            } else {
+                Ok(0)
+            }
+        }
+        None => insert_into(braavos_bonus)
+            .values(&BraavosBonus {
+                user_address: address.to_string(),
+                pro_score_80: Some(ts),
+                braavos_referral: None,
+            })
+            .execute(connection),
+    }
+}
+
+pub fn get_braavos_users_proscore_80() -> Vec<String> {
+    use crate::schema::braavos_bonus::dsl::*;
+
+    let connection = &mut establish_connection(&Network::Mainnet);
+
+    braavos_bonus
+        .filter(pro_score_80.is_not_null())
+        .select(user_address)
+        .load::<String>(connection)
+        .expect("Error loading pro score users")
 }
