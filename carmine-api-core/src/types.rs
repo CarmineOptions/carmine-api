@@ -87,6 +87,7 @@ pub struct AppData {
     pub votes: Vec<Vote>,
     pub votes_map: HashMap<String, Vec<Vote>>,
     pub defispring: DefispringInfo,
+    pub braavos_proscore: HashMap<String, i64>,
 }
 
 pub struct AppState {

@@ -10,10 +10,10 @@ use carmine_api_core::{
     utils::{normalize_address, strike_from_hex},
 };
 use carmine_api_db::{
-    get_all_user_points, get_events_by_address, get_legacy_options, get_options,
-    get_options_volatility, get_oracle_prices, get_pool_state, get_protocol_events,
-    get_protocol_events_from_block, get_referral_events, get_user_points_lastest_timestamp,
-    get_votes,
+    get_all_user_points, get_braavos_users_proscore_80_with_timestamp, get_events_by_address,
+    get_legacy_options, get_options, get_options_volatility, get_oracle_prices, get_pool_state,
+    get_protocol_events, get_protocol_events_from_block, get_referral_events,
+    get_user_points_lastest_timestamp, get_votes,
 };
 use carmine_api_starknet::carmine::Carmine;
 use defispring::get_defispring_stats;
@@ -153,6 +153,7 @@ impl Cache {
             votes,
             votes_map,
             defispring,
+            braavos_proscore: get_braavos_users_proscore_80_with_timestamp(),
         }
     }
 
