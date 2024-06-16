@@ -1,38 +1,73 @@
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{
+    collections::HashMap,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
-use reqwest::Error;
-use serde::Deserialize;
+use reqwest::{Client, Error};
+use serde::{Deserialize, Serialize};
 
 use carmine_api_db::{
     get_braavos_eligible_user_addresses, get_braavos_users_proscore_80, upsert_braavos_pro_score_80,
 };
+
+#[derive(Serialize)]
+struct RequestBody {
+    #[serde(rename = "mainnet-alpha")]
+    mainnet_alpha: Vec<String>,
+}
+
+#[derive(Deserialize)]
+struct ResponseBody {
+    #[serde(rename = "mainnet-alpha")]
+    mainnet_alpha: HashMap<String, Score>,
+}
 
 #[derive(Deserialize, Debug)]
 pub struct Score {
     pub score: u8,
 }
 
-pub async fn get_braavos_proscore(address: &str) -> Result<u8, Error> {
-    let url = format!(
-        "https://activity-api.braavos.app/pro-score?network=mainnet-alpha&account_address={}",
-        address
-    );
-    let score = fetch_score(url.as_str()).await?;
-    Ok(score.score)
+async fn get_braavos_proscore(
+    addresses: Vec<String>,
+) -> Result<HashMap<String, u8>, reqwest::Error> {
+    let client = Client::new();
+    let url = "https://activity-api.braavos.app/pro-score";
+    let request_body = RequestBody {
+        mainnet_alpha: addresses,
+    };
+
+    let response = client
+        .post(url)
+        .json(&request_body)
+        .send()
+        .await?
+        .json::<ResponseBody>()
+        .await?;
+
+    let transformed_response = response
+        .mainnet_alpha
+        .into_iter()
+        .map(|(k, v)| (k, v.score))
+        .collect::<HashMap<String, u8>>();
+
+    Ok(transformed_response)
 }
 
-pub async fn set_braavos_proscore(address: &str, ts: i64) -> Result<bool, Error> {
-    let score = get_braavos_proscore(address).await?;
-    if score >= 80 {
-        match upsert_braavos_pro_score_80(address, ts) {
-            Ok(_) => {
-                println!("Updated {}", address);
-                return Ok(true);
+pub async fn set_braavos_proscore(addresses: Vec<String>, ts: i64) -> Result<usize, Error> {
+    let scores = get_braavos_proscore(addresses).await?;
+
+    let mut updated = 0;
+
+    for (address, score) in scores {
+        if score >= 80 {
+            match upsert_braavos_pro_score_80(address.as_str(), ts) {
+                Ok(_) => updated += 1,
+                Err(_) => (),
             }
-            Err(e) => println!("Failed updating {}, {:#?}", address, e),
-        };
+        }
     }
-    Ok(false)
+
+    Ok(updated)
 }
 
 pub async fn update_braavos_proscore() {
@@ -53,22 +88,16 @@ pub async fn update_braavos_proscore() {
         .expect("Time went backwards");
     let ts = since_the_epoch.as_secs() as i64;
 
-    let mut count: u16 = 0;
+    let mut count: usize = 0;
 
-    for user in eligible.iter() {
-        let res = set_braavos_proscore(user, ts).await;
+    for chunk in eligible.chunks(100) {
+        let chunk_vec = chunk.to_vec();
+        let res = set_braavos_proscore(chunk_vec, ts).await;
 
         if let Ok(updated) = res {
-            if updated {
-                count += 1;
-            }
+            count += updated;
         }
     }
 
     println!("Updated proscore for {} users", count);
-}
-
-async fn fetch_score(url: &str) -> Result<Score, Error> {
-    let response = reqwest::get(url).await?.json::<Score>().await?;
-    Ok(response)
 }
