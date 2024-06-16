@@ -793,3 +793,24 @@ pub async fn token_prices(data: web::Data<Arc<Mutex<AppState>>>) -> impl Respond
         data: app_state.token_prices,
     })
 }
+
+#[get("/mainnet/braavos-proscore")]
+pub async fn braavos_proscore(data: web::Data<Arc<Mutex<AppState>>>) -> impl Responder {
+    let locked = &mut data.lock();
+    let app_state = match locked {
+        Ok(app_data) => app_data,
+        _ => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "server_error".to_string(),
+                message: "Failed to read AppState".to_string(),
+            });
+        }
+    };
+
+    let braavos_proscore_clone = app_state.mainnet.braavos_proscore.clone();
+
+    HttpResponse::Ok().json(DataResponse {
+        status: "success".to_string(),
+        data: braavos_proscore_clone,
+    })
+}

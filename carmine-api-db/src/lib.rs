@@ -1039,3 +1039,24 @@ pub fn get_braavos_users_proscore_80() -> Vec<String> {
         .load::<String>(connection)
         .expect("Error loading pro score users")
 }
+
+pub fn get_braavos_users_proscore_80_with_timestamp() -> HashMap<String, i64> {
+    use crate::schema::braavos_bonus::dsl::*;
+
+    let connection = &mut establish_connection(&Network::Mainnet);
+
+    let results = braavos_bonus
+        .filter(pro_score_80.is_not_null())
+        .select((user_address, pro_score_80, braavos_referral))
+        .load::<BraavosBonus>(connection)
+        .expect("Error loading pro score users");
+
+    let mut map = HashMap::new();
+    for bonus in results {
+        if let Some(score) = bonus.pro_score_80 {
+            map.insert(bonus.user_address, score);
+        }
+    }
+
+    map
+}
