@@ -16,6 +16,7 @@ use carmine_api_referral::referral_code::generate_referral_code;
 use diesel::dsl::max;
 use diesel::sql_types::{Array, Text};
 use diesel::{insert_into, prelude::*, update};
+use serde::Serialize;
 use std::collections::HashMap;
 use std::env;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -1040,22 +1041,36 @@ pub fn get_braavos_users_proscore_80() -> Vec<String> {
         .expect("Error loading pro score users")
 }
 
-pub fn get_braavos_users_proscore_80_with_timestamp() -> HashMap<String, i64> {
+#[derive(Serialize, Debug)]
+pub struct BraavosBonusValues {
+    pro_score_80: Option<i64>,
+    braavos_referral: Option<i64>,
+}
+
+pub fn get_braavos_users_proscore_80_with_timestamp() -> HashMap<String, BraavosBonusValues> {
     use crate::schema::braavos_bonus::dsl::*;
 
     let connection = &mut establish_connection(&Network::Mainnet);
 
     let results = braavos_bonus
-        .filter(pro_score_80.is_not_null())
+        .filter(
+            pro_score_80
+                .is_not_null()
+                .or(braavos_referral.is_not_null()),
+        )
         .select((user_address, pro_score_80, braavos_referral))
         .load::<BraavosBonus>(connection)
         .expect("Error loading pro score users");
 
     let mut map = HashMap::new();
     for bonus in results {
-        if let Some(score) = bonus.pro_score_80 {
-            map.insert(bonus.user_address, score);
-        }
+        map.insert(
+            bonus.user_address,
+            BraavosBonusValues {
+                pro_score_80: bonus.pro_score_80,
+                braavos_referral: bonus.braavos_referral,
+            },
+        );
     }
 
     map
