@@ -87,7 +87,7 @@ pub struct AppData {
     pub votes: Vec<Vote>,
     pub votes_map: HashMap<String, Vec<Vote>>,
     pub defispring: DefispringInfo,
-    pub braavos_proscore: HashMap<String, i64>,
+    pub braavos_proscore: HashMap<String, BraavosBonusValues>,
 }
 
 pub struct AppState {
@@ -423,6 +423,12 @@ pub struct OpenblockResponse {
 #[diesel(table_name = braavos_bonus)]
 pub struct BraavosBonus {
     pub user_address: String,
+    pub pro_score_80: Option<i64>,
+    pub braavos_referral: Option<i64>,
+}
+
+#[derive(Serialize, Debug, Clone, Copy)]
+pub struct BraavosBonusValues {
     pub pro_score_80: Option<i64>,
     pub braavos_referral: Option<i64>,
 }

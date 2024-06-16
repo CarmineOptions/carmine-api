@@ -6,8 +6,8 @@ use carmine_api_core::pool::{
 use carmine_api_core::schema::pool_state::lp_token_value_usd;
 use carmine_api_core::schema::{self};
 use carmine_api_core::types::{
-    BraavosBonus, DbBlock, Event, IOption, InsuranceEvent, NewReferralEvent, OptionVolatility,
-    OptionWithVolatility, OraclePrice, Pool, PoolState, PoolStatePriceUpdate,
+    BraavosBonus, BraavosBonusValues, DbBlock, Event, IOption, InsuranceEvent, NewReferralEvent,
+    OptionVolatility, OptionWithVolatility, OraclePrice, Pool, PoolState, PoolStatePriceUpdate,
     PoolStateWithTimestamp, PoolTvlInfo, ReferralCode, ReferralEventDigest, StarkScanEventSettled,
     TokenPair, UserPoints, UserPointsDb, Volatility, Vote,
 };
@@ -16,7 +16,6 @@ use carmine_api_referral::referral_code::generate_referral_code;
 use diesel::dsl::max;
 use diesel::sql_types::{Array, Text};
 use diesel::{insert_into, prelude::*, update};
-use serde::Serialize;
 use std::collections::HashMap;
 use std::env;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -1039,12 +1038,6 @@ pub fn get_braavos_users_proscore_80() -> Vec<String> {
         .select(user_address)
         .load::<String>(connection)
         .expect("Error loading pro score users")
-}
-
-#[derive(Serialize, Debug)]
-pub struct BraavosBonusValues {
-    pro_score_80: Option<i64>,
-    braavos_referral: Option<i64>,
 }
 
 pub fn get_braavos_users_proscore_80_with_timestamp() -> HashMap<String, BraavosBonusValues> {
