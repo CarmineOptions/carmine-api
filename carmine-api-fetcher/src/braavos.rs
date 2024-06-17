@@ -7,7 +7,8 @@ use reqwest::{Client, Error};
 use serde::{Deserialize, Serialize};
 
 use carmine_api_db::{
-    get_braavos_eligible_user_addresses, get_braavos_users_proscore_80, upsert_braavos_pro_score_80,
+    get_braavos_eligible_user_addresses, get_braavos_users_proscore_80,
+    get_first_braavos_referrals, upsert_braavos_pro_score_80, upsert_braavos_referral,
 };
 
 #[derive(Serialize)]
@@ -70,7 +71,19 @@ pub async fn set_braavos_proscore(addresses: Vec<String>, ts: i64) -> Result<usi
     Ok(updated)
 }
 
+pub fn update_braavos_referrals() {
+    let referrals = get_first_braavos_referrals().expect("Failed getting braavos referrals");
+
+    for (ts, s) in referrals {
+        let _ = upsert_braavos_referral(s.as_str(), ts);
+    }
+
+    println!("Updated Braavos referrals");
+}
+
 pub async fn update_braavos_proscore() {
+    update_braavos_referrals();
+
     let mut eligible = get_braavos_eligible_user_addresses();
     let proscore_users = get_braavos_users_proscore_80();
 

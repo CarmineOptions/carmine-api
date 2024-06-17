@@ -8,8 +8,8 @@ use carmine_api_core::schema::{self};
 use carmine_api_core::types::{
     BraavosBonus, BraavosBonusValues, DbBlock, Event, IOption, InsuranceEvent, NewReferralEvent,
     OptionVolatility, OptionWithVolatility, OraclePrice, Pool, PoolState, PoolStatePriceUpdate,
-    PoolStateWithTimestamp, PoolTvlInfo, ReferralCode, ReferralEventDigest, StarkScanEventSettled,
-    TokenPair, UserPoints, UserPointsDb, Volatility, Vote,
+    PoolStateWithTimestamp, PoolTvlInfo, ReferralCode, ReferralEvent, ReferralEventDigest,
+    StarkScanEventSettled, TokenPair, UserPoints, UserPointsDb, Volatility, Vote,
 };
 
 use carmine_api_referral::referral_code::generate_referral_code;
@@ -1028,6 +1028,38 @@ pub fn upsert_braavos_pro_score_80(address: &str, ts: i64) -> QueryResult<usize>
     }
 }
 
+pub fn upsert_braavos_referral(address: &str, ts: i64) -> QueryResult<usize> {
+    use crate::schema::braavos_bonus::dsl::*;
+
+    let connection = &mut establish_connection(&Network::Mainnet);
+
+    // Check if the user exists
+    let existing_user: Option<BraavosBonus> = braavos_bonus
+        .filter(user_address.eq(address))
+        .first::<BraavosBonus>(connection)
+        .optional()?;
+
+    match existing_user {
+        Some(mut user) => {
+            if user.braavos_referral.is_none() {
+                user.braavos_referral = Some(ts);
+                update(braavos_bonus.find(address))
+                    .set(&user)
+                    .execute(connection)
+            } else {
+                Ok(0)
+            }
+        }
+        None => insert_into(braavos_bonus)
+            .values(&BraavosBonus {
+                user_address: address.to_string(),
+                pro_score_80: None,
+                braavos_referral: Some(ts),
+            })
+            .execute(connection),
+    }
+}
+
 pub fn get_braavos_users_proscore_80() -> Vec<String> {
     use crate::schema::braavos_bonus::dsl::*;
 
@@ -1067,4 +1099,42 @@ pub fn get_braavos_users_proscore_80_with_timestamp() -> HashMap<String, Braavos
     }
 
     map
+}
+
+pub fn get_first_braavos_referrals() -> Result<Vec<(i64, String)>, diesel::result::Error> {
+    use crate::schema::referral_events::dsl::*;
+
+    let connection = &mut establish_connection(&Network::Mainnet);
+
+    let braavos_referral_events: Vec<ReferralEvent> = referral_events
+        .filter(referral_code.eq("braavos-referral-bonus"))
+        .load::<ReferralEvent>(connection)
+        .expect("Failed getting braavos referral events");
+
+    let tuples: Vec<(i64, String)> = braavos_referral_events
+        .into_iter()
+        .map(|e| {
+            let ts = e
+                .timestamp
+                .duration_since(UNIX_EPOCH)
+                .expect("Time went backwards");
+            (ts.as_secs() as i64, e.referred_wallet_address)
+        })
+        .collect();
+
+    let mut map: HashMap<String, i64> = HashMap::new();
+
+    for (ts, s) in tuples.into_iter() {
+        map.entry(s)
+            .and_modify(|e| {
+                if *e > ts {
+                    *e = ts
+                }
+            })
+            .or_insert(ts);
+    }
+
+    let without_duplicates: Vec<(i64, String)> = map.into_iter().map(|(s, ts)| (ts, s)).collect();
+
+    Ok(without_duplicates)
 }
