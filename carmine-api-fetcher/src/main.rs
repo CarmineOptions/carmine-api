@@ -2,7 +2,7 @@ use std::env;
 
 use actix_web::{get, App, HttpResponse, HttpServer, Responder};
 use carmine_api_db::lp_value::update_lp_prices;
-use carmine_api_fetcher::braavos::update_braavos_proscore;
+use carmine_api_fetcher::braavos::{update_braavos_proscore, update_braavos_referrals};
 use carmine_api_rpc_gateway::{blast_api_latest_block_number, carmine_latest_block_number};
 use tokio::time::{sleep, Duration};
 
@@ -17,6 +17,7 @@ const GET_NEW_BLOCKS: bool = true;
 const GET_NEW_EVENTS: bool = true;
 const UPDATE_POOL_PRICES: bool = true;
 const BRAAVOS_PROSCORE: bool = true;
+const BRAAVOS_REFERRAL: bool = true;
 
 const BLOCK_DISCREPENCY_THRESHOLD: i64 = 5;
 
@@ -171,6 +172,31 @@ async fn main() -> std::io::Result<()> {
                     .await;
                 } else {
                     println!("Braavos proscore updated");
+                }
+                sleep(Duration::from_secs(150)).await;
+            }
+        });
+    }
+
+    if BRAAVOS_REFERRAL {
+        println!("🛠️  Spawning Braavos referral updating thread...");
+        actix_web::rt::spawn(async move {
+            loop {
+                if let Err(err) = actix_web::rt::spawn(async move {
+                    update_braavos_referrals();
+                    Ok::<(), ()>(())
+                })
+                .await
+                {
+                    // failed, probably network overload, wait to send message
+                    sleep(Duration::from_secs(120)).await;
+                    println!("Update braavos referral panicked\n{:?}", err);
+                    telegram_bot::send_message(
+                        "Carmine API `update_braavos_referrals` just panicked",
+                    )
+                    .await;
+                } else {
+                    println!("Braavos referrals updated");
                 }
                 sleep(Duration::from_secs(150)).await;
             }

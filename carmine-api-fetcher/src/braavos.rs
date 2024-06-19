@@ -82,8 +82,6 @@ pub fn update_braavos_referrals() {
 }
 
 pub async fn update_braavos_proscore() {
-    update_braavos_referrals();
-
     let mut eligible = get_braavos_eligible_user_addresses();
     let proscore_users = get_braavos_users_proscore_80();
 
