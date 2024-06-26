@@ -807,10 +807,8 @@ pub async fn braavos_proscore(data: web::Data<Arc<Mutex<AppState>>>) -> impl Res
         }
     };
 
-    let braavos_proscore_clone = app_state.mainnet.braavos_proscore.clone();
-
     HttpResponse::Ok().json(DataResponse {
         status: "success".to_string(),
-        data: braavos_proscore_clone,
+        data: &app_state.mainnet.braavos_proscore,
     })
 }

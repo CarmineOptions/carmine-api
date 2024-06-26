@@ -137,6 +137,7 @@ impl Cache {
         }
 
         let defispring = self.defispring;
+        let braavos_proscore = get_braavos_users_proscore_80_with_timestamp();
 
         AppData {
             all_non_expired,
@@ -153,7 +154,7 @@ impl Cache {
             votes,
             votes_map,
             defispring,
-            braavos_proscore: get_braavos_users_proscore_80_with_timestamp(),
+            braavos_proscore,
         }
     }
 
