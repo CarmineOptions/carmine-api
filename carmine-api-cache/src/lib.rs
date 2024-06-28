@@ -490,8 +490,8 @@ impl Cache {
                             .await
                     }
                     Network::Testnet => {
-                        telegram_bot::send_message("Failed getting non expired options TESTNET")
-                            .await
+                        // telegram_bot::send_message("Failed getting non expired options TESTNET")
+                        //     .await
                     }
                 }
             }
