@@ -188,7 +188,7 @@ fn get_settled_events(event: StarkScanEvent) -> Option<Vec<StarkScanEventSettled
     if event.block_hash.is_none() || event.block_number.is_none() {
         return None;
     }
-    if event.block_hash.is_some() && event.block_number.is_some() && event.key_name.is_some() {
+    if event.key_name.is_some() {
         // regular event, return vec size 1
         return Some(vec![StarkScanEventSettled {
             id: format!("{}_{}", event.transaction_hash, event.event_index),
@@ -201,6 +201,28 @@ fn get_settled_events(event: StarkScanEvent) -> Option<Vec<StarkScanEventSettled
             data: event.data,
             timestamp: event.timestamp,
             key_name: event.key_name.unwrap(),
+        }]);
+    }
+
+    let voted_keys = vec![
+        "0x1b5f21c50bf3288fb310446824298a349f0ed9e28fb480cc9a4d54d034652e1",
+        "0x5c9afac1c510b50d3e0004024ba7b8e190864f1543dd8025d08f88410fb162",
+    ];
+
+    if event.keys == voted_keys {
+        // Vote event
+        let vote_event_name = "governance::contract::Governance::Voted".to_string();
+        return Some(vec![StarkScanEventSettled {
+            id: format!("{}_{}", event.transaction_hash, event.event_index),
+            block_hash: event.block_hash.unwrap(),
+            block_number: event.block_number.unwrap(),
+            transaction_hash: event.transaction_hash,
+            event_index: event.event_index,
+            from_address: event.from_address,
+            keys: event.keys,
+            data: event.data,
+            timestamp: event.timestamp,
+            key_name: vote_event_name,
         }]);
     }
 
