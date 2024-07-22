@@ -11,12 +11,31 @@ async fn main() {
     dotenv().ok();
 
     let network = &Network::Mainnet;
-    let protocols = vec![&Protocol::LegacyCarmineOptions];
+    let protocols = vec![
+        &Protocol::NostraMainnetNSTSTRK,
+        &Protocol::NostraMainnetNSTSTRKCollateral,
+        &Protocol::NostraMainnetNSTSTRKInterest,
+        &Protocol::NostraMainnetNSTSTRKDebt,
+        &Protocol::NostraMainnetNSTSTRKInterestCollateral,
+        &Protocol::NostraMainnetUNO,
+        &Protocol::NostraMainnetUNOCollateral,
+        &Protocol::NostraMainnetUNOInterest,
+        &Protocol::NostraMainnetUNODebt,
+        &Protocol::NostraMainnetUNOInterestCollateral,
+        &Protocol::NostraMainnetNSTR,
+        &Protocol::NostraMainnetNSTRCollateral,
+        &Protocol::NostraMainnetNSTRInterest,
+        &Protocol::NostraMainnetNSTRDebt,
+        &Protocol::NostraMainnetNSTRInterestCollateral,
+        &Protocol::NostraMainnetDAIV2,
+        &Protocol::NostraMainnetDAIV2Interest,
+        &Protocol::NostraMainnetDAIV2Debt,
+    ];
 
-    let start = 316837;
+    let start = 608000;
     let mut current;
-    let increment = 3;
-    let max = 316839;
+    let increment = 500;
+    let max = 660665;
 
     let mut events = vec![];
 
