@@ -15,12 +15,15 @@ use carmine_api_db::{
     get_protocol_events, get_protocol_events_from_block, get_referral_events,
     get_user_points_lastest_timestamp, get_votes,
 };
+use carmine_api_prices::HistoricalPrices;
 use carmine_api_starknet::carmine::Carmine;
 use defispring::get_defispring_stats;
 use std::{collections::HashMap, time::SystemTime, vec};
+use trade_data::get_trades;
 
 mod apy;
 pub mod defispring;
+pub mod trade_data;
 
 // Only store Events we know and not ExpireOptionTokenForPool and Upgrade
 const ALLOWED_METHODS: &'static [&'static str; 12] = &[
@@ -55,6 +58,8 @@ pub struct Cache {
     user_points: HashMap<String, UserPointsWithPosition>,
     top_user_points: Vec<UserPointsWithPosition>,
     defispring: DefispringInfo,
+    oracle_prices: HashMap<String, Vec<OraclePriceConcise>>,
+    historical_prices: HistoricalPrices,
 }
 
 impl Cache {
@@ -88,6 +93,8 @@ impl Cache {
                 tvl: 0.0,
             },
         };
+        let oracle_prices = generate_oracle_prices_hash_map();
+        let historical_prices = HistoricalPrices::new(&oracle_prices);
 
         let mut cache = Cache {
             network,
@@ -104,6 +111,8 @@ impl Cache {
             user_points: HashMap::new(), // initialize empty
             top_user_points: vec![],     // initialize empty
             defispring,
+            oracle_prices,
+            historical_prices,
         };
 
         cache.trade_history = Cache::generate_trade_history(&mut cache);
@@ -121,13 +130,14 @@ impl Cache {
         let option_volatility = get_options_volatility(&self.network);
         let state = self.generate_state_hashmap();
         let apy = self.generate_apy_hashmap();
-        let oracle_prices = self.generate_oracle_prices_hash_map();
+        let oracle_prices = self.oracle_prices.clone();
         let referrals = self.referrals.clone();
         let user_points = self.user_points.clone();
         let top_user_points = self.top_user_points.clone();
         let trades = self.generate_trades_hashmap();
         let votes = get_votes();
         let mut votes_map: HashMap<String, Vec<Vote>> = HashMap::new();
+        let trades_with_prices = get_trades(&trades, &self.historical_prices);
 
         for vote in votes.iter() {
             votes_map
@@ -155,6 +165,7 @@ impl Cache {
             votes_map,
             defispring,
             braavos_proscore,
+            trades_with_prices,
         }
     }
 
@@ -303,38 +314,6 @@ impl Cache {
 
         self.user_points = map;
         self.top_user_points = top;
-    }
-
-    fn set_oracle_prices_pair(
-        &self,
-        prices_map: &mut HashMap<String, Vec<OraclePriceConcise>>,
-        pair_id: String,
-        prices: Vec<OraclePrice>,
-    ) {
-        let data = prices
-            .into_iter()
-            .filter(|oracle_price| &oracle_price.token_pair == &pair_id)
-            .map(|full_price| OraclePriceConcise {
-                price: full_price.price,
-                decimals: full_price.decimals,
-                last_updated_timestamp: full_price.last_updated_timestamp,
-                block_number: full_price.block_number,
-            })
-            .collect();
-
-        prices_map.insert(pair_id, data);
-    }
-
-    fn generate_oracle_prices_hash_map(&self) -> HashMap<String, Vec<OraclePriceConcise>> {
-        let mut map: HashMap<String, Vec<OraclePriceConcise>> = HashMap::new();
-        let oracle_prices = get_oracle_prices(&self.network);
-
-        // TODO: optimize this
-        self.set_oracle_prices_pair(&mut map, TokenPair::EthUsdc.id(), oracle_prices.clone());
-        self.set_oracle_prices_pair(&mut map, TokenPair::BtcUsdc.id(), oracle_prices.clone());
-        self.set_oracle_prices_pair(&mut map, TokenPair::StrkUsdc.id(), oracle_prices.clone());
-
-        map
     }
 
     fn generate_trade_history(&self) -> Vec<TradeHistory> {
@@ -517,6 +496,14 @@ impl Cache {
         };
     }
 
+    fn update_prices(&mut self) {
+        let oracle_prices = generate_oracle_prices_hash_map();
+        let historical_prices = HistoricalPrices::new(&oracle_prices);
+
+        self.oracle_prices = oracle_prices;
+        self.historical_prices = historical_prices;
+    }
+
     pub async fn update(&mut self) {
         self.update_options();
         self.update_events();
@@ -524,5 +511,37 @@ impl Cache {
         self.update_defispring().await;
         self.update_trade_history();
         self.update_user_points();
+        self.update_prices();
     }
+}
+
+fn set_oracle_prices_pair(
+    prices_map: &mut HashMap<String, Vec<OraclePriceConcise>>,
+    pair_id: String,
+    prices: Vec<OraclePrice>,
+) {
+    let data = prices
+        .into_iter()
+        .filter(|oracle_price| &oracle_price.token_pair == &pair_id)
+        .map(|full_price| OraclePriceConcise {
+            price: full_price.price,
+            decimals: full_price.decimals,
+            last_updated_timestamp: full_price.last_updated_timestamp,
+            block_number: full_price.block_number,
+        })
+        .collect();
+
+    prices_map.insert(pair_id, data);
+}
+
+fn generate_oracle_prices_hash_map() -> HashMap<String, Vec<OraclePriceConcise>> {
+    let mut map: HashMap<String, Vec<OraclePriceConcise>> = HashMap::new();
+    let oracle_prices = get_oracle_prices(&Network::Mainnet);
+
+    // TODO: optimize this
+    set_oracle_prices_pair(&mut map, TokenPair::EthUsdc.id(), oracle_prices.clone());
+    set_oracle_prices_pair(&mut map, TokenPair::BtcUsdc.id(), oracle_prices.clone());
+    set_oracle_prices_pair(&mut map, TokenPair::StrkUsdc.id(), oracle_prices.clone());
+
+    map
 }

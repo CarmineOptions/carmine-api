@@ -1,0 +1,8 @@
+[package]
+name = "carmine-api-prices"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+carmine-api-core = { path = "../carmine-api-core" }
+carmine-api-db = { path = "../carmine-api-db" }

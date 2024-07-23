@@ -39,7 +39,7 @@ pub fn felt_to_float(felt: FieldElement, decimals: usize) -> f64 {
         &padded_str[len - decimals..]
     );
 
-    let result: f64 = decimal_str.parse().expect("Failed parsing lp token value");
+    let result: f64 = decimal_str.parse().expect("Failed parsing hex string");
 
     result
 }
@@ -48,6 +48,11 @@ pub fn string_to_float(str_num: &str, decimals: usize) -> f64 {
     let felt = FieldElement::from_str(str_num).expect("Failed parsing felt");
 
     felt_to_float(felt, decimals)
+}
+
+pub fn tokens_to_usd(tokens: &str, decimals: usize, price: f32) -> f32 {
+    let tokens_f64 = string_to_float(tokens, decimals);
+    (tokens_f64 as f32) * price
 }
 
 #[cfg(test)]

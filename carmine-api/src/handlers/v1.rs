@@ -718,6 +718,59 @@ pub async fn trades(
     }
 }
 
+#[get("/mainnet/trades")]
+pub async fn trades_with_prices(
+    opts: web::Query<QueryOptions>,
+    data: web::Data<Arc<Mutex<AppState>>>,
+) -> impl Responder {
+    let locked = &data.lock();
+    let app_state = match locked {
+        Ok(app_data) => app_data,
+        _ => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "server_error".to_string(),
+                message: "Failed to read AppState".to_string(),
+            });
+        }
+    };
+
+    let address_option = match &opts.address {
+        Some(address) => Some(format_tx(address)),
+        None => None,
+    };
+
+    // if address return user trades
+    if let Some(address) = address_option {
+        match &app_state
+            .mainnet
+            .trades_with_prices
+            .user_trades
+            .get(&address)
+        {
+            Some(data) => {
+                return HttpResponse::Ok().json(DataResponse {
+                    status: "success".to_string(),
+                    data,
+                })
+            }
+            None => {
+                return HttpResponse::Ok().json(DataResponse {
+                    status: "success".to_string(),
+                    data: vec![] as Vec<Vote>,
+                })
+            }
+        }
+    }
+
+    // return all trades
+    let data = &app_state.mainnet.trades_with_prices.all_trades;
+
+    HttpResponse::Ok().json(DataResponse {
+        status: "success".to_string(),
+        data,
+    })
+}
+
 #[get("/mainnet/votes")]
 pub async fn votes(
     opts: web::Query<QueryOptions>,

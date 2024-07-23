@@ -34,6 +34,22 @@ pub struct TradeEvent {
 }
 
 #[derive(Debug, Clone, Serialize)]
+pub struct TradeEventWithPrice {
+    pub timestamp: i64,
+    pub action: String,
+    pub caller: String,
+    pub capital_transfered: String,
+    pub capital_transfered_usd: f32,
+    pub underlying_asset_price_usd: f32,
+    pub tokens_minted: String,
+    pub option_side: i16,
+    pub option_type: i16,
+    pub maturity: i64,
+    pub strike_price: f64,
+    pub pool_id: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct StakeEvent {
     pub timestamp: i64,
     pub action: String,
@@ -72,6 +88,11 @@ pub enum OracleName {
     Pragma,
 }
 
+pub struct Trades {
+    pub all_trades: Vec<TradeEventWithPrice>,
+    pub user_trades: HashMap<String, Vec<TradeEventWithPrice>>,
+}
+
 pub struct AppData {
     pub all_non_expired: Vec<String>,
     pub trade_history: Vec<TradeHistory>,
@@ -88,6 +109,7 @@ pub struct AppData {
     pub votes_map: HashMap<String, Vec<Vote>>,
     pub defispring: DefispringInfo,
     pub braavos_proscore: HashMap<String, BraavosBonusValues>,
+    pub trades_with_prices: Trades,
 }
 
 pub struct AppState {
@@ -270,7 +292,7 @@ pub struct OraclePrice {
     pub block_number: i64,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone, Copy)]
 pub struct OraclePriceConcise {
     pub price: i64,
     pub decimals: i16,
