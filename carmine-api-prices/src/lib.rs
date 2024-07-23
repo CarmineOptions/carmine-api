@@ -18,7 +18,6 @@ impl HistoricalPrices {
         let mut nested_map: HashMap<String, HashMap<i64, f32>> = HashMap::new();
 
         for (token_pair, prices) in oracle_prices {
-            println!("{}", token_pair);
             let mut inner_map: HashMap<i64, f32> = HashMap::new();
             for price in prices {
                 let numeric_price = price.price as f32 / 10f32.powi(price.decimals as i32);
