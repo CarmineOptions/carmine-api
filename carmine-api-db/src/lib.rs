@@ -1,4 +1,6 @@
-use carmine_api_core::network::{protocol_address, Network, Protocol, NEW_AMM_GENESIS_TIMESTAMP};
+use carmine_api_core::network::{
+    protocol_address, Network, Protocol, NEW_AMM_GENESIS_BLOCK_NUMBER, NEW_AMM_GENESIS_TIMESTAMP,
+};
 use carmine_api_core::pool::{
     MAINNET_BTC_USDC_CALL, MAINNET_BTC_USDC_PUT, MAINNET_ETH_STRK_CALL, MAINNET_ETH_STRK_PUT,
     MAINNET_ETH_USDC_CALL, MAINNET_ETH_USDC_PUT, MAINNET_STRK_USDC_CALL, MAINNET_STRK_USDC_PUT,
@@ -212,6 +214,20 @@ pub fn get_oracle_prices(network: &Network) -> Vec<OraclePrice> {
         .expect("Error loading oracle prices")
 }
 
+pub fn get_oracle_prices_from_block(network: &Network, initial_block: i64) -> Vec<OraclePrice> {
+    use crate::schema::oracle_prices::dsl::*;
+
+    let connection = &mut establish_connection(network);
+    oracle_prices
+        .filter(block_number.ge(initial_block))
+        .load::<OraclePrice>(connection)
+        .expect("Error loading oracle prices")
+}
+
+pub fn get_oracle_prices_since_new_amm() -> Vec<OraclePrice> {
+    get_oracle_prices_from_block(&Network::Mainnet, NEW_AMM_GENESIS_BLOCK_NUMBER)
+}
+
 pub fn get_pools(network: &Network) -> Vec<Pool> {
     use crate::schema::pools::dsl::*;
 
@@ -346,6 +362,10 @@ pub fn get_blocks_greater_than(min: i64, network: &Network) -> Vec<DbBlock> {
         .filter(block_number.gt(min))
         .load::<DbBlock>(connection)
         .expect("Failed getting blocks")
+}
+
+pub fn get_blocks_since_new_amm() -> Vec<DbBlock> {
+    get_blocks_greater_than(NEW_AMM_GENESIS_BLOCK_NUMBER, &Network::Mainnet)
 }
 
 pub fn get_last_block_in_db(network: &Network) -> DbBlock {
