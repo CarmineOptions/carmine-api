@@ -50,6 +50,10 @@ pub fn string_to_float(str_num: &str, decimals: usize) -> f64 {
     felt_to_float(felt, decimals)
 }
 
+pub fn hex_to_u128(str_num: &str) -> u128 {
+    u128::from_str_radix(&str_num[2..], 16).expect("Failed to parse hex to u128")
+}
+
 pub fn tokens_to_usd(tokens: &str, decimals: usize, price: f32) -> f32 {
     let tokens_f64 = string_to_float(tokens, decimals);
     (tokens_f64 as f32) * price
