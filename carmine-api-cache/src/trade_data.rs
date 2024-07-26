@@ -3,9 +3,28 @@ use std::collections::HashMap;
 use carmine_api_core::{
     pool::pool_id_to_decimals,
     types::{TradeEvent, TradeEventWithPrice, Trades},
-    utils::tokens_to_usd,
+    utils::string_to_float,
 };
 use carmine_api_prices::HistoricalPrices;
+
+fn calculate_premia(
+    side: i16,
+    _type: i16,
+    capital_transfered: f64,
+    tokens_minted: f64,
+    strike_price: f64,
+) -> f64 {
+    // Long - premia is the capital transfered
+    if side == 0 {
+        return capital_transfered;
+    }
+    // Short Call - premia is the difference between tokens minted and capital transfered
+    if _type == 0 {
+        return tokens_minted - capital_transfered;
+    }
+    // Short Put
+    tokens_minted * strike_price - capital_transfered
+}
 
 pub fn get_trades(
     trades_map: &HashMap<String, Vec<TradeEvent>>,
@@ -22,17 +41,32 @@ pub fn get_trades(
                     &pool_id,
                     carmine_api_prices::BlockId::Timestamp(t.timestamp),
                 );
-                let capital_transfered = t.capital_transfered.to_string();
-                let capital_transfered_usd = tokens_to_usd(&capital_transfered, decimals, price);
+                let capital_transfered_string = t.capital_transfered.to_string();
+                let capital_transfered_human_readable =
+                    string_to_float(&capital_transfered_string, decimals);
+                let tokens_minted_string = t.tokens_minted.to_string();
+                let tokens_minted_human_readable = string_to_float(&tokens_minted_string, 18); // tokens_minted has always 18 decimals
+                let capital_transfered_usd = (capital_transfered_human_readable as f32) * price;
+
+                let premia = calculate_premia(
+                    t.option_side,
+                    t.option_type,
+                    capital_transfered_human_readable,
+                    tokens_minted_human_readable,
+                    t.strike_price,
+                );
+                let premia_usd = (premia as f32) * price;
 
                 TradeEventWithPrice {
                     timestamp: t.timestamp,
                     action: t.action.to_string(),
                     caller: t.caller.to_string(),
-                    capital_transfered,
+                    capital_transfered: capital_transfered_human_readable,
                     capital_transfered_usd,
                     underlying_asset_price_usd: price,
-                    tokens_minted: t.tokens_minted.to_string(),
+                    tokens_minted: tokens_minted_human_readable,
+                    premia,
+                    premia_usd,
                     option_side: t.option_side,
                     option_type: t.option_type,
                     maturity: t.maturity,
