@@ -50,6 +50,20 @@ pub fn pool_id_to_decimals(pool_id: &str) -> usize {
     }
 }
 
+pub fn pool_id_to_base_decimals(pool_id: &str) -> usize {
+    match pool_id {
+        "eth-usdc-call" => 18,
+        "eth-usdc-put" => 18,
+        "btc-usdc-call" => 8,
+        "btc-usdc-put" => 8,
+        "eth-strk-call" => 18,
+        "eth-strk-put" => 18,
+        "strk-usdc-call" => 18,
+        "strk-usdc-put" => 18,
+        _ => unreachable!("Failed getting decimals, invalid pool id"),
+    }
+}
+
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
