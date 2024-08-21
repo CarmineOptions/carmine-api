@@ -112,6 +112,7 @@ pub struct AppData {
     pub defispring: DefispringInfo,
     pub braavos_proscore: HashMap<String, BraavosBonusValues>,
     pub trades_with_prices: Trades,
+    pub insurance_events: Vec<InsuranceData>,
 }
 
 pub struct AppState {
@@ -346,6 +347,25 @@ pub struct APY {
 pub struct InsuranceEvent<'a> {
     pub user_address: &'a str,
     pub calldata: Vec<&'a str>,
+}
+
+#[derive(Serialize, Deserialize, Queryable, Debug)]
+pub struct InsuranceEventQueryable {
+    pub id: i32,
+    pub user_address: String,
+    pub calldata: Vec<String>,
+    pub timestamp: SystemTime,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct InsuranceData {
+    pub user_address: String,
+    pub base_token_price: f32,
+    pub timestamp: i64,
+    pub base_token_address: String,
+    pub premia: f64,
+    pub strike: f64,
+    pub size: String,
 }
 
 #[derive(Serialize, Deserialize, Queryable)]

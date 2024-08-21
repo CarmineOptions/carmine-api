@@ -1,4 +1,4 @@
-use actix_web::web;
+use actix_web::web::{self};
 
 mod common;
 mod v1;
@@ -32,6 +32,8 @@ pub fn config(conf: &mut web::ServiceConfig) {
                         .service(v1::all_transactions)
                         .service(v1::all_legacy_transactions)
                         .service(v1::votes)
+                        .service(v1::get_insurance_event_history)
+                        .service(v1::get_insurance_users)
                         .service(v1::braavos_proscore)
                         .service(v1::airdrop)
                         .service(v1::defispring)

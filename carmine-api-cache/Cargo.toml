@@ -22,3 +22,7 @@ name = "state"
 [[bin]]
 path = "./src/bin/defispring.rs"
 name = "defispring"
+
+[[bin]]
+path = "./src/bin/insurance.rs"
+name = "insurance"

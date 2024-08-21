@@ -8,10 +8,11 @@ use carmine_api_core::pool::{
 use carmine_api_core::schema::pool_state::lp_token_value_usd;
 use carmine_api_core::schema::{self};
 use carmine_api_core::types::{
-    BraavosBonus, BraavosBonusValues, DbBlock, Event, IOption, InsuranceEvent, NewReferralEvent,
-    OptionVolatility, OptionWithVolatility, OraclePrice, Pool, PoolState, PoolStatePriceUpdate,
-    PoolStateWithTimestamp, PoolTvlInfo, ReferralCode, ReferralEvent, ReferralEventDigest,
-    StarkScanEventSettled, TokenPair, UserPoints, UserPointsDb, Volatility, Vote,
+    BraavosBonus, BraavosBonusValues, DbBlock, Event, IOption, InsuranceEvent,
+    InsuranceEventQueryable, NewReferralEvent, OptionVolatility, OptionWithVolatility, OraclePrice,
+    Pool, PoolState, PoolStatePriceUpdate, PoolStateWithTimestamp, PoolTvlInfo, ReferralCode,
+    ReferralEvent, ReferralEventDigest, StarkScanEventSettled, TokenPair, UserPoints, UserPointsDb,
+    Volatility, Vote,
 };
 
 use carmine_api_referral::referral_code::generate_referral_code;
@@ -804,6 +805,16 @@ pub fn create_insurance_event(event: InsuranceEvent) -> Result<usize, diesel::re
     diesel::insert_into(insurance_events)
         .values(&event)
         .execute(connection)
+}
+
+pub fn get_insurance_events() -> Vec<InsuranceEventQueryable> {
+    use crate::schema::insurance_events::dsl::*;
+
+    let connection = &mut establish_connection(&Network::Mainnet);
+
+    insurance_events
+        .load::<InsuranceEventQueryable>(connection)
+        .expect("Failed getting insurance events")
 }
 
 pub fn get_user_points(address: &str) -> Option<UserPointsDb> {

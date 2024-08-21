@@ -4,7 +4,7 @@ use dotenvy::dotenv;
 fn main() {
     dotenv().ok();
 
-    let braavos = carmine_api_db::get_first_braavos_referrals();
+    let res = carmine_api_db::get_insurance_events();
 
-    println!("{:#?}", braavos);
+    println!("{:#?}", res);
 }

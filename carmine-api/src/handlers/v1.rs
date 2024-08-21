@@ -19,6 +19,7 @@ use carmine_api_core::{
 use carmine_api_db::{create_insurance_event, create_referral_event, get_referral_code};
 use lazy_static::lazy_static;
 use std::{
+    collections::HashSet,
     env,
     sync::{Arc, Mutex},
 };
@@ -825,6 +826,52 @@ pub async fn defispring(data: web::Data<Arc<Mutex<AppState>>>) -> impl Responder
     HttpResponse::Ok().json(DataResponse {
         status: "success".to_string(),
         data: app_state.mainnet.defispring,
+    })
+}
+
+#[get("/mainnet/price-protect-events")]
+pub async fn get_insurance_event_history(data: web::Data<Arc<Mutex<AppState>>>) -> impl Responder {
+    let locked = &data.lock();
+    let app_state = match locked {
+        Ok(app_data) => app_data,
+        _ => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "server_error".to_string(),
+                message: "Failed to read AppState".to_string(),
+            });
+        }
+    };
+
+    HttpResponse::Ok().json(DataResponse {
+        status: "success".to_string(),
+        data: &app_state.mainnet.insurance_events,
+    })
+}
+
+#[get("/mainnet/price-protect-users")]
+pub async fn get_insurance_users(data: web::Data<Arc<Mutex<AppState>>>) -> impl Responder {
+    let locked = &data.lock();
+    let app_state = match locked {
+        Ok(app_data) => app_data,
+        _ => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "server_error".to_string(),
+                message: "Failed to read AppState".to_string(),
+            });
+        }
+    };
+
+    let insurance_users: &HashSet<String> = &app_state
+        .mainnet
+        .insurance_events
+        .iter()
+        .filter(|item| item.premia > 10.0)
+        .map(|item| item.user_address.to_string())
+        .collect();
+
+    HttpResponse::Ok().json(DataResponse {
+        status: "success".to_string(),
+        data: insurance_users,
     })
 }
 
