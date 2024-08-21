@@ -11,13 +11,15 @@ use carmine_api_core::{
 };
 use carmine_api_db::{
     get_all_user_points, get_braavos_users_proscore_80_with_timestamp, get_events_by_address,
-    get_legacy_options, get_options, get_options_volatility, get_oracle_prices_since_new_amm,
-    get_pool_state, get_protocol_events, get_protocol_events_from_block, get_referral_events,
-    get_user_points_lastest_timestamp, get_votes,
+    get_insurance_events, get_legacy_options, get_options, get_options_volatility,
+    get_oracle_prices_since_new_amm, get_pool_state, get_protocol_events,
+    get_protocol_events_from_block, get_referral_events, get_user_points_lastest_timestamp,
+    get_votes,
 };
 use carmine_api_prices::HistoricalPrices;
 use carmine_api_starknet::carmine::Carmine;
 use defispring::get_defispring_stats;
+use insurance_events::get_insurace_data;
 use std::{
     collections::HashMap,
     time::{Instant, SystemTime},
@@ -27,6 +29,7 @@ use trade_data::get_trades;
 
 mod apy;
 pub mod defispring;
+pub mod insurance_events;
 pub mod trade_data;
 
 // Only store Events we know and not ExpireOptionTokenForPool and Upgrade
@@ -142,6 +145,7 @@ impl Cache {
         let votes = get_votes();
         let mut votes_map: HashMap<String, Vec<Vote>> = HashMap::new();
         let trades_with_prices = get_trades(&trades, &self.historical_prices);
+        let insurance_events = get_insurace_data(get_insurance_events(), &self.historical_prices);
 
         for vote in votes.iter() {
             votes_map
@@ -170,6 +174,7 @@ impl Cache {
             defispring,
             braavos_proscore,
             trades_with_prices,
+            insurance_events,
         }
     }
 
