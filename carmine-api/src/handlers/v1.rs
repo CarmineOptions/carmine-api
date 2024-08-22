@@ -865,7 +865,7 @@ pub async fn get_insurance_users(data: web::Data<Arc<Mutex<AppState>>>) -> impl 
         .mainnet
         .insurance_events
         .iter()
-        .filter(|item| item.premia > 10.0)
+        .filter(|item| item.premia >= 10.0 && item.timestamp > 1724544000)
         .map(|item| item.user_address.to_string())
         .collect();
 
