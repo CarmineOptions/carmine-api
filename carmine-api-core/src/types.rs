@@ -117,7 +117,6 @@ pub struct AppData {
 
 pub struct AppState {
     pub mainnet: AppData,
-    pub testnet: AppData,
     pub airdrop: MerkleTree,
     pub token_prices: TokenPrices,
 }
