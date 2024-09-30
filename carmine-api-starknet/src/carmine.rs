@@ -83,20 +83,20 @@ impl Carmine {
                     BlockTag::Latest,
                     &self.network,
                 ));
-                futures.push(call(
-                    MAINNET_CONTRACT_ADDRESS.to_string(), // aux contract to bypass BTC option problem
-                    format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
-                    vec![MAINNET_ETH_STRK_CALL.address.to_string()],
-                    BlockTag::Latest,
-                    &self.network,
-                ));
-                futures.push(call(
-                    MAINNET_CONTRACT_ADDRESS.to_string(), // aux contract to bypass BTC option problem
-                    format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
-                    vec![MAINNET_ETH_STRK_PUT.address.to_string()],
-                    BlockTag::Latest,
-                    &self.network,
-                ));
+                // futures.push(call(
+                //     MAINNET_CONTRACT_ADDRESS.to_string(), // aux contract to bypass BTC option problem
+                //     format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
+                //     vec![MAINNET_ETH_STRK_CALL.address.to_string()],
+                //     BlockTag::Latest,
+                //     &self.network,
+                // ));
+                // futures.push(call(
+                //     MAINNET_CONTRACT_ADDRESS.to_string(), // aux contract to bypass BTC option problem
+                //     format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
+                //     vec![MAINNET_ETH_STRK_PUT.address.to_string()],
+                //     BlockTag::Latest,
+                //     &self.network,
+                // ));
                 futures.push(call(
                     MAINNET_CONTRACT_ADDRESS.to_string(), // aux contract to bypass BTC option problem
                     format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),

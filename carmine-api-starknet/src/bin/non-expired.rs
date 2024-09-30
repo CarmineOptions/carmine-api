@@ -6,7 +6,7 @@ use dotenvy::dotenv;
 async fn main() {
     dotenv().ok();
 
-    let carmine = Carmine::new(Network::Testnet);
+    let carmine = Carmine::new(Network::Mainnet);
     match carmine.get_all_non_expired_options_with_premia().await {
         Ok(res) => println!("{:#?}", res),
         Err(e) => println!("FAILED! {:#?}", e),
