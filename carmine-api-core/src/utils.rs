@@ -6,8 +6,28 @@ use crate::{constants::MATH_64, types::PriceResponse};
 
 pub fn strike_from_hex(hex_str: &str) -> f64 {
     // Parse the hex string as u128, skipping the "0x" prefix
-    let num = u128::from_str_radix(&hex_str[2..], 16).expect("Failed to parse hex string");
-    num as f64 / MATH_64
+    let num_res = u128::from_str_radix(&hex_str[2..], 16);
+    match num_res {
+        Err(e) => {
+            println!("Failed parsing hex {}", hex_str);
+            println!("Failed parsing hex: {:#?}", e);
+            panic!("Failed to parse hex string");
+        }
+        Ok(num) => num as f64 / MATH_64,
+    }
+}
+
+pub fn math_64_to_decimal(dec_str: &str) -> f64 {
+    // Parse the hex string as u128, skipping the "0x" prefix
+    let num_res = u128::from_str_radix(&dec_str, 10);
+    match num_res {
+        Err(e) => {
+            println!("Failed parsing math64 number {}", dec_str);
+            println!("Failed parsing math64 number: {:#?}", e);
+            panic!("Failed to parse math64 number string");
+        }
+        Ok(num) => num as f64 / MATH_64,
+    }
 }
 
 pub async fn get_coingecko_prices() -> Result<PriceResponse, reqwest::Error> {

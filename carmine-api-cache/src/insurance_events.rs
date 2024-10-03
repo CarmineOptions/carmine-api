@@ -2,7 +2,7 @@ use std::time::UNIX_EPOCH;
 
 use carmine_api_core::{
     types::{InsuranceData, InsuranceEventQueryable},
-    utils::strike_from_hex,
+    utils::{math_64_to_decimal, strike_from_hex},
 };
 use carmine_api_prices::HistoricalPrices;
 
@@ -44,7 +44,7 @@ pub fn compose_insurance_event(
         base_token_price: price,
         timestamp,
         base_token_address: base_token_address.to_string(),
-        premia: strike_from_hex(&premia),
+        premia: math_64_to_decimal(&premia),
         strike: strike_from_hex(&strike),
         size: size.to_string(),
     }
