@@ -1,6 +1,6 @@
-use actix_web::{get, http::header::ContentType, HttpResponse, Responder};
+use actix_web::{http::header::ContentType, route, HttpResponse, Responder};
 
-#[get("liveness")]
+#[route("/liveness", method = "GET", method = "HEAD")]
 pub async fn liveness_probe_handler() -> impl Responder {
     HttpResponse::Ok()
         .content_type(ContentType::plaintext())
