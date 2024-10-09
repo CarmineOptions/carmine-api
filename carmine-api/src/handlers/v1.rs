@@ -63,8 +63,10 @@ pub async fn live_options(
         }
     };
     let data = match network {
-        Network::Testnet => &app_state.testnet.all_non_expired,
-        Network::Mainnet => &app_state.mainnet.all_non_expired,
+        // Network::Testnet => &app_state.testnet.all_non_expired,
+        // Network::Mainnet => &app_state.mainnet.all_non_expired,
+        // Always return Mainnet data
+        _ => &app_state.mainnet.all_non_expired,
     };
 
     HttpResponse::Ok().json(AllNonExpired {
@@ -109,8 +111,9 @@ pub async fn transactions(
         }
     };
     let all_history = match network {
-        Network::Testnet => &app_state.testnet.trade_history,
-        Network::Mainnet => &app_state.mainnet.trade_history,
+        // Network::Testnet => &app_state.testnet.trade_history,
+        // Network::Mainnet => &app_state.mainnet.trade_history,
+        _ => &app_state.mainnet.trade_history,
     };
 
     let data = all_history.iter().filter(|h| h.caller == address).collect();
@@ -148,8 +151,9 @@ pub async fn all_transactions(
     };
 
     let data = match network {
-        Network::Testnet => &app_state.testnet.trade_history,
-        Network::Mainnet => &app_state.mainnet.trade_history,
+        // Network::Testnet => &app_state.testnet.trade_history,
+        // Network::Mainnet => &app_state.mainnet.trade_history,
+        _ => &app_state.mainnet.trade_history,
     };
 
     let length = data.len();
@@ -188,8 +192,9 @@ pub async fn all_legacy_transactions(
     };
 
     let data = match network {
-        Network::Testnet => &app_state.testnet.legacy_trade_history,
-        Network::Mainnet => &app_state.mainnet.legacy_trade_history,
+        // Network::Testnet => &app_state.testnet.legacy_trade_history,
+        // Network::Mainnet => &app_state.mainnet.legacy_trade_history,
+        _ => &app_state.mainnet.legacy_trade_history,
     };
 
     let length = data.len();

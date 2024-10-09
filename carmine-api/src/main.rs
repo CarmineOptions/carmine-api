@@ -64,7 +64,7 @@ async fn main() -> std::io::Result<()> {
     println!("🛠️  Creating cache instances...");
 
     let mut mainnet_cache = Cache::new(Network::Mainnet).await;
-    let mut testnet_cache = Cache::new(Network::Testnet).await;
+    // let mut testnet_cache = Cache::new(Network::Testnet).await;
 
     println!("🛠️  Getting data from DB...");
 
@@ -72,9 +72,9 @@ async fn main() -> std::io::Result<()> {
 
     println!("✨ Got Mainnet data");
 
-    let testnet = testnet_cache.get_app_data();
+    // let testnet = testnet_cache.get_app_data();
 
-    println!("✨ Got Testnet data");
+    // println!("✨ Got Testnet data");
 
     let airdrop: MerkleTree = MerkleTree::new();
 
@@ -97,7 +97,7 @@ async fn main() -> std::io::Result<()> {
 
     let app_state = Data::new(Arc::new(Mutex::new(AppState {
         mainnet,
-        testnet,
+        // testnet,
         airdrop,
         token_prices,
     })));
@@ -124,13 +124,13 @@ async fn main() -> std::io::Result<()> {
                 counter = 1;
                 println!("Updating AppState");
                 mainnet_cache.update().await;
-                testnet_cache.update().await;
+                // testnet_cache.update().await;
                 let mainnet = mainnet_cache.get_app_data();
-                let testnet = testnet_cache.get_app_data();
+                // let testnet = testnet_cache.get_app_data();
 
                 let mut app_state_lock = app_state_clone.lock().unwrap();
                 app_state_lock.mainnet = mainnet;
-                app_state_lock.testnet = testnet;
+                // app_state_lock.testnet = testnet;
                 drop(app_state_lock);
                 println!("AppState updated");
             } else {
