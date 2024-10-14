@@ -20,10 +20,27 @@ lazy_static! {
 }
 
 #[derive(Debug, Serialize)]
-pub struct RpcCallData {
+pub struct RpcRequest {
     contract_address: String,
     entry_point_selector: String,
     calldata: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct RpcCallData {
+    request: RpcRequest,
+    block_id: BlockTag,
+}
+
+#[derive(Debug, Serialize)]
+pub struct RpcClassHashAtData {
+    contract_address: String,
+    block_id: BlockTag,
+}
+
+#[derive(Debug, Serialize)]
+pub struct RpcGetBlockHeaderWithTxHashesData {
+    block_id: BlockTag,
 }
 
 #[derive(Debug, Serialize, Copy, Clone)]
@@ -39,8 +56,10 @@ pub enum BlockTag {
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 enum Params {
-    CallData(RpcCallData),
-    BlockTag(BlockTag),
+    GetClassHashAt(RpcClassHashAtData),
+    Call(RpcCallData),
+    GetBlockWithTxHashes(RpcGetBlockHeaderWithTxHashesData),
+    Empty, // No params
 }
 
 #[derive(Debug, Serialize)]
@@ -48,7 +67,7 @@ pub struct RpcCallBody {
     jsonrpc: String,
     method: String,
     id: u32,
-    params: Vec<Params>,
+    params: Params,
 }
 
 #[derive(Debug, Serialize)]
@@ -185,7 +204,7 @@ struct RpcErrorData {
 struct RpcErrorResponse {
     code: i64,
     message: String,
-    data: RpcErrorData,
+    data: Option<RpcErrorData>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -216,19 +235,18 @@ pub fn build_call_body(
     calldata: Vec<String>,
     block: BlockTag,
 ) -> RpcCallBody {
-    let params = vec![
-        Params::CallData(RpcCallData {
-            contract_address,
-            entry_point_selector,
-            calldata,
-        }),
-        Params::BlockTag(block),
-    ];
     RpcCallBody {
         jsonrpc: "2.0".to_owned(),
         method: "starknet_call".to_owned(),
         id: 0,
-        params,
+        params: Params::Call(RpcCallData {
+            request: RpcRequest {
+                contract_address,
+                entry_point_selector,
+                calldata,
+            },
+            block_id: block,
+        }),
     }
 }
 
@@ -250,7 +268,7 @@ pub async fn rpc_latest_block_number(node: RpcNode) -> Result<i64, RpcError> {
         jsonrpc: "2.0".to_owned(),
         method: "starknet_blockNumber".to_owned(),
         id: 0,
-        params: vec![],
+        params: Params::Empty,
     };
     let request = rpc_request(body, node);
 
@@ -282,13 +300,50 @@ pub async fn rpc_latest_block_number(node: RpcNode) -> Result<i64, RpcError> {
     Ok(block_number)
 }
 
+pub async fn is_contract_deployed(
+    node: RpcNode,
+    contract_address: String,
+    block_number: i64,
+) -> Result<bool, ()> {
+    let body = RpcCallBody {
+        jsonrpc: "2.0".to_owned(),
+        method: "starknet_getClassHashAt".to_owned(),
+        id: 0,
+        params: Params::GetClassHashAt(RpcClassHashAtData {
+            contract_address,
+            block_id: BlockTag::Number(block_number),
+        }),
+    };
+
+    let request = rpc_request(body, node);
+
+    let response = match request.send().await {
+        Ok(response) => response,
+        Err(_) => return Err(()),
+    };
+
+    let parsed_response = response.json::<RpcResponse<String>>().await;
+
+    let rpc_response = match parsed_response {
+        Ok(data) => data,
+        Err(e) => {
+            println!("response parse error: {}", e);
+            return Err(());
+        }
+    };
+
+    match rpc_response.result {
+        Some(_) => Ok(true),
+        None => Ok(false),
+    }
+}
+
 pub async fn rpc_block_header(block: BlockTag, node: RpcNode) -> Result<DbBlock, RpcError> {
-    let params = vec![Params::BlockTag(block)];
     let body = RpcCallBody {
         jsonrpc: "2.0".to_owned(),
         method: "starknet_getBlockWithTxHashes".to_owned(),
         id: 0,
-        params,
+        params: Params::GetBlockWithTxHashes(RpcGetBlockHeaderWithTxHashesData { block_id: block }),
     };
     let request = rpc_request(body, node);
 
@@ -328,6 +383,7 @@ pub async fn rpc_call(
         &entry_point_selector, &calldata
     );
     let body = build_call_body(contract_address, entry_point_selector, calldata, block);
+
     let request = rpc_request(body, node);
 
     let response = match request.send().await {
@@ -343,7 +399,7 @@ pub async fn rpc_call(
     let rpc_response = match parsed_response {
         Ok(data) => data,
         Err(e) => {
-            println!("{} - error: {}", err_message, e);
+            println!("response parse error: {} {}", err_message, e);
             return Err(RpcError::Other("RPC node request failed".to_string()));
         }
     };
@@ -352,9 +408,11 @@ pub async fn rpc_call(
         return match e.code {
             20 => Err(RpcError::ContractNotFound),
             24 => Err(RpcError::BlockNotFound),
-            40 => Err(RpcError::ContractError(
-                e.data.revert_error.unwrap_or("".to_string()),
-            )),
+            40 => Err(RpcError::ContractError(if let Some(data) = e.data {
+                data.revert_error.unwrap_or("".to_string())
+            } else {
+                "".to_string()
+            })),
             _ => Err(RpcError::Other(format!(
                 "RPC returned unexpected code {}",
                 e.code

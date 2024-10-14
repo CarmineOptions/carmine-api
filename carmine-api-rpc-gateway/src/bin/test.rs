@@ -12,7 +12,7 @@ struct BenchResult {
     cumulative_time: u128,
     successful: usize,
     failed: usize,
-    average: u128,
+    average: Option<u128>,
 }
 
 impl BenchResult {
@@ -32,7 +32,9 @@ async fn bench(node: RpcNode, number_of_runs: usize) -> BenchResult {
         let res = rpc_call(
             amm_address(&Network::Mainnet).to_string(),
             format!("{}", Entrypoint::GetAllNonExpiredOptionsWithPremia),
-            vec!["0x0470999ab32712fd22748da002ae48918466f39b796ff8ebaa030d55946b1b3b".to_owned()],
+            vec![
+                "0x70cad6be2c3fc48c745e4a4b70ef578d9c79b46ffac4cd93ec7b61f951c7c5c".to_owned(), // ETH USDC CALL Pool address
+            ],
             BlockTag::Latest,
             node,
         )
@@ -49,12 +51,17 @@ async fn bench(node: RpcNode, number_of_runs: usize) -> BenchResult {
         };
     }
 
+    let average = match successful {
+        0 => None,
+        _ => Some(cum_time / successful as u128),
+    };
+
     BenchResult {
         node,
         cumulative_time: cum_time,
         successful,
         failed,
-        average: cum_time / successful as u128,
+        average,
     }
 }
 
