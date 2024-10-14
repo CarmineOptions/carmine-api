@@ -1,7 +1,7 @@
 use std::time::{Duration, Instant};
 
 use carmine_api_core::{
-    network::Network,
+    network::{Network, NEW_AMM_GENESIS_BLOCK_NUMBER},
     types::{DbBlock, OracleName, TokenPair},
 };
 use carmine_api_db::{
@@ -132,8 +132,7 @@ impl AmmStateObserver {
             }
         };
 
-        // let start = NEW_AMM_GENESIS_BLOCK_NUMBER; // new AMM deployed
-        let start = 642000;
+        let start = NEW_AMM_GENESIS_BLOCK_NUMBER; // new AMM deployed
         let finish = i64::try_from(last_block_starknet.block_number).unwrap();
 
         let holes = get_pool_state_block_holes(start, finish, &Network::Mainnet);
