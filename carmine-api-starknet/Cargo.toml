@@ -76,3 +76,7 @@ name = "telegram"
 [[bin]]
 path = "./src/bin/pragma.rs"
 name = "pragma"
+
+[[bin]]
+path = "./src/bin/options_history.rs"
+name = "options_history"

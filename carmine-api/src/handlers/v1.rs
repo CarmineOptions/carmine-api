@@ -14,7 +14,7 @@ use actix_web::{
 };
 use carmine_api_core::{
     network::Network,
-    types::{AppState, InsuranceEvent, NewReferralEvent, PoolStateWithTimestamp, Vote},
+    types::{AppState, InsuranceEvent, NewReferralEvent, PailToken, PoolStateWithTimestamp, Vote},
 };
 use carmine_api_db::{create_insurance_event, create_referral_event, get_referral_code};
 use lazy_static::lazy_static;
@@ -916,4 +916,22 @@ pub async fn braavos_proscore(data: web::Data<Arc<Mutex<AppState>>>) -> impl Res
         status: "success".to_string(),
         data: &app_state.mainnet.braavos_proscore,
     })
+}
+
+#[get("/mainnet/hedge")]
+pub async fn pail_token(
+    opts: web::Query<std::collections::HashMap<String, String>>,
+) -> impl Responder {
+    match opts.get("token_id") {
+        Some(token_id_str) => match token_id_str.parse::<u64>() {
+            Ok(token_id) => HttpResponse::Ok().json(PailToken {
+                name: "PAIL token".to_string(),
+                description: format!("token {}", token_id),
+                token_id,
+                image: "https://app.carmine.finance/logo.png".to_string(),
+            }),
+            Err(_) => HttpResponse::BadRequest().body("Invalid token_id: must be a valid u64"),
+        },
+        None => HttpResponse::BadRequest().body("Missing token_id in query parameters"),
+    }
 }

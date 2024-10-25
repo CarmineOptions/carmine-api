@@ -335,6 +335,16 @@ pub fn get_options(network: &Network) -> Vec<IOption> {
         .expect("Error loading options")
 }
 
+pub fn get_non_expired_options(network: &Network, ts: i64) -> Vec<IOption> {
+    use crate::schema::options::dsl::*;
+
+    let connection = &mut establish_connection(network);
+    options
+        .filter(maturity.gt(ts)) // only get new AMM options
+        .load::<IOption>(connection)
+        .expect("Error loading options")
+}
+
 pub fn get_legacy_options(network: &Network) -> Vec<IOption> {
     use crate::schema::options::dsl::*;
 

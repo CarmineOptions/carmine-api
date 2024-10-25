@@ -4,13 +4,17 @@ use carmine_api_core::network::{
 };
 use carmine_api_core::pool::{
     get_all_pool_addresses, get_all_pools, Pool, MAINNET_BTC_USDC_CALL, MAINNET_BTC_USDC_PUT,
-    MAINNET_ETH_STRK_CALL, MAINNET_ETH_STRK_PUT, MAINNET_ETH_USDC_CALL, MAINNET_ETH_USDC_PUT,
-    MAINNET_STRK_USDC_CALL, MAINNET_STRK_USDC_PUT, TESTNET_ETH_STRK_CALL, TESTNET_ETH_STRK_PUT,
-    TESTNET_ETH_USDC_CALL, TESTNET_ETH_USDC_PUT, TESTNET_STRK_USDC_CALL, TESTNET_STRK_USDC_PUT,
+    MAINNET_ETH_USDC_CALL, MAINNET_ETH_USDC_PUT, MAINNET_STRK_USDC_CALL, MAINNET_STRK_USDC_PUT,
+    TESTNET_ETH_STRK_CALL, TESTNET_ETH_STRK_PUT, TESTNET_ETH_USDC_CALL, TESTNET_ETH_USDC_PUT,
+    TESTNET_STRK_USDC_CALL, TESTNET_STRK_USDC_PUT,
 };
 use carmine_api_core::types::{DbBlock, IOption, OptionVolatility, PoolState};
-use carmine_api_db::{create_batch_of_options, get_option_with_address, get_options, get_pools};
-use carmine_api_rpc_gateway::{call, carmine_get_block_header, BlockTag, Entrypoint, RpcError};
+use carmine_api_db::{
+    create_batch_of_options, get_non_expired_options, get_option_with_address, get_pools,
+};
+use carmine_api_rpc_gateway::{
+    call, carmine_get_block_header, is_contract_deployed, BlockTag, Entrypoint, RpcError,
+};
 use futures::future::join_all;
 use futures::FutureExt;
 use starknet::core::types::FieldElement;
@@ -36,6 +40,36 @@ struct FunctionDescriptor<'a> {
 pub struct Carmine {
     pools: Vec<Pool>,
     network: Network,
+}
+
+pub async fn filter_deployed_options(opts: Vec<IOption>, block_number: i64) -> Vec<IOption> {
+    let checks = opts.into_iter().map(|option| {
+        let address = option.option_address.clone();
+        let block_number = block_number;
+
+        async move {
+            let deployed = is_contract_deployed(
+                carmine_api_rpc_gateway::RpcNode::CarmineJunoNode,
+                &address,
+                block_number,
+            )
+            .await;
+            (deployed, option)
+        }
+    });
+
+    let results = join_all(checks).await;
+
+    // Filter out options where `is_contract_deployed` returned Ok(true)
+    results
+        .into_iter()
+        .filter_map(|(deployed_result, option)| {
+            match deployed_result {
+                Ok(true) => Some(option),
+                _ => None, // Discard those that failed or returned false
+            }
+        })
+        .collect()
 }
 
 impl Carmine {
@@ -612,32 +646,25 @@ impl Carmine {
     ) -> Result<Vec<OptionVolatility>, ()> {
         let now = Instant::now();
 
-        let options = get_options(&self.network);
+        let non_expired_options =
+            get_non_expired_options(&self.network, block.timestamp - TWO_DAYS_SECS);
+
+        println!("non_expired_options length {}", &non_expired_options.len());
+
+        let deployed_in_this_block =
+            filter_deployed_options(non_expired_options, block.block_number).await;
+
+        println!(
+            "deployed_in_this_block length {}",
+            &deployed_in_this_block.len()
+        );
+
         let mut to_store: Vec<OptionVolatility> = vec![];
-
-        let mut non_expired_options: Vec<IOption> = vec![];
-        for opt in options {
-            // non expired
-            if opt.maturity + TWO_DAYS_SECS > block.timestamp {
-                non_expired_options.push(opt);
-
-                // for expired set volatility to None
-            }
-            //  else {
-            //     let option_volatility = OptionVolatility {
-            //         block_number: block.block_number,
-            //         option_address: opt.option_address,
-            //         volatility: None,
-            //         option_position: None,
-            //     };
-            //     to_store.push(option_volatility);
-            // }
-        }
 
         // volatility fails if too many requests, break it into chunks
         let chunk_size = 50;
 
-        let vector_of_vectors: Vec<Vec<IOption>> = non_expired_options
+        let vector_of_vectors: Vec<Vec<IOption>> = deployed_in_this_block
             .chunks(chunk_size)
             .map(|chunk| chunk.to_vec()) // Convert each chunk to a vector
             .collect();

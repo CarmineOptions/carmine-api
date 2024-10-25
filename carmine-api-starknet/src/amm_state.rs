@@ -1,7 +1,7 @@
 use std::time::{Duration, Instant};
 
 use carmine_api_core::{
-    network::{Network, NEW_AMM_GENESIS_BLOCK_NUMBER},
+    network::Network,
     types::{DbBlock, OracleName, TokenPair},
 };
 use carmine_api_db::{
@@ -60,10 +60,21 @@ impl AmmStateObserver {
             self.pragma.get_spot_median(&TokenPair::StrkUsdc, &block),
         );
 
-        println!("Fetched single block state in {:.2?}", t0.elapsed());
-        println!("ETH-USDC {:?}", pragma_eth_usdc_result);
-        println!("BTC-USDC {:?}", pragma_btc_usdc_result);
-        println!("STRK-USDC {:?}", pragma_strk_usdc_result);
+        if let Err(err) = &options_volatility_result {
+            println!("Error in options_volatility_result {:?}", err);
+        }
+        if let Err(err) = &amm_state_result {
+            println!("Error in amm_state_result {:?}", err);
+        }
+        if let Err(err) = &pragma_eth_usdc_result {
+            println!("Error in pragma_eth_usdc_result {:?}", err);
+        }
+        if let Err(err) = &pragma_btc_usdc_result {
+            println!("Error in pragma_btc_usdc_result {:?}", err);
+        }
+        if let Err(err) = &pragma_strk_usdc_result {
+            println!("Error in pragma_strk_usdc_result {:?}", err);
+        }
 
         match (
             options_volatility_result,
@@ -86,6 +97,11 @@ impl AmmStateObserver {
                 create_oracle_price(&pragma_eth_usdc, &self.network);
                 create_oracle_price(&pragma_btc_usdc, &self.network);
                 create_oracle_price(&pragma_strk_usdc, &self.network);
+                println!(
+                    "Fetched and stored block {} state in {:.2?}",
+                    block_number,
+                    t0.elapsed()
+                );
                 Ok(())
             }
             _ => Err(()),
@@ -132,7 +148,7 @@ impl AmmStateObserver {
             }
         };
 
-        let start = NEW_AMM_GENESIS_BLOCK_NUMBER; // new AMM deployed
+        let start = 751467; // up to here holes are plugged
         let finish = i64::try_from(last_block_starknet.block_number).unwrap();
 
         let holes = get_pool_state_block_holes(start, finish, &Network::Mainnet);

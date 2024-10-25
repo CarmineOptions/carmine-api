@@ -475,3 +475,11 @@ pub struct BraavosBonusValues {
     pub pro_score_80: Option<i64>,
     pub braavos_referral: Option<i64>,
 }
+
+#[derive(Serialize)]
+pub struct PailToken {
+    pub name: String,
+    pub description: String,
+    pub token_id: u64,
+    pub image: String,
+}

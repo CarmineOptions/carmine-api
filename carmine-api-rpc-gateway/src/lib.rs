@@ -302,7 +302,7 @@ pub async fn rpc_latest_block_number(node: RpcNode) -> Result<i64, RpcError> {
 
 pub async fn is_contract_deployed(
     node: RpcNode,
-    contract_address: String,
+    contract_address: &str,
     block_number: i64,
 ) -> Result<bool, ()> {
     let body = RpcCallBody {
@@ -310,7 +310,7 @@ pub async fn is_contract_deployed(
         method: "starknet_getClassHashAt".to_owned(),
         id: 0,
         params: Params::GetClassHashAt(RpcClassHashAtData {
-            contract_address,
+            contract_address: contract_address.to_string(),
             block_id: BlockTag::Number(block_number),
         }),
     };
@@ -413,10 +413,7 @@ pub async fn rpc_call(
             } else {
                 "".to_string()
             })),
-            _ => Err(RpcError::Other(format!(
-                "RPC returned unexpected code {}",
-                e.code
-            ))),
+            _ => Err(RpcError::Other(format!("{} {}", e.code, e.message))),
         };
     }
     if let Some(data) = rpc_response.result {

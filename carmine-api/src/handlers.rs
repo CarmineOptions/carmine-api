@@ -32,6 +32,7 @@ pub fn config(conf: &mut web::ServiceConfig) {
                         .service(v1::all_transactions)
                         .service(v1::all_legacy_transactions)
                         .service(v1::votes)
+                        .service(v1::pail_token)
                         .service(v1::get_insurance_event_history)
                         .service(v1::get_insurance_users)
                         .service(v1::braavos_proscore)
