@@ -11,13 +11,13 @@ use carmine_api_starknet::{
     plug_holes_amm_state, update_database_amm_state, update_database_events,
 };
 
-const BLOCK_OFFSET: i64 = 5;
-const PLUG_HOLES: bool = false;
+const BLOCK_OFFSET: i64 = 10;
+const PLUG_HOLES: bool = true;
 const GET_NEW_BLOCKS: bool = true;
-const GET_NEW_EVENTS: bool = false;
-const UPDATE_POOL_PRICES: bool = false;
-const BRAAVOS_PROSCORE: bool = false;
-const BRAAVOS_REFERRAL: bool = false;
+const GET_NEW_EVENTS: bool = true;
+const UPDATE_POOL_PRICES: bool = true;
+const BRAAVOS_PROSCORE: bool = true;
+const BRAAVOS_REFERRAL: bool = true;
 
 const BLOCK_DISCREPENCY_THRESHOLD: i64 = 5;
 

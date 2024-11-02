@@ -441,6 +441,7 @@ pub struct TokenPrices {
     pub usdc: f64,
     pub strk: f64,
     pub btc: f64,
+    pub ekubo: f64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
