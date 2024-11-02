@@ -7,13 +7,11 @@ async fn main() {
     dotenv().ok();
 
     let b = DbBlock {
-        block_number: 518540,
-        timestamp: 123,
+        block_number: 864166,
+        timestamp: 1730500755,
     };
     let c = Carmine::new(Network::Mainnet);
     let state = c.get_amm_state(&b).await.unwrap();
-    let options = c.get_all_options_volatility(&b).await.unwrap();
 
     println!("State: {:#?}", state);
-    println!("Options: {:#?}", options);
 }

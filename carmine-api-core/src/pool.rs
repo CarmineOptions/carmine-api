@@ -121,6 +121,12 @@ const MAINNET_STRK: Token = Token {
     symbol: "STRK",
 };
 
+const MAINNET_EKUBO: Token = Token {
+    address: "0x75afe6402ad5a5c20dd25e10ec3b3986acaa647b77e4ae24b0cbc9a54a27a87",
+    decimals: 18,
+    symbol: "EKUBO",
+};
+
 pub const TESTNET_ETH_USDC_CALL: Pool = Pool {
     address: "0x201f9513450a32a1f3803f289ee7d104735cd1f933712fffc1cdae98ad6c008",
     network: Network::Testnet,
@@ -265,6 +271,24 @@ pub const MAINNET_STRK_USDC_PUT: Pool = Pool {
     id: "strk-usdc-put",
 };
 
+pub const MAINNET_EKUBO_USDC_CALL: Pool = Pool {
+    address: "0x78a090c99bfc993fe8bbd19487351e501dbe7b50ab695966605e0839b34182a",
+    network: Network::Mainnet,
+    type_: Type::Call,
+    base: MAINNET_EKUBO,
+    quote: MAINNET_USDC,
+    id: "ekubo-usdc-call",
+};
+
+pub const MAINNET_EKUBO_USDC_PUT: Pool = Pool {
+    address: "0xe12a16c964dc68850c1f6cbea9062c36bed7676265eec7f563c728c53e536f",
+    network: Network::Mainnet,
+    type_: Type::Put,
+    base: MAINNET_EKUBO,
+    quote: MAINNET_USDC,
+    id: "ekubo-usdc-put",
+};
+
 pub const LEGACY_MAINNET_ETH_USDC_CALL: Pool = Pool {
     address: "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024",
     network: Network::Mainnet,
@@ -294,6 +318,8 @@ pub fn get_all_pools(network: &Network) -> Vec<Pool> {
             MAINNET_ETH_STRK_PUT,
             MAINNET_STRK_USDC_CALL,
             MAINNET_STRK_USDC_PUT,
+            MAINNET_EKUBO_USDC_CALL,
+            MAINNET_EKUBO_USDC_PUT,
         ],
         Network::Testnet => vec![
             TESTNET_ETH_USDC_CALL,
