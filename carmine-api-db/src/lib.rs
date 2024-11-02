@@ -50,7 +50,7 @@ fn get_db_url(network: &Network) -> String {
 fn establish_connection(network: &Network) -> PgConnection {
     let database_url = get_db_url(network);
     PgConnection::establish(&database_url)
-        .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
+        .unwrap_or_else(|e| panic!("Error connecting to {}: {:?}", database_url, e))
 }
 
 pub fn create_event(new_event: Event, network: &Network) {

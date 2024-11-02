@@ -64,6 +64,7 @@ pub enum TokenPair {
     EthUsdc,
     BtcUsdc,
     StrkUsdc,
+    EkuboUsdc,
 }
 
 impl TokenPair {
@@ -72,6 +73,7 @@ impl TokenPair {
             TokenPair::EthUsdc => "eth-usdc".to_string(),
             TokenPair::BtcUsdc => "btc-usdc".to_string(),
             TokenPair::StrkUsdc => "strk-usdc".to_string(),
+            TokenPair::EkuboUsdc => "ekubo-usdc".to_string(),
         }
     }
 }
@@ -82,6 +84,7 @@ impl fmt::Display for TokenPair {
             TokenPair::EthUsdc => write!(f, "eth-usdc"),
             TokenPair::BtcUsdc => write!(f, "btc-usdc"),
             TokenPair::StrkUsdc => write!(f, "strk-usdc"),
+            TokenPair::EkuboUsdc => write!(f, "ekubo-usdc"),
         }
     }
 }
@@ -428,6 +431,8 @@ pub struct PriceResponse {
     pub usd_coin: CoinGeckoPrice,
     pub starknet: CoinGeckoPrice,
     pub bitcoin: CoinGeckoPrice,
+    #[serde(rename = "ekubo-protocol")]
+    pub ekubo: CoinGeckoPrice,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]

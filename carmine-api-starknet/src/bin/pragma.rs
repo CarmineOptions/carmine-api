@@ -12,6 +12,7 @@ fn get_first_block_for_token_pair(token_pair: &TokenPair) -> i64 {
         TokenPair::EthUsdc => 430000,
         TokenPair::BtcUsdc => 416490,
         TokenPair::StrkUsdc => 557529,
+        TokenPair::EkuboUsdc => 850000,
     }
 }
 
@@ -43,5 +44,5 @@ async fn update_token_pair(token_pair: TokenPair) {
 async fn main() {
     dotenv().ok();
 
-    update_token_pair(TokenPair::EthUsdc).await;
+    update_token_pair(TokenPair::EkuboUsdc).await;
 }

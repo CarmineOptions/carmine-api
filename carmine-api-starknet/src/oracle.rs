@@ -31,6 +31,7 @@ impl Oracle {
             (OracleName::Pragma, TokenPair::EthUsdc) => "0x4554482f555344".to_string(),
             (OracleName::Pragma, TokenPair::BtcUsdc) => "0x4254432f555344".to_string(),
             (OracleName::Pragma, TokenPair::StrkUsdc) => "0x5354524b2f555344".to_string(),
+            (OracleName::Pragma, TokenPair::EkuboUsdc) => "0x454b55424f2f555344".to_string(),
         }
     }
 

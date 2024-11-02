@@ -31,7 +31,7 @@ pub fn math_64_to_decimal(dec_str: &str) -> f64 {
 }
 
 pub async fn get_coingecko_prices() -> Result<PriceResponse, reqwest::Error> {
-    let url = "https://api.coingecko.com/api/v3/simple/price?ids=ethereum,usd-coin,starknet,bitcoin&vs_currencies=usd";
+    let url = "https://api.coingecko.com/api/v3/simple/price?ids=ethereum,usd-coin,starknet,bitcoin,ekubo-protocol&vs_currencies=usd";
 
     reqwest::get(url).await?.json::<PriceResponse>().await
 }
