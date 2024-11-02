@@ -88,6 +88,7 @@ async fn main() -> std::io::Result<()> {
             usdc: res.usd_coin.usd,
             strk: res.starknet.usd,
             btc: res.bitcoin.usd,
+            ekubo: res.ekubo.usd,
         },
         Err(e) => {
             println!("{:#?}", e);
@@ -142,6 +143,7 @@ async fn main() -> std::io::Result<()> {
                         usdc: res.usd_coin.usd,
                         strk: res.starknet.usd,
                         btc: res.bitcoin.usd,
+                        ekubo: res.ekubo.usd,
                     }),
                     Err(e) => Err(e),
                 };
