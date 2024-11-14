@@ -7,14 +7,14 @@ async fn main() {
 
     let so = AmmStateObserver::new();
 
-    let mut n = 864000;
-    let max = 865000;
+    let mut n = 879200;
+    let max = 879253;
 
     while n < max {
         match so.update_single_block(n).await {
             Ok(_) => println!("updated {}", n),
             Err(_) => println!("FAILED {}", n),
         };
-        n += 20;
+        n += 5;
     }
 }

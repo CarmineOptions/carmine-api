@@ -38,6 +38,7 @@ pub enum Protocol {
     CarminePoolEthStrkPut,
     CarminePoolStrkUsdcCall,
     CarminePoolStrkUsdcPut,
+    Pail,
     ZkLendMarket,
     ZkLendETH,
     ZkLendUSDC,
@@ -190,6 +191,7 @@ pub fn protocol_address(network: &Network, protocol: &Protocol) -> &'static str 
         Protocol::CarmineGovernance => {
             "0x001405ab78ab6ec90fba09e6116f373cda53b0ba557789a4578d8c1ec374ba0f"
         }
+        Protocol::Pail => "0x038290ac85a923dd7b38c23cc1ec5b15853b76e2c3c02d367043685caecd2fc2",
         Protocol::LegacyCarminePoolEthUsdcCall => {
             "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024"
         }

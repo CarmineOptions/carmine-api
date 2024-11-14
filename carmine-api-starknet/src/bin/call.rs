@@ -1,15 +1,15 @@
 use carmine_api_core::network::Network;
-use carmine_api_db::get_pool_state_block_holes;
+use carmine_api_rpc_gateway::BlockTag;
+use carmine_api_starknet::carmine::Carmine;
 use dotenvy::dotenv;
 
 #[tokio::main]
 async fn main() {
     dotenv().ok();
 
-    let start = 504056; // new AMM deployed
-    let finish = 827949;
+    let c = Carmine::new(Network::Mainnet);
 
-    let holes = get_pool_state_block_holes(start, finish, &Network::Mainnet);
+    let r = c.get_block_by_id(BlockTag::Latest).await;
 
-    println!("{:?}", holes);
+    println!("{:#?}", r);
 }

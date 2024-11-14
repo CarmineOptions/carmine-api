@@ -204,14 +204,17 @@ fn get_settled_events(event: StarkScanEvent) -> Option<Vec<StarkScanEventSettled
         }]);
     }
 
-    let voted_keys = vec![
-        "0x1b5f21c50bf3288fb310446824298a349f0ed9e28fb480cc9a4d54d034652e1",
-        "0x5c9afac1c510b50d3e0004024ba7b8e190864f1543dd8025d08f88410fb162",
-    ];
+    let key_str = &event.keys.join(",").to_string();
 
-    if event.keys == voted_keys {
-        // Vote event
-        let vote_event_name = "governance::contract::Governance::Voted".to_string();
+    let key_name_option = match key_str.as_str() {
+        "0x1b5f21c50bf3288fb310446824298a349f0ed9e28fb480cc9a4d54d034652e1,0x5c9afac1c510b50d3e0004024ba7b8e190864f1543dd8025d08f88410fb162" => Some("governance::contract::Governance::Voted".to_string()),
+        "0x2e770a5d835a0fc0bf1f36b9b91399b8216f234b49647eea957ce5808318568,0x1b23aa51d5569b9441d60ff575bf735345123304c4c3a303ee91670dccb4ac9" => Some("hedge_open".to_string()),
+        "0x13c3f174625b762b261f1b1433ad5bfff7d0cbaecaf4b503c89fce1f23e68a8,0x1b23aa51d5569b9441d60ff575bf735345123304c4c3a303ee91670dccb4ac9" => Some("hedge_close".to_string()),
+        "0x36af3feb5ea00cf41c0a5a0c1f795cd0ee1294433ccefb1916f0eafb4550b53,0x1b23aa51d5569b9441d60ff575bf735345123304c4c3a303ee91670dccb4ac9" => Some("hedge_settle".to_string()),
+        _ => None
+    };
+
+    if let Some(key_name) = key_name_option {
         return Some(vec![StarkScanEventSettled {
             id: format!("{}_{}", event.transaction_hash, event.event_index),
             block_hash: event.block_hash.unwrap(),
@@ -222,7 +225,7 @@ fn get_settled_events(event: StarkScanEvent) -> Option<Vec<StarkScanEventSettled
             keys: event.keys,
             data: event.data,
             timestamp: event.timestamp,
-            key_name: vote_event_name,
+            key_name,
         }]);
     }
 
