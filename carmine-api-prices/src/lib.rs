@@ -63,6 +63,8 @@ impl HistoricalPrices {
             "eth-strk-put" => "strk-usdc",
             "strk-usdc-call" => "strk-usdc",
             "strk-usdc-put" => return usdc_price,
+            "ekubo-usdc-call" => "ekubo-usdc",
+            "ekubo-usdc-put" => return usdc_price,
             _ => unreachable!("invalid pool id"),
         };
         let pair_map = match self.prices.get(pair) {

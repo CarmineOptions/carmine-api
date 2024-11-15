@@ -46,6 +46,8 @@ pub fn pool_id_to_decimals(pool_id: &str) -> usize {
         "eth-strk-put" => 18,
         "strk-usdc-call" => 18,
         "strk-usdc-put" => 6,
+        "ekubo-usdc-call" => 18,
+        "ekubo-usdc-put" => 6,
         _ => unreachable!("Failed getting decimals, invalid pool id"),
     }
 }

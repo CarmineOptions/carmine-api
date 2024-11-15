@@ -30,6 +30,7 @@ pub fn compose_insurance_event(
         "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7" => "eth-usdc-call",
         "0x03fe2b97c1fd336e750087d68b9b867997fd64a2661ff3ca5a7c771641e8e7ac" => "btc-usdc-call",
         "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d" => "strk-usdc-call",
+        "0x075afe6402ad5a5c20dd25e10ec3b3986acaa647b77e4ae24b0cbc9a54a27a87" => "ekubo-usdc-call",
         _ => unreachable!("invalid base token"),
     };
     let timestamp = event
