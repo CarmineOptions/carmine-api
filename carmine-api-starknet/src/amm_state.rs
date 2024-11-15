@@ -52,12 +52,14 @@ impl AmmStateObserver {
             pragma_eth_usdc_result,
             pragma_btc_usdc_result,
             pragma_strk_usdc_result,
+            pragma_ekubo_usdc_result,
         ) = join!(
             self.carmine.get_all_options_volatility(&block),
             self.carmine.get_amm_state(&block),
             self.pragma.get_spot_median(&TokenPair::EthUsdc, &block),
             self.pragma.get_spot_median(&TokenPair::BtcUsdc, &block),
             self.pragma.get_spot_median(&TokenPair::StrkUsdc, &block),
+            self.pragma.get_spot_median(&TokenPair::EkuboUsdc, &block),
         );
 
         if let Err(err) = &options_volatility_result {
@@ -75,6 +77,9 @@ impl AmmStateObserver {
         if let Err(err) = &pragma_strk_usdc_result {
             println!("Error in pragma_strk_usdc_result {:?}", err);
         }
+        if let Err(err) = &pragma_ekubo_usdc_result {
+            println!("Error in pragma_ekubo_usdc_result {:?}", err);
+        }
 
         match (
             options_volatility_result,
@@ -82,6 +87,7 @@ impl AmmStateObserver {
             pragma_eth_usdc_result,
             pragma_btc_usdc_result,
             pragma_strk_usdc_result,
+            pragma_ekubo_usdc_result,
         ) {
             (
                 Ok(options_volatility),
@@ -89,6 +95,7 @@ impl AmmStateObserver {
                 Ok(pragma_eth_usdc),
                 Ok(pragma_btc_usdc),
                 Ok(pragma_strk_usdc),
+                Ok(pragma_ekubo_usdc),
             ) => {
                 // got everything - store it to the database
                 create_block(&block, &self.network);
@@ -97,6 +104,7 @@ impl AmmStateObserver {
                 create_oracle_price(&pragma_eth_usdc, &self.network);
                 create_oracle_price(&pragma_btc_usdc, &self.network);
                 create_oracle_price(&pragma_strk_usdc, &self.network);
+                create_oracle_price(&pragma_ekubo_usdc, &self.network);
                 println!(
                     "Fetched and stored block {} state in {:.2?}",
                     block_number,

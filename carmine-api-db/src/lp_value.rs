@@ -2,8 +2,9 @@ use crate::{get_pool_states_with_prices, update_pool_state_asset_prices};
 use carmine_api_core::{
     network::Network,
     pool::{
-        MAINNET_BTC_USDC_CALL, MAINNET_BTC_USDC_PUT, MAINNET_ETH_STRK_CALL, MAINNET_ETH_STRK_PUT,
-        MAINNET_ETH_USDC_CALL, MAINNET_ETH_USDC_PUT, MAINNET_STRK_USDC_CALL, MAINNET_STRK_USDC_PUT,
+        MAINNET_BTC_USDC_CALL, MAINNET_BTC_USDC_PUT, MAINNET_EKUBO_USDC_CALL,
+        MAINNET_EKUBO_USDC_PUT, MAINNET_ETH_STRK_CALL, MAINNET_ETH_STRK_PUT, MAINNET_ETH_USDC_CALL,
+        MAINNET_ETH_USDC_PUT, MAINNET_STRK_USDC_CALL, MAINNET_STRK_USDC_PUT,
     },
     types::{OraclePrice, PoolStatePriceUpdate},
     utils::string_to_float,
@@ -28,6 +29,8 @@ pub fn update_lp_prices() {
         (MAINNET_ETH_STRK_PUT.address, "strk-usdc"),
         (MAINNET_STRK_USDC_CALL.address, "strk-usdc"),
         (MAINNET_STRK_USDC_PUT.address, "usdc"),
+        (MAINNET_EKUBO_USDC_CALL.address, "ekubo-usdc"),
+        (MAINNET_EKUBO_USDC_PUT.address, "usdc"),
     ];
 
     for (pool_address, token_pair) in address_pair {

@@ -9,8 +9,8 @@ async fn main() {
         .get_spot_median(
             &TokenPair::EthUsdc,
             &DbBlock {
-                block_number: 75312,
-                timestamp: 1686136008,
+                block_number: 820000,
+                timestamp: 1728897868,
             },
         )
         .await;
