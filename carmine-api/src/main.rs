@@ -15,7 +15,8 @@ use std::env;
 use std::sync::{Arc, Mutex};
 use tokio::time::{sleep, Duration};
 
-const UPDATE_APP_STATE_INTERVAL: u64 = 15;
+const UPDATE_APP_STATE_INTERVAL: u64 = 180;
+const UPDATE_PRICES_INTERVAL: u64 = 12;
 
 const LOCAL_IP: &str = "127.0.0.1";
 const DOCKER_IP: &str = "0.0.0.0";
@@ -105,24 +106,21 @@ async fn main() -> std::io::Result<()> {
 
     println!("🛠️  Cloning app state...");
 
-    let app_state_clone = app_state.clone();
-
     println!("🛠️  Spawning app state updating thread...");
 
-    let mut counter: u16 = 0;
+    {
+        let app_state_clone = app_state.clone();
 
-    // updates app state
-    actix_web::rt::spawn(async move {
-        let mut startup = true;
-        loop {
-            if startup {
-                startup = false;
-            } else {
-                sleep(Duration::from_secs(UPDATE_APP_STATE_INTERVAL)).await;
-            }
+        // updates app state
+        actix_web::rt::spawn(async move {
+            let mut startup = true;
+            loop {
+                if startup {
+                    startup = false;
+                } else {
+                    sleep(Duration::from_secs(UPDATE_APP_STATE_INTERVAL)).await;
+                }
 
-            if counter % 15 == 0 {
-                counter = 1;
                 println!("Updating AppState");
                 mainnet_cache.update().await;
                 // testnet_cache.update().await;
@@ -134,9 +132,25 @@ async fn main() -> std::io::Result<()> {
                 // app_state_lock.testnet = testnet;
                 drop(app_state_lock);
                 println!("AppState updated");
-            } else {
-                counter += 1;
+            }
+        });
+    }
+
+    {
+        let app_state_clone = app_state.clone();
+
+        // updates prices
+        actix_web::rt::spawn(async move {
+            let mut startup = true;
+            loop {
+                if startup {
+                    startup = false;
+                } else {
+                    sleep(Duration::from_secs(UPDATE_PRICES_INTERVAL)).await;
+                }
+
                 println!("Updating Gecko prices");
+
                 let token_prices_response = match get_coingecko_prices().await {
                     Ok(res) => Ok(TokenPrices {
                         eth: res.ethereum.usd,
@@ -160,8 +174,8 @@ async fn main() -> std::io::Result<()> {
 
                 drop(app_state_lock);
             }
-        }
-    });
+        });
+    }
 
     println!("🚀 Server started successfully");
 

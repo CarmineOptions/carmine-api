@@ -574,6 +574,7 @@ fn generate_oracle_prices_hash_map() -> HashMap<String, Vec<OraclePriceConcise>>
     set_oracle_prices_pair(&mut map, TokenPair::EthUsdc.id(), oracle_prices.clone());
     set_oracle_prices_pair(&mut map, TokenPair::BtcUsdc.id(), oracle_prices.clone());
     set_oracle_prices_pair(&mut map, TokenPair::StrkUsdc.id(), oracle_prices.clone());
+    set_oracle_prices_pair(&mut map, TokenPair::EkuboUsdc.id(), oracle_prices.clone());
 
     map
 }
