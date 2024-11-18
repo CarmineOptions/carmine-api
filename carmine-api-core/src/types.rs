@@ -511,6 +511,7 @@ pub struct PailHedgeFinalized {
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(untagged)]
 pub enum PailEvents {
     Open(PailHedgeOpen),
     Close(PailHedgeFinalized),
