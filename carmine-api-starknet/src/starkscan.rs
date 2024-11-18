@@ -204,29 +204,39 @@ fn get_settled_events(event: StarkScanEvent) -> Option<Vec<StarkScanEventSettled
         }]);
     }
 
-    let key_str = &event.keys.join(",").to_string();
+    let event_name_hash_option = &event.keys.get(0);
 
-    let key_name_option = match key_str.as_str() {
-        "0x1b5f21c50bf3288fb310446824298a349f0ed9e28fb480cc9a4d54d034652e1,0x5c9afac1c510b50d3e0004024ba7b8e190864f1543dd8025d08f88410fb162" => Some("governance::contract::Governance::Voted".to_string()),
-        "0x2e770a5d835a0fc0bf1f36b9b91399b8216f234b49647eea957ce5808318568,0x1b23aa51d5569b9441d60ff575bf735345123304c4c3a303ee91670dccb4ac9" => Some("hedge_open".to_string()),
-        "0x13c3f174625b762b261f1b1433ad5bfff7d0cbaecaf4b503c89fce1f23e68a8,0x1b23aa51d5569b9441d60ff575bf735345123304c4c3a303ee91670dccb4ac9" => Some("hedge_close".to_string()),
-        "0x36af3feb5ea00cf41c0a5a0c1f795cd0ee1294433ccefb1916f0eafb4550b53,0x1b23aa51d5569b9441d60ff575bf735345123304c4c3a303ee91670dccb4ac9" => Some("hedge_settle".to_string()),
-        _ => None
-    };
+    if let Some(event_name_hash) = event_name_hash_option {
+        let event_name_option = match event_name_hash.as_str() {
+            "0x1b5f21c50bf3288fb310446824298a349f0ed9e28fb480cc9a4d54d034652e1" => {
+                Some("governance::contract::Governance::Voted".to_string())
+            }
+            "0x2e770a5d835a0fc0bf1f36b9b91399b8216f234b49647eea957ce5808318568" => {
+                Some("hedge_open".to_string())
+            }
+            "0x13c3f174625b762b261f1b1433ad5bfff7d0cbaecaf4b503c89fce1f23e68a8" => {
+                Some("hedge_close".to_string())
+            }
+            "0x36af3feb5ea00cf41c0a5a0c1f795cd0ee1294433ccefb1916f0eafb4550b53" => {
+                Some("hedge_settle".to_string())
+            }
+            _ => None,
+        };
 
-    if let Some(key_name) = key_name_option {
-        return Some(vec![StarkScanEventSettled {
-            id: format!("{}_{}", event.transaction_hash, event.event_index),
-            block_hash: event.block_hash.unwrap(),
-            block_number: event.block_number.unwrap(),
-            transaction_hash: event.transaction_hash,
-            event_index: event.event_index,
-            from_address: event.from_address,
-            keys: event.keys,
-            data: event.data,
-            timestamp: event.timestamp,
-            key_name,
-        }]);
+        if let Some(key_name) = event_name_option {
+            return Some(vec![StarkScanEventSettled {
+                id: format!("{}_{}", event.transaction_hash, event.event_index),
+                block_hash: event.block_hash.unwrap(),
+                block_number: event.block_number.unwrap(),
+                transaction_hash: event.transaction_hash,
+                event_index: event.event_index,
+                from_address: event.from_address,
+                keys: event.keys,
+                data: event.data,
+                timestamp: event.timestamp,
+                key_name,
+            }]);
+        }
     }
 
     let pools = get_all_pools(&Network::Mainnet);

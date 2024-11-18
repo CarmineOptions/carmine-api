@@ -20,6 +20,7 @@ use carmine_api_prices::HistoricalPrices;
 use carmine_api_starknet::carmine::Carmine;
 use defispring::get_defispring_stats;
 use insurance_events::get_insurace_data;
+use pail_events::transform_pail_events;
 use std::{
     collections::HashMap,
     time::{Instant, SystemTime},
@@ -30,6 +31,7 @@ use trade_data::get_trades;
 mod apy;
 pub mod defispring;
 pub mod insurance_events;
+pub mod pail_events;
 pub mod trade_data;
 
 // Only store Events we know and not ExpireOptionTokenForPool and Upgrade
@@ -80,6 +82,7 @@ impl Cache {
             }
             Network::Testnet => vec![],
         };
+
         let options_vec = get_options(&network);
         let options = Cache::options_vec_to_hashmap(options_vec);
         let all_non_expired = vec![];
@@ -156,6 +159,12 @@ impl Cache {
 
         let defispring = self.defispring;
         let braavos_proscore = get_braavos_users_proscore_80_with_timestamp();
+        let pail_events = match &self.network {
+            Network::Mainnet => {
+                transform_pail_events(&get_protocol_events(&Network::Mainnet, &Protocol::Pail))
+            }
+            Network::Testnet => HashMap::new(),
+        };
 
         AppData {
             all_non_expired,
@@ -175,6 +184,7 @@ impl Cache {
             braavos_proscore,
             trades_with_prices,
             insurance_events,
+            pail_events,
         }
     }
 

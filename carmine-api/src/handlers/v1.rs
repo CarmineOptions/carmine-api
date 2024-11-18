@@ -935,3 +935,41 @@ pub async fn pail_token(
         None => HttpResponse::BadRequest().body("Missing token_id in query parameters"),
     }
 }
+
+#[get("/mainnet/pail_events")]
+pub async fn pail_events(
+    opts: web::Query<QueryOptions>,
+    data: web::Data<Arc<Mutex<AppState>>>,
+) -> impl Responder {
+    let locked = &data.lock();
+    let app_state = match locked {
+        Ok(app_data) => app_data,
+        _ => {
+            return HttpResponse::InternalServerError().json(GenericResponse {
+                status: "server_error".to_string(),
+                message: "Failed to read AppState".to_string(),
+            });
+        }
+    };
+
+    let address = match &opts.address {
+        Some(address) => format_tx(address),
+        _ => {
+            return HttpResponse::Ok().json(DataResponse {
+                status: "success".to_string(),
+                data: &app_state.mainnet.votes,
+            })
+        }
+    };
+
+    match &app_state.mainnet.pail_events.get(&address) {
+        Some(data) => HttpResponse::Ok().json(DataResponse {
+            status: "success".to_string(),
+            data,
+        }),
+        None => HttpResponse::Ok().json(DataResponse {
+            status: "success".to_string(),
+            data: vec![] as Vec<Vote>,
+        }),
+    }
+}

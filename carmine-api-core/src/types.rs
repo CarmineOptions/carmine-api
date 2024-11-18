@@ -116,6 +116,7 @@ pub struct AppData {
     pub braavos_proscore: HashMap<String, BraavosBonusValues>,
     pub trades_with_prices: Trades,
     pub insurance_events: Vec<InsuranceData>,
+    pub pail_events: HashMap<String, Vec<PailEvents>>,
 }
 
 pub struct AppState {
@@ -488,4 +489,39 @@ pub struct PailToken {
     pub description: String,
     pub token_id: u64,
     pub image: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PailHedgeOpen {
+    pub user: String,
+    pub hedge_token_id: u64,
+    pub amount: u128,
+    pub quote_token: String,
+    pub base_token: String,
+    pub maturity: u64,
+    pub event: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PailHedgeFinalized {
+    pub user: String,
+    pub hedge_token_id: u64,
+    pub event: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub enum PailEvents {
+    Open(PailHedgeOpen),
+    Close(PailHedgeFinalized),
+    Settle(PailHedgeFinalized),
+}
+
+impl PailEvents {
+    pub fn get_user(&self) -> String {
+        match self {
+            PailEvents::Open(data) => data.user.to_owned(),
+            PailEvents::Close(data) => data.user.to_owned(),
+            PailEvents::Settle(data) => data.user.to_owned(),
+        }
+    }
 }
