@@ -29,11 +29,11 @@ fn transform_event(event: &StarkScanEventSettled) -> PailEvents {
                     16,
                 )
                 .expect("Failed to parse pail token id"),
-                amount: u128::from_str_radix(
-                    &event.data.get(2).expect("Failed to get pail amount")[2..],
-                    16,
-                )
-                .expect("Failed to parse pail amount"),
+                amount: event
+                    .data
+                    .get(2)
+                    .expect("Failed to get pail amount")
+                    .to_string(),
                 quote_token: event
                     .data
                     .get(4)

@@ -495,7 +495,7 @@ pub struct PailToken {
 pub struct PailHedgeOpen {
     pub user: String,
     pub hedge_token_id: u64,
-    pub amount: u128,
+    pub amount: String,
     pub quote_token: String,
     pub base_token: String,
     pub maturity: u64,

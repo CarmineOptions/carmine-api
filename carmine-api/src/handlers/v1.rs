@@ -957,7 +957,7 @@ pub async fn pail_events(
         _ => {
             return HttpResponse::Ok().json(DataResponse {
                 status: "success".to_string(),
-                data: &app_state.mainnet.votes,
+                data: &app_state.mainnet.pail_events,
             })
         }
     };
