@@ -49,6 +49,11 @@ fn transform_event(event: &StarkScanEventSettled) -> PailEvents {
                     16,
                 )
                 .expect("Failed to parse pail maturity"),
+                at_price: event
+                    .data
+                    .get(7)
+                    .expect("Failed to get pail at price")
+                    .to_string(),
                 event: "hedge_open".to_string(),
             };
             PailEvents::Open(e)

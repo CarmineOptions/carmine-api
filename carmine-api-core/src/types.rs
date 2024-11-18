@@ -499,6 +499,7 @@ pub struct PailHedgeOpen {
     pub quote_token: String,
     pub base_token: String,
     pub maturity: u64,
+    pub at_price: String,
     pub event: String,
 }
 
