@@ -45,7 +45,7 @@ fn transform_event(event: &StarkScanEventSettled) -> PailEvents {
                     .expect("Failed to get pail base_token")
                     .to_owned(),
                 maturity: u64::from_str_radix(
-                    &event.data.get(7).expect("Failed to get pail maturity")[2..],
+                    &event.data.get(6).expect("Failed to get pail maturity")[2..],
                     16,
                 )
                 .expect("Failed to parse pail maturity"),
