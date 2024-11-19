@@ -19,6 +19,7 @@ pub async fn update_database_events() {
     let protocols = [
         Protocol::CarmineOptions,
         Protocol::CarmineGovernance,
+        Protocol::Pail,
         Protocol::CarminePoolEthUsdcCall,
         Protocol::CarminePoolEthUsdcPut,
         Protocol::CarminePoolBtcUsdcCall,
