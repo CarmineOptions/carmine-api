@@ -4,7 +4,7 @@ use carmine_api_core::types::{
     PailEvents, PailHedgeFinalized, PailHedgeOpen, StarkScanEventSettled,
 };
 
-fn transform_event(event: &StarkScanEventSettled) -> PailEvents {
+fn transform_event(event: &StarkScanEventSettled) -> Option<PailEvents> {
     match event.key_name.as_str() {
         // #[derive(Drop, starknet::Event)]
         // struct HedgeOpenedEvent {
@@ -56,7 +56,7 @@ fn transform_event(event: &StarkScanEventSettled) -> PailEvents {
                     .to_string(),
                 event: "hedge_open".to_string(),
             };
-            PailEvents::Open(e)
+            Some(PailEvents::Open(e))
         }
         // #[derive(Drop, starknet::Event)]
         // struct HedgeFinalizedEvent {
@@ -78,7 +78,7 @@ fn transform_event(event: &StarkScanEventSettled) -> PailEvents {
                 .expect("Failed to parse pail token id"),
                 event: "hedge_close".to_string(),
             };
-            PailEvents::Close(e)
+            Some(PailEvents::Close(e))
         }
         "hedge_settle" => {
             let e = PailHedgeFinalized {
@@ -94,9 +94,9 @@ fn transform_event(event: &StarkScanEventSettled) -> PailEvents {
                 .expect("Failed to parse pail token id"),
                 event: "hedge_settle".to_string(),
             };
-            PailEvents::Settle(e)
+            Some(PailEvents::Settle(e))
         }
-        _ => unreachable!("Unexpected PAIL event"),
+        _ => None,
     }
 }
 
@@ -106,10 +106,13 @@ pub fn transform_pail_events(
     let mut res = HashMap::new();
 
     for event in events {
-        let transformed_event = transform_event(event);
-        res.entry(transformed_event.get_user())
-            .or_insert_with(Vec::new)
-            .push(transformed_event);
+        let transformed_event_option = transform_event(event);
+
+        if let Some(transformed_event) = transformed_event_option {
+            res.entry(transformed_event.get_user())
+                .or_insert_with(Vec::new)
+                .push(transformed_event);
+        }
     }
 
     res
