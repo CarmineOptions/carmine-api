@@ -141,7 +141,8 @@ impl Cache {
         println!("trade history: {:?}", t0.elapsed());
         let legacy_trade_history = self.get_legacy_trade_history();
         println!("legacy trade history: {:?}", t0.elapsed());
-        let option_volatility = get_options_volatility(&self.network);
+        let option_volatility = vec![];
+        // let option_volatility = get_options_volatility(&self.network);
         println!("option volatility: {:?}", t0.elapsed());
         let state = self.generate_state_hashmap();
         println!("state: {:?}", t0.elapsed());
