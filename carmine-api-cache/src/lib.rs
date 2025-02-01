@@ -134,21 +134,37 @@ impl Cache {
     }
 
     pub fn get_app_data(&self) -> AppData {
+        let t0 = Instant::now();
         let all_non_expired = self.get_all_non_expired();
+        println!("all non expired: {:?}", t0.elapsed());
         let trade_history = self.get_trade_history();
+        println!("trade history: {:?}", t0.elapsed());
         let legacy_trade_history = self.get_legacy_trade_history();
+        println!("legacy trade history: {:?}", t0.elapsed());
         let option_volatility = get_options_volatility(&self.network);
+        println!("option volatility: {:?}", t0.elapsed());
         let state = self.generate_state_hashmap();
+        println!("state: {:?}", t0.elapsed());
         let apy = self.generate_apy_hashmap();
+        println!("apy: {:?}", t0.elapsed());
         let oracle_prices = self.oracle_prices.clone();
+        println!("oracle prices: {:?}", t0.elapsed());
         let referrals = self.referrals.clone();
+        println!("referrals: {:?}", t0.elapsed());
         let user_points = self.user_points.clone();
+        println!("user points: {:?}", t0.elapsed());
         let top_user_points = self.top_user_points.clone();
+        println!("top user points: {:?}", t0.elapsed());
         let trades = self.generate_trades_hashmap();
+        println!("trades: {:?}", t0.elapsed());
         let votes = get_votes();
+        println!("votes: {:?}", t0.elapsed());
         let mut votes_map: HashMap<String, Vec<Vote>> = HashMap::new();
+        println!("votes map: {:?}", t0.elapsed());
         let trades_with_prices = get_trades(&trades, &self.historical_prices);
+        println!("trades with prices: {:?}", t0.elapsed());
         let insurance_events = get_insurace_data(get_insurance_events(), &self.historical_prices);
+        println!("insurance events: {:?}", t0.elapsed());
 
         for vote in votes.iter() {
             votes_map
@@ -158,13 +174,16 @@ impl Cache {
         }
 
         let defispring = self.defispring;
+        println!("defispring: {:?}", t0.elapsed());
         let braavos_proscore = get_braavos_users_proscore_80_with_timestamp();
+        println!("braavos proscore: {:?}", t0.elapsed());
         let pail_events = match &self.network {
             Network::Mainnet => {
                 transform_pail_events(&get_protocol_events(&Network::Mainnet, &Protocol::Pail))
             }
             Network::Testnet => HashMap::new(),
         };
+        println!("pail events: {:?}", t0.elapsed());
 
         AppData {
             all_non_expired,
