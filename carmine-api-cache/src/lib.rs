@@ -1,28 +1,29 @@
 use carmine_api_core::{
     network::{Network, Protocol, LEGACY_AMM_CONTRACT_ADDRESS},
     pool::{get_all_pools, Pool},
-    telegram_bot,
+    telegram_bot::TelegramBot,
     types::{
-        AppData, DefispringInfo, IOption, OraclePrice, OraclePriceConcise, PoolStateWithTimestamp,
-        ReferralEventDigest, StarkScanEventSettled, TokenPair, TradeEvent, TradeHistory,
-        UserPointsWithPosition, Vote, APY,
+        AppData, DefispringInfo, IOption, Messenger, OraclePrice, OraclePriceConcise,
+        PoolStateWithTimestamp, ReferralEventDigest, StarkScanEventSettled, TokenPair, TradeEvent,
+        TradeHistory, UserPointsWithPosition, Vote, APY,
     },
     utils::{normalize_address, strike_from_hex},
 };
 use carmine_api_db::{
     get_all_user_points, get_braavos_users_proscore_80_with_timestamp, get_events_by_address,
-    get_insurance_events, get_legacy_options, get_options, get_options_volatility,
-    get_oracle_prices_since_new_amm, get_pool_state, get_protocol_events,
-    get_protocol_events_from_block, get_referral_events, get_user_points_lastest_timestamp,
-    get_votes,
+    get_insurance_events, get_legacy_options, get_options, get_oracle_prices_since_new_amm,
+    get_pool_state, get_protocol_events, get_protocol_events_from_block, get_referral_events,
+    get_user_points_lastest_timestamp, get_votes,
 };
 use carmine_api_prices::HistoricalPrices;
 use carmine_api_starknet::carmine::Carmine;
 use defispring::get_defispring_stats;
 use insurance_events::get_insurace_data;
+use live_options_tracker::LiveOptionsUpdateTracker;
 use pail_events::transform_pail_events;
 use std::{
     collections::HashMap,
+    sync::Arc,
     time::{Instant, SystemTime},
     vec,
 };
@@ -31,6 +32,7 @@ use trade_data::get_trades;
 mod apy;
 pub mod defispring;
 pub mod insurance_events;
+pub mod live_options_tracker;
 pub mod pail_events;
 pub mod trade_data;
 
@@ -69,6 +71,8 @@ pub struct Cache {
     defispring: DefispringInfo,
     oracle_prices: HashMap<String, Vec<OraclePriceConcise>>,
     historical_prices: HistoricalPrices,
+    live_options_tracking: LiveOptionsUpdateTracker<Arc<TelegramBot>>,
+    telegram_messenger: Arc<TelegramBot>,
 }
 
 impl Cache {
@@ -105,6 +109,7 @@ impl Cache {
         };
         let oracle_prices = generate_oracle_prices_hash_map();
         let historical_prices = HistoricalPrices::new(&oracle_prices);
+        let telegram_messenger = Arc::new(TelegramBot::new());
 
         let mut cache = Cache {
             network,
@@ -123,6 +128,8 @@ impl Cache {
             defispring,
             oracle_prices,
             historical_prices,
+            live_options_tracking: LiveOptionsUpdateTracker::new(telegram_messenger.clone()),
+            telegram_messenger,
         };
 
         cache.trade_history = Cache::generate_trade_history(&mut cache);
@@ -496,7 +503,10 @@ impl Cache {
         let new_non_expired_result = self.carmine.get_all_non_expired_options_with_premia().await;
 
         match new_non_expired_result {
-            Ok(new_non_expired) => self.all_non_expired = new_non_expired,
+            Ok(new_non_expired) => {
+                self.all_non_expired = new_non_expired;
+                self.live_options_tracking.update();
+            }
             Err(e) => {
                 println!(
                     "Failed getting non expired options: {:?}, \nNetwork {}",
@@ -504,12 +514,10 @@ impl Cache {
                 );
                 match &self.network {
                     Network::Mainnet => {
-                        telegram_bot::send_message("Failed getting non expired options MAINNET")
-                            .await
+                        self.live_options_tracking.report();
                     }
                     Network::Testnet => {
-                        // telegram_bot::send_message("Failed getting non expired options TESTNET")
-                        //     .await
+                        // do nothing for testnet
                     }
                 }
             }
@@ -519,7 +527,9 @@ impl Cache {
     pub async fn update_defispring(&mut self) {
         match get_defispring_stats().await {
             Ok(data) => self.defispring = data,
-            Err(_) => telegram_bot::send_message("Failed updating DefiSpring data.").await,
+            Err(_) => self
+                .telegram_messenger
+                .send_message("Failed updating DefiSpring data."),
         }
     }
 

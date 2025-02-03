@@ -527,3 +527,7 @@ impl PailEvents {
         }
     }
 }
+
+pub trait Messenger {
+    fn send_message(&self, msg: &str);
+}
