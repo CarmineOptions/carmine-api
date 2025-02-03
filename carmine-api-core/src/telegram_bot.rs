@@ -11,6 +11,22 @@ lazy_static! {
     static ref CHAT_ID_ENVAR: String = var("CHAT_ID").expect("Failed to read CHAT_ID");
 }
 
+fn escape_markdown_v2(text: &str) -> String {
+    let reserved_chars = [
+        '_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!',
+    ];
+
+    text.chars()
+        .map(|c| {
+            if reserved_chars.contains(&c) {
+                format!("\\{}", c) // Escape with a backslash
+            } else {
+                c.to_string()
+            }
+        })
+        .collect()
+}
+
 pub struct TelegramBot {
     chat_id: String,
     bot: teloxide::Bot,
@@ -18,16 +34,17 @@ pub struct TelegramBot {
 
 impl TelegramBot {
     pub fn new() -> Self {
-        let token = BOT_TOKEN_ENVAR.to_owned(); // Replace with your token handling logic
-        let chat_id = CHAT_ID_ENVAR.to_owned(); // Replace with your chat_id handling logic
+        let token = BOT_TOKEN_ENVAR.to_owned();
+        let chat_id = CHAT_ID_ENVAR.to_owned();
         let bot = Bot::new(token);
         Self { chat_id, bot }
     }
 
-    pub async fn send_message_async(self: Arc<Self>, msg: String) {
+    pub async fn send_message_async(self: Arc<Self>, msg: &str) {
+        let escaped_message = escape_markdown_v2(msg);
         let res = self
             .bot
-            .send_message(self.chat_id.clone(), msg)
+            .send_message(self.chat_id.clone(), escaped_message)
             .parse_mode(ParseMode::MarkdownV2)
             .send()
             .await;
@@ -42,7 +59,7 @@ impl Messenger for Arc<TelegramBot> {
         let bot_clone = Arc::clone(self);
 
         tokio::spawn(async move {
-            bot_clone.send_message_async(msg_owned).await;
+            bot_clone.send_message_async(msg_owned.as_str()).await;
         });
     }
 }
