@@ -188,7 +188,7 @@ impl AmmStateObserver {
             match self.update_single_block(n).await {
                 Ok(_) => {
                     println!("Updated block #{} in {:.2?}", n, now.elapsed());
-                    // only increment if successfull
+                    // only increment if successful
                     n = n + increment;
                 }
                 Err(_) => {
