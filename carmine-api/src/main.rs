@@ -29,6 +29,7 @@ impl Origins {
     const LEGACY: &'static str = "https://legacy.app.carmine.finance";
     const PRODUCTION_MAINNET: &'static str = "https://app.carmine.finance";
     const PRODUCTION_TESTNET: &'static str = "https://testnet.app.carmine.finance";
+    const REMUS: &'static str = "https://app.remusdex.xyz";
 }
 
 fn ip_address() -> &'static str {
@@ -186,6 +187,7 @@ async fn main() -> std::io::Result<()> {
             .allowed_origin(Origins::LEGACY)
             .allowed_origin(Origins::PRODUCTION_MAINNET)
             .allowed_origin(Origins::PRODUCTION_TESTNET)
+            .allowed_origin(Origins::REMUS)
             .allowed_methods(vec!["GET", "POST", "OPTIONS"])
             .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
             .allowed_header(header::CONTENT_TYPE)

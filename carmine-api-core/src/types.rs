@@ -319,6 +319,7 @@ pub struct ReferralEvent {
     pub id: i32,
     pub referred_wallet_address: String,
     pub referral_code: String,
+    pub source: String,
     pub timestamp: SystemTime,
 }
 
@@ -335,6 +336,7 @@ pub struct ReferralEventDigest {
 pub struct NewReferralEvent<'a> {
     pub referred_wallet_address: &'a str,
     pub referral_code: &'a str,
+    pub source: &'a str,
 }
 
 #[derive(Debug, Serialize, Default)]

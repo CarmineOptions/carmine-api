@@ -105,6 +105,7 @@ diesel::table! {
         id -> Int4,
         referred_wallet_address -> Text,
         referral_code -> Text,
+        source -> Text,
         timestamp -> Timestamp,
     }
 }
