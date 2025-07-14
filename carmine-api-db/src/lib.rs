@@ -1,27 +1,57 @@
 use carmine_api_core::network::{
-    protocol_address, Network, Protocol, NEW_AMM_GENESIS_BLOCK_NUMBER, NEW_AMM_GENESIS_TIMESTAMP,
+    protocol_address,
+    Network,
+    Protocol,
+    NEW_AMM_GENESIS_BLOCK_NUMBER,
+    NEW_AMM_GENESIS_TIMESTAMP,
 };
 use carmine_api_core::pool::{
-    MAINNET_BTC_USDC_CALL, MAINNET_BTC_USDC_PUT, MAINNET_ETH_STRK_CALL, MAINNET_ETH_STRK_PUT,
-    MAINNET_ETH_USDC_CALL, MAINNET_ETH_USDC_PUT, MAINNET_STRK_USDC_CALL, MAINNET_STRK_USDC_PUT,
+    MAINNET_BTC_USDC_CALL,
+    MAINNET_BTC_USDC_PUT,
+    MAINNET_ETH_STRK_CALL,
+    MAINNET_ETH_STRK_PUT,
+    MAINNET_ETH_USDC_CALL,
+    MAINNET_ETH_USDC_PUT,
+    MAINNET_STRK_USDC_CALL,
+    MAINNET_STRK_USDC_PUT,
 };
 use carmine_api_core::schema::pool_state::lp_token_value_usd;
-use carmine_api_core::schema::{self};
+use carmine_api_core::schema::{ self };
 use carmine_api_core::types::{
-    BraavosBonus, BraavosBonusValues, DbBlock, Event, IOption, InsuranceEvent,
-    InsuranceEventQueryable, NewReferralEvent, OptionVolatility, OptionWithVolatility, OraclePrice,
-    Pool, PoolState, PoolStatePriceUpdate, PoolStateWithTimestamp, PoolTvlInfo, ReferralCode,
-    ReferralEvent, ReferralEventDigest, StarkScanEventSettled, TokenPair, UserPoints, UserPointsDb,
-    Volatility, Vote,
+    BraavosBonus,
+    BraavosBonusValues,
+    DbBlock,
+    Event,
+    IOption,
+    InsuranceEvent,
+    InsuranceEventQueryable,
+    NewReferralEvent,
+    OptionVolatility,
+    OptionWithVolatility,
+    OraclePrice,
+    Pool,
+    PoolState,
+    PoolStatePriceUpdate,
+    PoolStateWithTimestamp,
+    PoolTvlInfo,
+    ReferralCode,
+    ReferralEvent,
+    ReferralEventDigest,
+    StarkScanEventSettled,
+    TokenPair,
+    UserPoints,
+    UserPointsDb,
+    Volatility,
+    Vote,
 };
 
 use carmine_api_referral::referral_code::generate_referral_code;
 use diesel::dsl::max;
-use diesel::sql_types::{Array, Text};
-use diesel::{insert_into, prelude::*, update};
+use diesel::sql_types::{ Array, Text };
+use diesel::{ insert_into, prelude::*, update };
 use std::collections::HashMap;
 use std::env;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{ SystemTime, UNIX_EPOCH };
 
 pub mod lp_value;
 
@@ -49,8 +79,9 @@ fn get_db_url(network: &Network) -> String {
 
 fn establish_connection(network: &Network) -> PgConnection {
     let database_url = get_db_url(network);
-    PgConnection::establish(&database_url)
-        .unwrap_or_else(|e| panic!("Error connecting to {}: {:?}", database_url, e))
+    PgConnection::establish(&database_url).unwrap_or_else(|e|
+        panic!("Error connecting to {}: {:?}", database_url, e)
+    )
 }
 
 pub fn create_event(new_event: Event, network: &Network) {
@@ -58,7 +89,8 @@ pub fn create_event(new_event: Event, network: &Network) {
 
     let mut connection = establish_connection(network);
 
-    diesel::insert_into(events)
+    diesel
+        ::insert_into(events)
         .values(&new_event)
         .on_conflict_do_nothing()
         .execute(&mut connection)
@@ -73,7 +105,8 @@ pub fn create_batch_of_events(new_events: &Vec<Event>, network: &Network) {
     let chunks = new_events.chunks(BATCH_SIZE);
 
     for chunk in chunks {
-        diesel::insert_into(events)
+        diesel
+            ::insert_into(events)
             .values(chunk)
             .on_conflict_do_nothing()
             .execute(&mut connection)
@@ -91,7 +124,8 @@ pub fn create_batch_of_starkscan_events(events: &Vec<StarkScanEventSettled>, net
     let mut inserted: u32 = 0;
 
     for chunk in chunks {
-        let res = diesel::insert_into(starkscan_events)
+        let res = diesel
+            ::insert_into(starkscan_events)
             .values(chunk)
             .on_conflict_do_nothing()
             .execute(&mut connection)
@@ -107,7 +141,8 @@ pub fn create_option(option: IOption, network: &Network) {
 
     let mut connection = establish_connection(network);
 
-    diesel::insert_into(options)
+    diesel
+        ::insert_into(options)
         .values(&option)
         .on_conflict_do_nothing()
         .execute(&mut connection)
@@ -122,7 +157,8 @@ pub fn create_batch_of_options(new_options: &Vec<IOption>, network: &Network) {
     let chunks = new_options.chunks(BATCH_SIZE);
 
     for chunk in chunks {
-        diesel::insert_into(options)
+        diesel
+            ::insert_into(options)
             .values(chunk)
             .on_conflict_do_nothing()
             .execute(&mut connection)
@@ -135,7 +171,8 @@ pub fn create_block(data: &DbBlock, network: &Network) {
 
     let mut connection = establish_connection(network);
 
-    diesel::insert_into(blocks)
+    diesel
+        ::insert_into(blocks)
         .values(data)
         .on_conflict_do_nothing()
         .execute(&mut connection)
@@ -147,7 +184,8 @@ pub fn create_pools(data: Vec<Pool>, network: &Network) {
 
     let mut connection = establish_connection(network);
 
-    diesel::insert_into(pools)
+    diesel
+        ::insert_into(pools)
         .values(&data)
         .on_conflict_do_nothing()
         .execute(&mut connection)
@@ -159,7 +197,8 @@ pub fn create_oracle_price(data: &OraclePrice, network: &Network) {
 
     let mut connection = establish_connection(network);
 
-    diesel::insert_into(oracle_prices)
+    diesel
+        ::insert_into(oracle_prices)
         .values(data)
         .on_conflict_do_nothing()
         .execute(&mut connection)
@@ -180,7 +219,7 @@ pub fn get_last_block_for_protocol_event(network: &Network, protocol: &Protocol)
 
 pub fn get_last_timestamp_for_protocol_event(
     network: &Network,
-    protocol: &Protocol,
+    protocol: &Protocol
 ) -> Option<i64> {
     use crate::schema::starkscan_events::dsl::*;
 
@@ -210,9 +249,7 @@ pub fn get_oracle_prices(network: &Network) -> Vec<OraclePrice> {
     use crate::schema::oracle_prices::dsl::*;
 
     let connection = &mut establish_connection(network);
-    oracle_prices
-        .load::<OraclePrice>(connection)
-        .expect("Error loading oracle prices")
+    oracle_prices.load::<OraclePrice>(connection).expect("Error loading oracle prices")
 }
 
 pub fn get_oracle_prices_from_block(network: &Network, initial_block: i64) -> Vec<OraclePrice> {
@@ -235,7 +272,7 @@ pub fn get_pools(network: &Network) -> Vec<Pool> {
     // TODO: currently old AMM is still in the DB, but we no longer care
     let legacy_lp_addresses = vec![
         "0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024",
-        "0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a",
+        "0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a"
     ];
 
     let connection = &mut establish_connection(network);
@@ -270,7 +307,7 @@ pub fn get_events_by_address(network: &Network, address: &str) -> Vec<StarkScanE
 pub fn get_protocol_events_from_block(
     network: &Network,
     protocol: &Protocol,
-    from_block_number: i64,
+    from_block_number: i64
 ) -> Vec<StarkScanEventSettled> {
     use crate::schema::starkscan_events::dsl::*;
 
@@ -288,9 +325,7 @@ pub fn get_events(network: &Network) -> Vec<Event> {
     use crate::schema::events::dsl::*;
 
     let connection = &mut establish_connection(network);
-    events
-        .load::<Event>(connection)
-        .expect("Error loading events")
+    events.load::<Event>(connection).expect("Error loading events")
 }
 
 pub fn get_events_by_caller_address(address: &str, network: &Network) -> Vec<Event> {
@@ -308,7 +343,7 @@ pub fn get_option_with_address(
     in_option_side: i16,
     in_maturity: i64,
     in_strike_price: &String,
-    in_lp_address: &String,
+    in_lp_address: &String
 ) -> Option<IOption> {
     use crate::schema::options::dsl::*;
 
@@ -369,10 +404,7 @@ pub fn get_blocks_greater_than(min: i64, network: &Network) -> Vec<DbBlock> {
     use crate::schema::blocks::dsl::*;
 
     let connection = &mut establish_connection(network);
-    blocks
-        .filter(block_number.gt(min))
-        .load::<DbBlock>(connection)
-        .expect("Failed getting blocks")
+    blocks.filter(block_number.gt(min)).load::<DbBlock>(connection).expect("Failed getting blocks")
 }
 
 pub fn get_blocks_since_new_amm() -> Vec<DbBlock> {
@@ -409,7 +441,8 @@ pub fn create_batch_of_volatilities(volatilities: &Vec<OptionVolatility>, networ
     let chunks = volatilities.chunks(BATCH_SIZE);
 
     for chunk in chunks {
-        diesel::insert_into(options_volatility)
+        diesel
+            ::insert_into(options_volatility)
             .values(chunk)
             .on_conflict_do_nothing()
             .execute(&mut connection)
@@ -425,16 +458,17 @@ pub fn update_batch_of_volatilities(new_volatilities: &Vec<OptionVolatility>, ne
     let mut updated_sum = 0;
 
     for new_volatility in new_volatilities {
-        let res: usize = diesel::update(
-            options_volatility.filter(
-                option_address
-                    .eq(&new_volatility.option_address)
-                    .and(block_number.eq(&new_volatility.block_number)),
-            ),
-        )
-        .set(new_volatility)
-        .execute(&mut connection)
-        .expect("Error updating volatilities");
+        let res: usize = diesel
+            ::update(
+                options_volatility.filter(
+                    option_address
+                        .eq(&new_volatility.option_address)
+                        .and(block_number.eq(&new_volatility.block_number))
+                )
+            )
+            .set(new_volatility)
+            .execute(&mut connection)
+            .expect("Error updating volatilities");
 
         updated_sum += res;
     }
@@ -450,7 +484,8 @@ pub fn create_batch_of_pool_states(states: &Vec<PoolState>, network: &Network) {
     let chunks = states.chunks(BATCH_SIZE);
 
     for chunk in chunks {
-        diesel::insert_into(pool_state)
+        diesel
+            ::insert_into(pool_state)
             .values(chunk)
             .on_conflict_do_nothing()
             .execute(&mut connection)
@@ -472,20 +507,18 @@ pub fn get_pool_state(pool_address: &str, network: &Network) -> Vec<PoolStateWit
         .load::<(PoolState, DbBlock)>(connection)
         .expect("Error loading pool state")
         .into_iter()
-        .map(
-            |(pool, block): (PoolState, DbBlock)| PoolStateWithTimestamp {
-                unlocked_cap: pool.unlocked_cap,
-                locked_cap: pool.locked_cap,
-                lp_balance: pool.lp_balance,
-                pool_position: pool.pool_position,
-                lp_token_value: pool.lp_token_value,
-                lp_token_value_usd: pool.lp_token_value_usd,
-                underlying_asset_price: pool.underlying_asset_price,
-                lp_address: pool.lp_address,
-                block_number: block.block_number,
-                timestamp: block.timestamp,
-            },
-        )
+        .map(|(pool, block): (PoolState, DbBlock)| PoolStateWithTimestamp {
+            unlocked_cap: pool.unlocked_cap,
+            locked_cap: pool.locked_cap,
+            lp_balance: pool.lp_balance,
+            pool_position: pool.pool_position,
+            lp_token_value: pool.lp_token_value,
+            lp_token_value_usd: pool.lp_token_value_usd,
+            underlying_asset_price: pool.underlying_asset_price,
+            lp_address: pool.lp_address,
+            block_number: block.block_number,
+            timestamp: block.timestamp,
+        })
         .collect();
 
     data.sort_by(|a, b| b.block_number.cmp(&a.block_number));
@@ -495,11 +528,13 @@ pub fn get_pool_state(pool_address: &str, network: &Network) -> Vec<PoolStateWit
 
 pub fn get_pool_states_with_prices(
     pool_address: &str,
-    network: &Network,
+    network: &Network
 ) -> Vec<(PoolState, Vec<OraclePrice>)> {
-    use crate::schema::oracle_prices::dsl::{block_number as oracle_block_number, oracle_prices};
+    use crate::schema::oracle_prices::dsl::{ block_number as oracle_block_number, oracle_prices };
     use crate::schema::pool_state::dsl::{
-        block_number as pool_state_block_number, lp_address, pool_state,
+        block_number as pool_state_block_number,
+        lp_address,
+        pool_state,
     };
 
     let connection = &mut establish_connection(network);
@@ -521,13 +556,12 @@ pub fn get_pool_states_with_prices(
         .load::<OraclePrice>(connection)
         .expect("Error loading oracle prices");
 
-    let mut prices_map: std::collections::HashMap<i64, Vec<OraclePrice>> =
-        std::collections::HashMap::new();
+    let mut prices_map: std::collections::HashMap<
+        i64,
+        Vec<OraclePrice>
+    > = std::collections::HashMap::new();
     for price in prices {
-        prices_map
-            .entry(price.block_number)
-            .or_insert_with(Vec::new)
-            .push(price);
+        prices_map.entry(price.block_number).or_insert_with(Vec::new).push(price);
     }
 
     let mut results: Vec<(PoolState, Vec<OraclePrice>)> = pool_states_with_blocks
@@ -544,25 +578,26 @@ pub fn get_pool_states_with_prices(
 }
 
 pub fn update_pool_state_asset_prices(
-    pool_state_price_updates: Vec<PoolStatePriceUpdate>,
+    pool_state_price_updates: Vec<PoolStatePriceUpdate>
 ) -> Result<(), diesel::result::Error> {
     use self::schema::pool_state::dsl::*;
 
     let connection = &mut establish_connection(&Network::Mainnet);
 
     for price_update in pool_state_price_updates {
-        diesel::update(
-            pool_state.filter(
-                lp_address
-                    .eq(price_update.lp_address)
-                    .and(block_number.eq(price_update.block_number)),
-            ),
-        )
-        .set((
-            lp_token_value_usd.eq(price_update.lp_token_value_usd),
-            underlying_asset_price.eq(price_update.underlying_asset_price),
-        ))
-        .execute(connection)?;
+        diesel
+            ::update(
+                pool_state.filter(
+                    lp_address
+                        .eq(price_update.lp_address)
+                        .and(block_number.eq(price_update.block_number))
+                )
+            )
+            .set((
+                lp_token_value_usd.eq(price_update.lp_token_value_usd),
+                underlying_asset_price.eq(price_update.underlying_asset_price),
+            ))
+            .execute(connection)?;
     }
 
     Ok(())
@@ -571,18 +606,14 @@ pub fn update_pool_state_asset_prices(
 pub fn get_pool_state_block_numbers_in_range(
     start_block: i64,
     end_block: i64,
-    network: &Network,
+    network: &Network
 ) -> Vec<i64> {
     use crate::schema::pool_state::dsl::*;
 
     let connection = &mut establish_connection(network);
     pool_state
         .select(block_number)
-        .filter(
-            block_number
-                .gt(start_block - 1)
-                .and(block_number.lt(end_block + 1)),
-        )
+        .filter(block_number.gt(start_block - 1).and(block_number.lt(end_block + 1)))
         .order(block_number.asc())
         .load::<i64>(connection)
         .expect("Error loading pool_state")
@@ -610,12 +641,9 @@ pub fn get_options_volatility(network: &Network) -> Vec<OptionWithVolatility> {
     let connection = &mut establish_connection(network);
 
     let start = SystemTime::now();
-    let timestamp_now = start
-        .duration_since(UNIX_EPOCH)
-        .expect("Time went backwards")
-        .as_secs();
+    let timestamp_now = start.duration_since(UNIX_EPOCH).expect("Time went backwards").as_secs();
 
-    let cutoff: i64 = timestamp_now as i64 - 172800;
+    let cutoff: i64 = (timestamp_now as i64) - 172800;
 
     let live_options: Vec<IOption> = options
         .filter(maturity.gt(cutoff))
@@ -664,13 +692,14 @@ pub fn update_option_volatility(
     block: i64,
     vol: Option<String>,
     pos: Option<String>,
-    address: String,
+    address: String
 ) {
     use crate::schema::options_volatility::dsl::*;
 
     let mut connection = establish_connection(network);
 
-    let res = diesel::update(options_volatility)
+    let res = diesel
+        ::update(options_volatility)
         .filter(block_number.eq(block))
         .filter(option_address.eq(address))
         .set((volatility.eq(vol), option_position.eq(pos)))
@@ -686,17 +715,15 @@ pub fn update_token_value(block: i64, pool: String, new_value: String, network: 
 
     let connection = &mut establish_connection(network);
 
-    let res = diesel::update(pool_state)
+    let res = diesel
+        ::update(pool_state)
         .filter(lp_address.eq(pool))
         .filter(block_number.eq(block))
         .set(lp_token_value.eq(new_value))
         .execute(connection);
 
     match res {
-        Ok(size) => println!(
-            "SUCCESS: updated block {} - returned value: {}",
-            block, size
-        ),
+        Ok(size) => println!("SUCCESS: updated block {} - returned value: {}", block, size),
         Err(e) => println!("FAIL: block {} failed: {:?}", block, e),
     }
 }
@@ -706,7 +733,8 @@ pub fn create_referral_pair(referral_pair: ReferralCode) {
 
     let connection = &mut establish_connection(&Network::Mainnet);
 
-    let _ = diesel::insert_into(referral_codes)
+    let _ = diesel
+        ::insert_into(referral_codes)
         .values(&referral_pair)
         .execute(connection)
         .expect("Error loading pool_state");
@@ -763,9 +791,7 @@ pub fn create_referral_event(event: NewReferralEvent) -> Result<usize, diesel::r
 
     let connection = &mut establish_connection(&Network::Mainnet);
 
-    diesel::insert_into(referral_events)
-        .values(&event)
-        .execute(connection)
+    diesel::insert_into(referral_events).values(&event).execute(connection)
 }
 
 pub fn get_referral_events() -> Vec<ReferralEventDigest> {
@@ -776,8 +802,9 @@ pub fn get_referral_events() -> Vec<ReferralEventDigest> {
 
     referral_events::table
         .inner_join(
-            referral_codes::table
-                .on(referral_events::referral_code.eq(referral_codes::referral_code)),
+            referral_codes::table.on(
+                referral_events::referral_code.eq(referral_codes::referral_code)
+            )
         )
         .select((
             referral_codes::wallet_address,
@@ -800,7 +827,7 @@ pub fn get_referral_events() -> Vec<ReferralEventDigest> {
                         referee_wallet_address,
                         referral_code,
                         timestamp,
-                    },
+                    }
                 )
                 .collect()
         })
@@ -812,9 +839,7 @@ pub fn create_insurance_event(event: InsuranceEvent) -> Result<usize, diesel::re
 
     let connection = &mut establish_connection(&Network::Mainnet);
 
-    diesel::insert_into(insurance_events)
-        .values(&event)
-        .execute(connection)
+    diesel::insert_into(insurance_events).values(&event).execute(connection)
 }
 
 pub fn get_insurance_events() -> Vec<InsuranceEventQueryable> {
@@ -904,7 +929,11 @@ pub fn get_votes() -> Vec<Vote> {
     let connection = &mut establish_connection(&Network::Mainnet);
 
     let events: Vec<StarkScanEventSettled> = starkscan_events
-        .filter(key_name.eq_any(vec!["Voted", "governance::contract::Governance::Voted"]))
+        .filter(
+            key_name.eq_any(
+                vec!["Voted", "governance::contract::Governance::Voted", "ProposalsEvent"]
+            )
+        )
         .load::<StarkScanEventSettled>(connection)
         .expect("Error getting votes");
 
@@ -927,7 +956,8 @@ pub fn get_votes() -> Vec<Vote> {
             Vote {
                 timestamp: event.timestamp,
                 user_address,
-                prop_id: usize::from_str_radix(&prop_id_str[2..], 16)
+                prop_id: usize
+                    ::from_str_radix(&prop_id_str[2..], 16)
                     .expect("Failed parsing prop_id"),
                 opinion,
             }
@@ -949,10 +979,21 @@ pub fn get_tvl_info() -> QueryResult<Vec<PoolTvlInfo>> {
         .first::<(i64, i64)>(connection)?;
 
     let results = options_dsl::options
-        .inner_join(volatility_dsl::options_volatility.on(options_dsl::option_address.eq(volatility_dsl::option_address)))
-        .inner_join(blocks_dsl::blocks.on(volatility_dsl::block_number.eq(blocks_dsl::block_number)))
-        .inner_join(pool_state_dsl::pool_state.on(blocks_dsl::block_number.eq(pool_state_dsl::block_number)
-                                                  .and(options_dsl::lp_address.eq(pool_state_dsl::lp_address))))
+        .inner_join(
+            volatility_dsl::options_volatility.on(
+                options_dsl::option_address.eq(volatility_dsl::option_address)
+            )
+        )
+        .inner_join(
+            blocks_dsl::blocks.on(volatility_dsl::block_number.eq(blocks_dsl::block_number))
+        )
+        .inner_join(
+            pool_state_dsl::pool_state.on(
+                blocks_dsl::block_number
+                    .eq(pool_state_dsl::block_number)
+                    .and(options_dsl::lp_address.eq(pool_state_dsl::lp_address))
+            )
+        )
         .filter(options_dsl::maturity.gt(max_block_timestamp))
         .filter(options_dsl::option_side.eq(1))
         .filter(volatility_dsl::block_number.eq(max_block_num))
@@ -960,9 +1001,11 @@ pub fn get_tvl_info() -> QueryResult<Vec<PoolTvlInfo>> {
             blocks_dsl::block_number,
             blocks_dsl::timestamp,
             options_dsl::lp_address,
-            diesel::dsl::sql::<Array<Text>>("ARRAY_AGG(option_position) OVER (PARTITION BY options.lp_address, pool_state.unlocked_cap, pool_state.locked_cap)"),
+            diesel::dsl::sql::<Array<Text>>(
+                "ARRAY_AGG(option_position) OVER (PARTITION BY options.lp_address, pool_state.unlocked_cap, pool_state.locked_cap)"
+            ),
             pool_state_dsl::unlocked_cap,
-            pool_state_dsl::locked_cap
+            pool_state_dsl::locked_cap,
         ))
         .distinct_on((blocks_dsl::block_number, options_dsl::lp_address))
         .load::<PoolTvlInfo>(connection)?;
@@ -1000,19 +1043,24 @@ pub fn get_pool_tvl_map() -> HashMap<String, u128> {
             .get(&tvl_info.lp_address.as_str())
             .expect("Failed getting divisor");
 
-        tvl += u128::from_str_radix(&tvl_info.locked_capital[2..], 16)
-            .expect("Failed to parse locked_capital")
-            * ad_hoc_precission
-            / pool_divisor;
-        tvl += u128::from_str_radix(&tvl_info.unlocked_capital[2..], 16)
-            .expect("Failed to parse unlocked_capital")
-            * ad_hoc_precission
-            / pool_divisor;
+        tvl +=
+            (u128
+                ::from_str_radix(&tvl_info.locked_capital[2..], 16)
+                .expect("Failed to parse locked_capital") *
+                ad_hoc_precission) /
+            pool_divisor;
+        tvl +=
+            (u128
+                ::from_str_radix(&tvl_info.unlocked_capital[2..], 16)
+                .expect("Failed to parse unlocked_capital") *
+                ad_hoc_precission) /
+            pool_divisor;
 
         for hex in tvl_info.option_positions {
-            tvl += u128::from_str_radix(&hex[2..], 16).expect("Failed to parse option position")
-                * ad_hoc_precission
-                / option_divisor;
+            tvl +=
+                (u128::from_str_radix(&hex[2..], 16).expect("Failed to parse option position") *
+                    ad_hoc_precission) /
+                option_divisor;
         }
 
         pool_tvl_map.insert(lp_address, tvl);
@@ -1052,20 +1100,21 @@ pub fn upsert_braavos_pro_score_80(address: &str, ts: i64) -> QueryResult<usize>
         Some(mut user) => {
             if user.pro_score_80.is_none() {
                 user.pro_score_80 = Some(ts);
-                update(braavos_bonus.find(address))
-                    .set(&user)
-                    .execute(connection)
+                update(braavos_bonus.find(address)).set(&user).execute(connection)
             } else {
                 Ok(0)
             }
         }
-        None => insert_into(braavos_bonus)
-            .values(&BraavosBonus {
-                user_address: address.to_string(),
-                pro_score_80: Some(ts),
-                braavos_referral: None,
-            })
-            .execute(connection),
+        None =>
+            insert_into(braavos_bonus)
+                .values(
+                    &(BraavosBonus {
+                        user_address: address.to_string(),
+                        pro_score_80: Some(ts),
+                        braavos_referral: None,
+                    })
+                )
+                .execute(connection),
     }
 }
 
@@ -1084,20 +1133,21 @@ pub fn upsert_braavos_referral(address: &str, ts: i64) -> QueryResult<usize> {
         Some(mut user) => {
             if user.braavos_referral.is_none() {
                 user.braavos_referral = Some(ts);
-                update(braavos_bonus.find(address))
-                    .set(&user)
-                    .execute(connection)
+                update(braavos_bonus.find(address)).set(&user).execute(connection)
             } else {
                 Ok(0)
             }
         }
-        None => insert_into(braavos_bonus)
-            .values(&BraavosBonus {
-                user_address: address.to_string(),
-                pro_score_80: None,
-                braavos_referral: Some(ts),
-            })
-            .execute(connection),
+        None =>
+            insert_into(braavos_bonus)
+                .values(
+                    &(BraavosBonus {
+                        user_address: address.to_string(),
+                        pro_score_80: None,
+                        braavos_referral: Some(ts),
+                    })
+                )
+                .execute(connection),
     }
 }
 
@@ -1119,24 +1169,17 @@ pub fn get_braavos_users_proscore_80_with_timestamp() -> HashMap<String, Braavos
     let connection = &mut establish_connection(&Network::Mainnet);
 
     let results = braavos_bonus
-        .filter(
-            pro_score_80
-                .is_not_null()
-                .or(braavos_referral.is_not_null()),
-        )
+        .filter(pro_score_80.is_not_null().or(braavos_referral.is_not_null()))
         .select((user_address, pro_score_80, braavos_referral))
         .load::<BraavosBonus>(connection)
         .expect("Error loading pro score users");
 
     let mut map = HashMap::new();
     for bonus in results {
-        map.insert(
-            bonus.user_address,
-            BraavosBonusValues {
-                pro_score_80: bonus.pro_score_80,
-                braavos_referral: bonus.braavos_referral,
-            },
-        );
+        map.insert(bonus.user_address, BraavosBonusValues {
+            pro_score_80: bonus.pro_score_80,
+            braavos_referral: bonus.braavos_referral,
+        });
     }
 
     map
@@ -1155,10 +1198,7 @@ pub fn get_first_braavos_referrals() -> Result<Vec<(i64, String)>, diesel::resul
     let tuples: Vec<(i64, String)> = braavos_referral_events
         .into_iter()
         .map(|e| {
-            let ts = e
-                .timestamp
-                .duration_since(UNIX_EPOCH)
-                .expect("Time went backwards");
+            let ts = e.timestamp.duration_since(UNIX_EPOCH).expect("Time went backwards");
             (ts.as_secs() as i64, e.referred_wallet_address)
         })
         .collect();
@@ -1169,13 +1209,16 @@ pub fn get_first_braavos_referrals() -> Result<Vec<(i64, String)>, diesel::resul
         map.entry(s)
             .and_modify(|e| {
                 if *e > ts {
-                    *e = ts
+                    *e = ts;
                 }
             })
             .or_insert(ts);
     }
 
-    let without_duplicates: Vec<(i64, String)> = map.into_iter().map(|(s, ts)| (ts, s)).collect();
+    let without_duplicates: Vec<(i64, String)> = map
+        .into_iter()
+        .map(|(s, ts)| (ts, s))
+        .collect();
 
     Ok(without_duplicates)
 }
