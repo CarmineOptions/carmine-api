@@ -1,6 +1,8 @@
 services:
   api:
-    build: .
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile.api
     env_file:
       - .env
     platform: linux/amd64
@@ -10,7 +12,7 @@ services:
   fetcher:
     build:
       context: .
-      dockerfile: Dockerfile.fetcher
+      dockerfile: ./docker/Dockerfile.fetcher
     env_file:
       - .env
     platform: linux/amd64
