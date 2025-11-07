@@ -143,6 +143,51 @@ impl AmmStateObserver {
         }
     }
 
+    pub async fn update_state_latest_block(&self) {
+        let now = Instant::now();
+        let last_block_db = get_last_block_in_db(&self.network);
+        let last_block_starknet_result = self.carmine.get_latest_block().await;
+
+        let last_block_starknet: DbBlock = match last_block_starknet_result {
+            Ok(block) => block,
+            Err(e) => {
+                println!(
+                    "Failed getting latest block, skipping this update cycle.\n{:#?}",
+                    e
+                );
+                return;
+            }
+        };
+
+        if last_block_db.block_number >= last_block_starknet.block_number {
+            println!(
+                "Last block DB: {:#?}, last block starknet: {:#?} - nothing to do",
+                last_block_db, last_block_starknet,
+            );
+            return;
+        }
+
+        match self
+            .update_single_block(last_block_starknet.block_number)
+            .await
+        {
+            Ok(_) => {
+                println!(
+                    "Updated block #{} in {:.2?}",
+                    last_block_starknet.block_number,
+                    now.elapsed()
+                );
+            }
+            Err(_) => {
+                println!(
+                    "Failed updating latest block #{} in {:.2?}",
+                    last_block_starknet.block_number,
+                    now.elapsed()
+                );
+            }
+        }
+    }
+
     pub async fn plug_holes_in_state(&self) {
         let last_block_starknet_result = self.carmine.get_latest_block().await;
         let last_block_starknet: DbBlock = match last_block_starknet_result {
