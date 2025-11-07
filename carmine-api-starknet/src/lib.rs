@@ -157,6 +157,13 @@ pub async fn update_database_amm_state(offset: i64) {
     AmmStateObserver::new().update_state(offset).await;
 }
 
+pub async fn update_database_amm_state_for_latest_block() {
+    let network = Network::Mainnet;
+    let carmine = Carmine::new(network);
+    carmine.get_options_with_addresses().await;
+    AmmStateObserver::new().update_state_latest_block().await;
+}
+
 pub async fn plug_holes_amm_state() {
     AmmStateObserver::new().plug_holes_in_state().await;
 }

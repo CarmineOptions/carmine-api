@@ -7,12 +7,8 @@ use carmine_api_rpc_gateway::{blast_api_latest_block_number, carmine_latest_bloc
 use tokio::time::{sleep, Duration};
 
 use carmine_api_core::telegram_bot;
-use carmine_api_starknet::{
-    plug_holes_amm_state, update_database_amm_state, update_database_events,
-};
+use carmine_api_starknet::{update_database_amm_state_for_latest_block, update_database_events};
 
-const BLOCK_OFFSET: i64 = 10;
-const PLUG_HOLES: bool = true;
 const GET_NEW_BLOCKS: bool = true;
 const GET_NEW_EVENTS: bool = true;
 const UPDATE_POOL_PRICES: bool = true;
@@ -95,12 +91,13 @@ async fn main() -> std::io::Result<()> {
             loop {
                 report_block_discrepency().await;
 
-                if let Err(err) =
-                    actix_web::rt::spawn(async { update_database_amm_state(BLOCK_OFFSET).await })
-                        .await
+                if let Err(err) = actix_web::rt::spawn(async {
+                    update_database_amm_state_for_latest_block().await
+                })
+                .await
                 {
                     // failed, probably network overload, wait to send message
-                    sleep(Duration::from_secs(100)).await;
+                    sleep(Duration::from_secs(15)).await;
                     println!("Update database amm state panicked\n{:?}", err);
                     telegram_bot::send_message(
                         "Carmine API `update_database_amm_state` just panicked",
@@ -109,26 +106,7 @@ async fn main() -> std::io::Result<()> {
                 } else {
                     println!("Database updated with AMM state");
                 }
-                sleep(Duration::from_secs(150)).await;
-            }
-        });
-    }
-
-    if PLUG_HOLES {
-        println!("🛠️  Spawning hole plugging thread...");
-        actix_web::rt::spawn(async move {
-            loop {
-                if let Err(err) = actix_web::rt::spawn(async { plug_holes_amm_state().await }).await
-                {
-                    // failed, probably network overload, wait to send message
-                    sleep(Duration::from_secs(120)).await;
-                    println!("Plug holes panicked\n{:?}", err);
-                    telegram_bot::send_message("Carmine API `plug_holes_amm_state` just panicked")
-                        .await;
-                } else {
-                    println!("Holes in AMM state pluged");
-                }
-                sleep(Duration::from_secs(150)).await;
+                sleep(Duration::from_secs(10)).await;
             }
         });
     }
